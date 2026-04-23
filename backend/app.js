@@ -30,7 +30,7 @@ app.get("/users", (req, res) => {
     res.status(200).json(result);
   });
 });
-
+console.log("Database connection established successfully.");
 app.listen(8000, () => {
   console.log("Server running on http://localhost:8000");
 });
