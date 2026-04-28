@@ -1,0 +1,122 @@
+/*
+  forms.css
+  ---------
+  עיצוב טפסים ודפי התחברות/הרשמה.
+
+  אחריות:
+  - InputField
+  - טפסים כלליים
+  - Login / Register pages
+*/
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-weight: 700;
+  color: white;
+}
+
+.input,
+.textarea,
+select {
+  width: 100%;
+  border: 2px solid #8d6550;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.stackCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.authPage {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+  background-image:
+    linear-gradient(rgba(30, 15, 14, 0.42), rgba(30, 15, 14, 0.42)),
+    url("https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=1400&q=80");
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.authCard {
+  width: min(560px, 100%);
+  background: rgba(57, 39, 34, 0.86);
+  color: white;
+  border: 2px solid #9c7c5d;
+  border-radius: 18px;
+  padding: 32px;
+}
+
+.authCard h1 {
+  text-align: center;
+  margin-bottom: 10px;
+  font-size: clamp(28px, 4vw, 42px);
+}
+
+.authCard p {
+  text-align: center;
+  margin-bottom: 22px;
+  line-height: 1.6;
+}
+
+.authSwitchText {
+  text-align: center;
+  margin-top: 18px;
+  color: #f2e6de;
+  font-size: 16px;
+}
+
+.authSwitchLink {
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.authSwitchLink:hover {
+  color: var(--gold);
+}
+
+.backButton {
+  position: absolute;
+  top: 30px;
+  left: 30px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #ffffff40;
+  color: white;
+  font-size: 22px;
+  width: 45px;
+  height: 45px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.2s;
+  z-index: 5;
+}
+
+.backButton:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+@media (max-width: 600px) {
+  .authCard {
+    padding: 20px;
+  }
+
+  .backButton {
+    top: 16px;
+    left: 16px;
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+}

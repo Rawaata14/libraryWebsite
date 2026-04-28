@@ -1,0 +1,110 @@
+/*
+  books.css
+  ---------
+  עיצוב דף הספרים וכרטיסי ספרים.
+*/
+
+.booksGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.bookCard {
+  background: #4a231f;
+  color: #fff5ec;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid #6e4137;
+  padding-bottom: 14px;
+}
+
+.bookCard img {
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+}
+
+.bookCardBody {
+  padding: 14px;
+  text-align: center;
+}
+
+.bookCategory {
+  opacity: 0.8;
+  margin-bottom: 10px;
+}
+
+.booksPageContainer {
+  max-width: 1180px;
+  margin: 20px auto 40px;
+  padding: 20px;
+}
+
+.booksPageCard {
+  background: rgba(45, 25, 20, 0.84);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(6px);
+  padding: 24px 20px 30px;
+  color: white;
+}
+
+.booksToolbar {
+  display: grid;
+  grid-template-columns: 1.6fr 220px;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.booksSearchInput,
+.booksCategorySelect {
+  width: 100%;
+  border: 2px solid #8d6550;
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 16px;
+}
+
+.booksResultsInfo {
+  margin-bottom: 18px;
+  color: #f4e5db;
+  font-size: 16px;
+}
+
+.booksEmptyState {
+  text-align: center;
+  padding: 40px 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+}
+
+.booksEmptyState h3 {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 768px) {
+  .booksPageContainer {
+    padding: 12px;
+  }
+
+  .booksPageCard {
+    padding: 18px 14px 24px;
+  }
+
+  .booksToolbar {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .booksGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .bookCard img {
+    height: 220px;
+  }
+}

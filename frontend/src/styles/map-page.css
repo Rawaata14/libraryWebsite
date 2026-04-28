@@ -1,0 +1,61 @@
+/*
+  map-page.css
+  ------------
+  עיצוב מבנה דף המפה (layout + panel + סיכום).
+*/
+
+.mapPageContainer {
+  max-width: 1180px;
+  margin: 20px auto;
+  padding: 20px;
+}
+
+.mapPageCard {
+  background: rgba(45, 25, 20, 0.84);
+  border-radius: 20px;
+  padding: 24px;
+  color: white;
+}
+
+.mapPageLayout {
+  display: grid;
+  grid-template-columns: 1.5fr 400px;
+  gap: 24px;
+}
+
+/* פאנלים */
+.mapSelectionPanel,
+.mapSummaryPanel {
+  background: #efe0d7;
+  border-radius: 16px;
+  padding: 20px;
+  color: #3d2019;
+}
+
+/* פילטרים */
+.mapFilters {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.mapFilterInput {
+  padding: 12px;
+  border-radius: 10px;
+  border: 2px solid #8d6550;
+}
+
+/* סיכום */
+.mapSummaryTitle {
+  font-size: 28px;
+  margin-bottom: 16px;
+}
+
+.mapSummaryInfo p {
+  margin-bottom: 10px;
+}
+
+/* כפתור */
+.mapSummaryButtonRow {
+  margin-top: 20px;
+}

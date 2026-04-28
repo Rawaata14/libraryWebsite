@@ -1,0 +1,91 @@
+/*
+  about.css
+  ---------
+  עיצוב דף האודות.
+*/
+
+.aboutPageContainer {
+  max-width: 1180px;
+  margin: 20px auto 40px;
+  padding: 20px;
+}
+
+.aboutPageCard {
+  background: rgba(45, 25, 20, 0.84);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(6px);
+  padding: 24px 20px 30px;
+  color: white;
+}
+
+.aboutHeroImage {
+  border-radius: 18px;
+  overflow: hidden;
+  border: 2px solid #8f6c5d;
+  margin-bottom: 24px;
+}
+
+.aboutHeroImage img {
+  width: 100%;
+  height: 340px;
+  object-fit: cover;
+}
+
+.aboutContent {
+  background: linear-gradient(
+    180deg,
+    rgba(239, 224, 215, 0.97) 0%,
+    rgba(227, 207, 196, 0.97) 100%
+  );
+  border: 2px solid #6c3f37;
+  border-radius: 18px;
+  padding: 24px;
+  color: #3d2019;
+}
+
+.aboutContent h2 {
+  margin-bottom: 18px;
+  font-size: 34px;
+}
+
+.aboutContent h3 {
+  margin-top: 22px;
+  margin-bottom: 12px;
+  font-size: 24px;
+}
+
+.aboutContent p {
+  margin-bottom: 14px;
+  line-height: 1.8;
+  font-size: 18px;
+}
+
+.aboutContent ul {
+  padding-left: 24px;
+  line-height: 1.8;
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .aboutPageContainer {
+    padding: 12px;
+  }
+
+  .aboutPageCard {
+    padding: 18px 14px 24px;
+  }
+
+  .aboutHeroImage img {
+    height: 240px;
+  }
+
+  .aboutContent h2 {
+    font-size: 28px;
+  }
+
+  .aboutContent p,
+  .aboutContent ul {
+    font-size: 16px;
+  }
+}

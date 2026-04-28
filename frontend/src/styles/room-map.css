@@ -1,0 +1,147 @@
+/*
+  room-map.css
+  ------------
+  עיצוב רכיב המפה האינטראקטיבית בלבד (שולחנות, כיסאות, אזורים).
+*/
+
+.roomMap {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* כותרת המפה */
+.mapHeroHeader {
+  background: linear-gradient(180deg, #7c4337 0%, #5c281f 100%);
+  color: #fff7ef;
+  padding: 22px 26px 18px;
+  border-radius: 20px 20px 0 0;
+}
+
+.mapHeroHeader h2 {
+  font-size: 30px;
+  font-weight: 900;
+}
+
+/* הקנבס של המפה */
+.interactiveLibraryMap {
+  position: relative;
+  min-height: 940px;
+  border: 2px solid #8a6350;
+  border-radius: 0 0 24px 24px;
+  overflow: hidden;
+  background: #ead7ca;
+}
+
+/* אזורים */
+.mapZone {
+  position: absolute;
+  padding: 18px;
+}
+
+.zoneTitle {
+  font-size: 26px;
+  font-weight: 900;
+  color: white;
+}
+
+.zoneSubtitle {
+  font-size: 14px;
+  color: rgba(255,255,255,0.9);
+}
+
+/* חלוקת אזורים */
+.readingZone {
+  top: 0;
+  left: 0;
+  width: 38%;
+  height: 62%;
+  background: linear-gradient(180deg, #d4ab81, #b9855d);
+}
+
+.computerZone {
+  top: 0;
+  left: 38%;
+  width: 27%;
+  height: 62%;
+  background: linear-gradient(180deg, #d07b68, #b45a4a);
+}
+
+.studyZone {
+  top: 0;
+  right: 0;
+  width: 35%;
+  height: 100%;
+  background: linear-gradient(180deg, #bad3e0, #97bed2);
+}
+
+/* מעבר */
+.mapWalkway {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 65%;
+  height: 38%;
+  background: #dfd0c3;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* שולחן */
+.mapTable {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  background: #7a503d;
+  border-radius: 12px;
+  border: 2px solid #f0d2b0;
+}
+
+/* כיסאות */
+.seatMarker {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.seat-available {
+  background: #cfe8b4;
+  border-radius: 50%;
+}
+
+.seat-reserved {
+  background: #f2b7b2;
+  border-radius: 50%;
+}
+
+.seat-selected {
+  background: #2e6fe0;
+  border-radius: 50%;
+}
+
+/* מקרא */
+.roomLegend {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  color: white;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legendColor {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+.legendColor.available { background: green; }
+.legendColor.reserved { background: red; }
+.legendColor.selected { background: blue; }

@@ -1,0 +1,112 @@
+/*
+  events.css
+  ----------
+  עיצוב דף האירועים.
+*/
+
+.eventsPageContainer {
+  max-width: 1180px;
+  margin: 20px auto 40px;
+  padding: 20px;
+}
+
+.eventsPageCard {
+  background: rgba(45, 25, 20, 0.84);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(6px);
+  padding: 24px 20px 30px;
+  color: white;
+}
+
+.eventsIntro {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.eventsIntro h2 {
+  font-size: 36px;
+  margin-bottom: 12px;
+}
+
+.eventsIntro p {
+  font-size: 18px;
+  line-height: 1.7;
+  color: #f2e5db;
+}
+
+.eventsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.eventCard {
+  background: linear-gradient(
+    180deg,
+    rgba(239, 224, 215, 0.97) 0%,
+    rgba(227, 207, 196, 0.97) 100%
+  );
+  border: 2px solid #6c3f37;
+  border-radius: 16px;
+  overflow: hidden;
+  color: #3d2019;
+  display: flex;
+  flex-direction: column;
+}
+
+.eventCardImage img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+}
+
+.eventCardBody {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.eventCardBody h3 {
+  font-size: 24px;
+}
+
+.eventMeta {
+  font-size: 16px;
+}
+
+.eventDescription {
+  line-height: 1.7;
+  font-size: 16px;
+  flex: 1;
+}
+
+@media (max-width: 992px) {
+  .eventsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .eventsPageContainer {
+    padding: 12px;
+  }
+
+  .eventsPageCard {
+    padding: 18px 14px 24px;
+  }
+
+  .eventsIntro h2 {
+    font-size: 28px;
+  }
+
+  .eventsIntro p {
+    font-size: 16px;
+  }
+
+  .eventsGrid {
+    grid-template-columns: 1fr;
+  }
+}

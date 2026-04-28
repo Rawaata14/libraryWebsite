@@ -1,0 +1,19 @@
+/*
+  variables.css
+  -------------
+  משתנים גלובליים של המערכת.
+
+  אחריות:
+  - ריכוז צבעים, צללים ומשתני עיצוב לשימוש חוזר
+*/
+
+:root {
+  --paper: #efe0d7;
+  --paper2: #e3cfc4;
+  --brown-dark: #3a1f1d;
+  --brown: #5d322d;
+  --brown-soft: #6c3f37;
+  --navy: #192a67;
+  --gold: #f3d8ae;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
