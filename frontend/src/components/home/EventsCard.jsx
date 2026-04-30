@@ -17,6 +17,7 @@ export default function EventsCard() {
         <p>May 18 - Writing Workshop</p>
         <p>May 27–29 - Book Fair</p>
         <p>June 8 - Guest Lecture</p>
+        <p>rawaa</p>
       </div>
     </div>
   );
