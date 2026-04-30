@@ -14,6 +14,7 @@ import { Link, useNavigate } from "react-router-dom";
 import InputField from "../common/InputField";
 import Button from "../common/Button";
 import useAuth from "../../hooks/useAuth";
+import axios from "axios";
 
 export default function RegisterForm() {
   const navigate = useNavigate();
@@ -46,7 +47,7 @@ export default function RegisterForm() {
       email: formData.email,
       phone: formData.phone,
       address: formData.address,
-      role: "user",
+      role: "reader", // ברירת מחדל לתפקיד "קורא"
     };
 
     register(newUser);

@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const dbSingleton = require("./dbSingleton");
+const dbSingleton = require("./database/dbSingleton");
 
 const app = express();
 const db = dbSingleton.getConnection();

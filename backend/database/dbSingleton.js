@@ -11,7 +11,7 @@ const dbSingleton = {
         host: "localhost",
         user: "root",
         password: "",
-        database: "libraryfinalproj",
+        database: "librarywebsite",
       });
 
       // Connect to the database
