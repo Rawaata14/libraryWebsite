@@ -9,29 +9,50 @@ async function registerUser(detailsToInsert) {
   if (!fullName || !email || !passwordHash) {
     return { success: false, message: "Missing required fields" };
   }
+  if (passwordHash.length < 6 || passwordHash.length > 20) {
+    return {
+      success: false,
+      message: "Password must be between 6 and 20 characters long",
+    };
+  }
 
   const normalizedPhone = detailsToInsert.phone || null; // Optional field, set to null if not provided
   const normalizedRole = detailsToInsert.role || "reader"; // Default role is "reader"
   const normalizedStatus = detailsToInsert.status || "active"; // Default status is "active"
+  try {
+    //check if reader already exists according to email
+    const existingUserSQL = "SELECT * FROM user WHERE email = ?";
+    const existingUser = await doQuery(existingUserSQL, [email]);
 
-  //check if reader already exists according to email
-  const existingUserSQL = "SELECT * FROM users WHERE email = ?";
-  const existingUser = await doQuery(existingUserSQL, [email]);
+    if (existingUser.length > 0) {
+      return { success: false, message: "User with this email already exists" };
+    } else {
+      const hashedPassword = await bcrypt.hash(passwordHash, 10);
 
-  if (existingUser.length > 0) {
-    return { success: false, message: "User with this email already exists" };
-  } else {
-    hashedPassword = await bcrypt.hash(passwordHash, 10);
+      let paramsToInsert = [
+        fullName,
+        email,
+        normalizedPhone,
+        hashedPassword,
+        normalizedRole,
+        normalizedStatus,
+      ];
 
-    let paramsToInsert = [fullName, email, phone, hashedPassword, role, status];
+      const insertUserSQL =
+        "INSERT INTO user (fullName, email, phone, passwordHash, role, status) VALUES (?, ?, ?, ?, ?, ?)";
+      const result = await doQuery(insertUserSQL, paramsToInsert);
 
-    const insertUserSQL =
-      "INSERT INTO users (fullName, email, phone, passwordHash, role, status) VALUES (?, ?, ?, ?, ?, ?)";
-    const result = await doQuery(insertUserSQL, paramsToInsert);
-
-    if (result.affectedRows > 0) {
-      return { success: true, message: "User registered successfully" };
+      if (result.affectedRows > 0) {
+        return { success: true, message: "User registered successfully" };
+      }
+      return { success: false, message: "Could not create user account" };
     }
+  } catch (error) {
+    console.error("Error during registration:", error);
+    return {
+      success: false,
+      message: "An error occurred while registering the user",
+    };
   }
 }
 module.exports = {

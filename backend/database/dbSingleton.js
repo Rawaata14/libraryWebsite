@@ -1,38 +1,36 @@
-//dbSingleton.js
-const mysql = require("mysql2");
+// dbSingleton.js
+const mysql = require("mysql2/promise"); 
 
-let connection; // Variable for storing a single connection
+let connection;
 
 const dbSingleton = {
-  getConnection: () => {
+  getConnection: async () => {
     if (!connection) {
-      // Create a connection only once
-      connection = mysql.createConnection({
-        host: "localhost",
-        user: "root",
-        password: "",
-        database: "librarywebsite",
-      });
+      try {
+        connection = await mysql.createConnection({
+          host: "localhost",
+          user: "root",
+          password: "",
+          database: "librarywebsite",
+        });
 
-      // Connect to the database
-      connection.connect((err) => {
-        if (err) {
-          console.error("Error connecting to database:", err);
-          throw err;
-        }
-        console.log("Connected to MySQL!");
-      });
+        console.log("Connected to MySQL successfully (Promise-based)!");
 
-      // Handle connection errors
-      connection.on("error", (err) => {
-        console.error("Database connection error:", err);
-        if (err.code === "PROTOCOL_CONNECTION_LOST") {
-          connection = null; // Update the connection state
-        }
-      });
+        // טיפול בניתוקים
+        connection.on("error", (err) => {
+          console.error("Database error:", err);
+          if (err.code === "PROTOCOL_CONNECTION_LOST") {
+            connection = null;
+          }
+        });
+      } catch (err) {
+        console.error("Error connecting to database:", err);
+        connection = null;
+        throw err; // זריקת השגיאה כדי שהשרת ידע שהחיבור נכשל
+      }
     }
 
-    return connection; // Return the current connection
+    return connection;
   },
 };
 

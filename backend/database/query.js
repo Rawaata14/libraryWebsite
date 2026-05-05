@@ -1,11 +1,15 @@
-const getConnection = require("./dbSingleton");
+const { getConnection } = require("./dbSingleton");
 
 async function doQuery(sql, params = []) {
-  const db = await getConnection();
-  const result = await db.query(sql, params);
-
-  console.log(result[0], "result from doQuery");
-  return result[0];
+  try {
+    const db = await getConnection();
+    const [result] = await db.query(sql, params);
+    console.log("Query executed successfully. Result:", result);
+    return result;
+  } catch (error) {
+    console.error("Error executing query:", error);
+    throw error;
+  }
 }
 
 module.exports = doQuery;
