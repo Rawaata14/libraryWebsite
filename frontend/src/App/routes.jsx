@@ -18,10 +18,12 @@ import AboutPage from "../pages/AboutPage";
 import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
 import ReserveBookPage from "../pages/ReserveBookPage";
+import AddBookPage from "../pages/AddBookPage";
 
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import GuestRoute from "../components/common/GuestRoute";
 import RoleRoute from "../components/common/RoleRoute";
+import useAuth from "../hooks/useAuth";
 
 // דוגמת דף ספרן זמני לצורך בדיקת הרשאות
 function LibrarianDashboardPage() {
@@ -79,6 +81,14 @@ export default function AppRoutes() {
           element={
             <RoleRoute allowedRoles={["librarian"]}>
               <LibrarianDashboardPage />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/admin/add-book"
+          element={
+            <RoleRoute allowedRoles={["librarian"]}>
+              <AddBookPage />
             </RoleRoute>
           }
         />

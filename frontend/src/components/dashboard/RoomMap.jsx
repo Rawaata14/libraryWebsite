@@ -1,8 +1,8 @@
 /*
   RoomMap.jsx
   -----------
-  ׳§׳•׳׳₪׳•׳ ׳ ׳˜׳” ׳׳”׳¦׳’׳× ׳׳₪׳× ׳”׳¡׳₪׳¨׳™׳™׳” ׳‘׳¦׳•׳¨׳” ׳׳™׳ ׳˜׳¨׳׳§׳˜׳™׳‘׳™׳× ׳•׳׳¡׳•׳“׳¨׳×.
 */
+import useAuth from "../../hooks/useAuth";
 
 const seatData = [
   /* Reading Table A */
@@ -92,6 +92,7 @@ export default function RoomMap({
   onSeatSelect = () => {},
   showSelectionInfo = true,
 }) {
+  const { isLibrarian } = useAuth();
   const selectedSeat =
     seatData.find((seat) => seat.id === selectedSeatId) || null;
 

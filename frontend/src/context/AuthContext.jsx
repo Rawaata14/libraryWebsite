@@ -33,6 +33,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = (userData) => {
+    console.log("AuthContext received userData:", userData);
     setUser(userData);
     localStorage.setItem("libraryUser", JSON.stringify(userData));
   };

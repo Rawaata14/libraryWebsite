@@ -55,6 +55,34 @@ async function registerUser(detailsToInsert) {
     };
   }
 }
+
+async function loginUser(email, password) {
+  try {
+    console.log("Attempting to log in user with email:", email);
+    const getUserSQL = "SELECT * FROM user WHERE email = ?";
+    const users = await doQuery(getUserSQL, [email]);
+
+    if (users.length === 0) {
+      return { success: false, message: "User not found" };
+    }
+
+    const user = users[0];
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+
+    if (!isMatch) {
+      return { success: false, message: "Invalid password" };
+    }
+
+    return { success: true, message: "Login successful", user };
+  } catch (error) {
+    console.error("Error during login:", error);
+    return {
+      success: false,
+      message: "An error occurred while logging in",
+    };
+  }
+}
 module.exports = {
   registerUser,
+  loginUser,
 };

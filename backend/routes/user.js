@@ -19,4 +19,21 @@ router.post("/register", async (req, res) => {
   }
 });
 
+// Route for user login
+router.post("/login", async (req, res) => {
+  try {
+    const login = require("../database/queries/authorization").loginUser;
+    const { email, password } = req.body;
+    const result = await login(email, password);
+    if (result.success) {
+      res.status(200).json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error("Error in login:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 module.exports = router;
