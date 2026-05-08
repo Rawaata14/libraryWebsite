@@ -98,7 +98,7 @@ export default function MapPage() {
             <RoomMap
               selectedSeatId={selectedSeat?.id || null}
               onSeatSelect={setSelectedSeat}
-              showSelectionInfo={true}
+              showSelectionInfo={false}
             />
           </div>
 

@@ -7,6 +7,7 @@
   - Hero
   - home sections
   - shared cards inside home
+  - opening hours / upcoming events
 */
 
 .homeContainer {
@@ -26,19 +27,6 @@
 
 .homeSection {
   margin-top: 30px;
-}
-
-.homeInfoGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
-  margin-top: 30px;
-}
-
-.infoCardBody p {
-  margin-bottom: 14px;
-  font-size: 18px;
-  line-height: 1.6;
 }
 
 .heroWrap {
@@ -95,10 +83,42 @@
 
 .sectionCardBody {
   padding: 20px;
+  color: #2f1d18;
 }
 
 .mapSectionBody {
   position: relative;
+}
+
+/* אזור כרטיסיות שעות ואירועים - מתחת למפה */
+.homeInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.infoCardBody {
+  color: #1f1f1f;
+}
+
+.infoCardBody p,
+.infoCardBody li,
+.infoCardBody span {
+  color: #1f1f1f;
+  font-size: 18px;
+  line-height: 1.7;
+  font-weight: 600;
+}
+
+.infoCardBody ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.infoCardBody li {
+  margin-bottom: 14px;
 }
 
 .mapButtonBottom {
@@ -108,15 +128,12 @@
 }
 
 @media (max-width: 992px) {
-  .homeInfoGrid,
-  .booksGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .homeInfoGrid {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-  .homeInfoGrid,
-  
   .heroPanel {
     padding: 24px 18px;
   }

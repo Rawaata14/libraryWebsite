@@ -1,61 +1,88 @@
 /*
   map-page.css
   ------------
-  עיצוב מבנה דף המפה (layout + panel + סיכום).
+  עיצוב דף מפת המקומות.
 */
 
 .mapPageContainer {
-  max-width: 1180px;
-  margin: 20px auto;
+  max-width: 1280px;
+  margin: 20px auto 40px;
   padding: 20px;
 }
 
 .mapPageCard {
   background: rgba(45, 25, 20, 0.84);
-  border-radius: 20px;
+  border-radius: 22px;
   padding: 24px;
   color: white;
 }
 
-.mapPageLayout {
-  display: grid;
-  grid-template-columns: 1.5fr 400px;
+.mapPageCardColumn {
+  display: flex;
+  flex-direction: column;
   gap: 24px;
 }
 
-/* פאנלים */
 .mapSelectionPanel,
 .mapSummaryPanel {
   background: #efe0d7;
-  border-radius: 16px;
+  border: 2px solid #7a4c3a;
+  border-radius: 18px;
   padding: 20px;
   color: #3d2019;
 }
 
-/* פילטרים */
 .mapFilters {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
+  margin-bottom: 20px;
+}
+
+.mapFilterLabel {
+  font-weight: 700;
+  color: #3d2019;
+  margin-bottom: 6px;
 }
 
 .mapFilterInput {
-  padding: 12px;
+  width: 100%;
+  padding: 13px 14px;
   border-radius: 10px;
   border: 2px solid #8d6550;
+  background: #fffaf6;
+  color: #2f1d18;
 }
 
-/* סיכום */
 .mapSummaryTitle {
-  font-size: 28px;
+  font-size: 30px;
   margin-bottom: 16px;
+  color: #3d2019;
 }
 
 .mapSummaryInfo p {
   margin-bottom: 10px;
+  font-size: 17px;
 }
 
-/* כפתור */
+.mapAvailabilityBanner {
+  margin-top: 16px;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.availableBanner {
+  background: #dceecb;
+  color: #2e5c1c;
+}
+
+.reservedBanner {
+  background: #f3d3cf;
+  color: #7a2d26;
+}
+
 .mapSummaryButtonRow {
   margin-top: 20px;
 }

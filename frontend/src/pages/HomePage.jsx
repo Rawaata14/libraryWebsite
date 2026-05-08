@@ -7,8 +7,8 @@
   - להציג את המסך הראשי למשתמש
   - לשלב אזורי תוכן מרכזיים:
     1. אזור פתיחה
-    2. מפת מקומות
-    3. מידע כללי
+    2. מידע כללי (שעות + אירועים)
+    3. מפת מקומות
     4. ספרים מומלצים
 */
 
@@ -24,8 +24,14 @@ export default function HomePage() {
       <div className="homeContainer">
         <div className="homeCard">
           <HeroSection />
-          <RoomMapSection />
+
+          {/* שעות עבודה + אירועים */}
           <InfoSection />
+
+          {/* מפת המקומות */}
+          <RoomMapSection />
+
+          {/* ספרים מומלצים */}
           <RecommendedBooks />
         </div>
       </div>
