@@ -8,6 +8,7 @@
   - Header
   - Footer
   - PageBanner
+  - Profile Page
 */
 
 .pageShell {
@@ -19,63 +20,108 @@
 
 .frame {
   background: rgba(239, 224, 215, 0.95);
+
   backdrop-filter: blur(6px);
+
   border-radius: 22px;
+
   overflow: hidden;
+
   border: 1px solid rgba(0, 0, 0, 0.15);
+
   box-shadow: var(--shadow);
+
   min-height: 100vh;
 }
 
 .libraryBg {
   background-image:
-    linear-gradient(rgba(40, 16, 14, 0.35), rgba(40, 16, 14, 0.35)),
+    linear-gradient(
+      rgba(40, 16, 14, 0.35),
+      rgba(40, 16, 14, 0.35)
+    ),
     url("https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=1400&q=80");
+
   background-size: cover;
+
   background-position: center;
 }
 
+/* ===== Header ===== */
+
 .topbar {
-  background: linear-gradient(180deg, #24357d 0%, #1a2557 100%);
+  background: linear-gradient(
+    180deg,
+    #24357d 0%,
+    #1a2557 100%
+  );
+
   color: white;
+
   padding: 14px 24px;
+
   display: flex;
+
   align-items: center;
+
   justify-content: space-between;
+
   gap: 18px;
+
   flex-wrap: wrap;
+
   border-radius: 16px 16px 0 0;
 }
 
+/* Logo */
+
 .brand {
   display: flex;
+
   align-items: center;
+
   gap: 10px;
+
   font-size: clamp(24px, 3vw, 34px);
+
   font-weight: 800;
+
   color: white;
+
   text-decoration: none;
 }
 
 .brandIcon {
   display: inline-flex;
+
   align-items: center;
+
   justify-content: center;
 }
 
+/* Navigation */
+
 .navLinks {
   display: flex;
+
   align-items: center;
+
   gap: 24px;
+
   flex-wrap: wrap;
 }
 
 .navItem {
   color: white;
+
   text-decoration: none;
+
   font-size: 18px;
+
   font-weight: 600;
+
   padding-bottom: 4px;
+
   transition: 0.2s;
 }
 
@@ -85,93 +131,319 @@
 
 .activeNav {
   color: var(--gold);
+
   border-bottom: 2px solid var(--gold);
 }
 
+/* Header Actions */
+
 .headerActions {
   display: flex;
+
   align-items: center;
-  gap: 10px;
+
+  gap: 12px;
 }
 
 .headerLoginBtn {
   background: #2a469c;
+
   color: white;
+
   padding: 10px 18px;
+
   border-radius: 12px;
+
   text-decoration: none;
+
   font-weight: 700;
+
+  transition: 0.2s;
 }
+
+.headerLoginBtn:hover {
+  background: #17357f;
+}
+
+/* ===== Profile Section ===== */
+
+.headerProfileSection {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+}
+
+.headerWelcomeText {
+  color: white;
+
+  font-weight: 700;
+
+  font-size: 1rem;
+}
+
+/* תמונת פרופיל */
+
+.profileImageLink {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+}
+
+.headerProfileImage {
+  width: 48px;
+
+  height: 48px;
+
+  border-radius: 50%;
+
+  object-fit: cover;
+
+  border: 3px solid #f3d8c0;
+
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+
+  transition: 0.2s;
+}
+
+.headerProfileImage:hover {
+  transform: scale(1.08);
+
+  border-color: #ffffff;
+}
+
+/* Logout */
 
 .headerLogoutBtn {
   background: #7a2d26;
+
   color: white;
+
   padding: 10px 16px;
+
   border-radius: 10px;
+
   border: none;
+
   font-weight: 700;
+
   cursor: pointer;
+
+  transition: 0.2s;
 }
+
+.headerLogoutBtn:hover {
+  background: #5d1f1a;
+}
+
+/* User Chip */
 
 .userChip {
   background: rgba(67, 24, 22, 0.85);
+
   color: white;
+
   padding: 10px 14px;
+
   border-radius: 12px;
+
   font-weight: 700;
 }
 
+/* ===== Page Banner ===== */
+
 .pageBanner {
-  background: linear-gradient(180deg, #7a463f 0%, #5e312d 100%);
+  background: linear-gradient(
+    180deg,
+    #7a463f 0%,
+    #5e312d 100%
+  );
+
   color: #fff5ef;
+
   text-align: center;
+
   padding: 24px;
+
   font-size: clamp(24px, 4vw, 38px);
+
   font-weight: 800;
+
   border-bottom: 6px double #9b6b57;
 }
 
+/* ===== Footer ===== */
+
 .footer {
-  background: linear-gradient(180deg, #6d3b35 0%, #4c2421 100%);
+  background: linear-gradient(
+    180deg,
+    #6d3b35 0%,
+    #4c2421 100%
+  );
+
   color: #fff7f3;
+
   padding: 20px 26px;
+
   margin-top: 40px;
 }
 
 .footerRow {
   display: flex;
+
   align-items: center;
+
   justify-content: space-between;
+
   gap: 16px;
+
   flex-wrap: wrap;
 }
 
 .socials {
   display: flex;
+
   gap: 10px;
 }
 
 .socialBadge {
   width: 42px;
+
   height: 42px;
+
   display: grid;
+
   place-items: center;
+
   border-radius: 10px;
+
   background: rgba(255, 255, 255, 0.12);
 }
 
 .footerContact {
   display: flex;
+
   gap: 26px;
+
   flex-wrap: wrap;
+
   font-size: 18px;
+
   font-weight: 600;
 }
+
+/* ===== Profile Page ===== */
+
+.profilePage {
+  min-height: 100vh;
+
+  padding: 40px 20px;
+
+  display: flex;
+
+  justify-content: center;
+}
+
+.profileCard {
+  width: 100%;
+
+  max-width: 1100px;
+
+  background: rgba(34, 20, 14, 0.92);
+
+  border: 2px solid #8d5a42;
+
+  border-radius: 24px;
+
+  padding: 32px;
+
+  color: white;
+
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+}
+
+.profileHeader {
+  display: flex;
+
+  align-items: center;
+
+  gap: 24px;
+
+  margin-bottom: 40px;
+}
+
+.profileImage {
+  width: 110px;
+
+  height: 110px;
+
+  border-radius: 50%;
+
+  object-fit: cover;
+
+  border: 4px solid #d8b08f;
+}
+
+.profileRole {
+  display: inline-block;
+
+  margin-top: 10px;
+
+  padding: 6px 14px;
+
+  background: #7a3e2e;
+
+  border-radius: 999px;
+
+  font-size: 14px;
+
+  font-weight: 700;
+}
+
+.profileSection h2 {
+  margin-bottom: 24px;
+}
+
+.profileGrid {
+  display: grid;
+
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(220px, 1fr)
+  );
+
+  gap: 20px;
+}
+
+.profileBox {
+  background: rgba(255, 255, 255, 0.08);
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  border-radius: 18px;
+
+  padding: 22px;
+
+  transition: 0.2s;
+}
+
+.profileBox:hover {
+  transform: translateY(-4px);
+
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ===== Responsive ===== */
 
 @media (max-width: 900px) {
   .topbar {
     flex-direction: column;
+
     align-items: center;
+
     text-align: center;
   }
 
@@ -181,5 +453,15 @@
 
   .headerActions {
     justify-content: center;
+  }
+
+  .profileHeader {
+    flex-direction: column;
+
+    text-align: center;
+  }
+
+  .profileGrid {
+    grid-template-columns: 1fr;
   }
 }

@@ -5,6 +5,8 @@ const dbSingleton = require("./database/dbSingleton");
 const app = express();
 const db = dbSingleton.getConnection();
 
+
+
 app.use(express.json());
 
 app.use(
@@ -15,21 +17,25 @@ app.use(
   }),
 );
 
-app.get("/users", (req, res) => {
-  const sql = "SELECT user_id, full_name, email, phone, address FROM users";
 
-  db.query(sql, (err, result) => {
-    if (err) {
-      console.error("SQL ERROR:", err);
-      return res.status(500).json({
-        message: "Failed to fetch users",
-        error: err.message,
-      });
-    }
+// app.get("/users", (req, res) => {
+//   const sql = "SELECT user_id, full_name, email, phone, address FROM users";
 
-    res.status(200).json(result);
-  });
-});
+//   db.query(sql, (err, result) => {
+//     if (err) {
+//       console.error("SQL ERROR:", err);
+//       return res.status(500).json({
+//         message: "Failed to fetch users",
+//         error: err.message,
+//       });
+//     }
+
+//     res.status(200).json(result);
+//   });
+// });
+
+const userRoutes = require("./routes/user");
+app.use("/user", userRoutes);
 console.log("Database connection established successfully.");
 app.listen(8000, () => {
   console.log("Server running on http://localhost:8000");

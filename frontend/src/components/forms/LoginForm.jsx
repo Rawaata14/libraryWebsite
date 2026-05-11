@@ -14,11 +14,12 @@ import { Link, useNavigate } from "react-router-dom";
 import InputField from "../common/InputField";
 import Button from "../common/Button";
 import useAuth from "../../hooks/useAuth";
+import axios from "axios";
 
 export default function LoginForm() {
   const navigate = useNavigate();
   const { login } = useAuth();
-
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -33,19 +34,33 @@ export default function LoginForm() {
     }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-
-    // הדמיית משתמש מחובר.
-    // בהמשך יוחלף בקריאת API אמיתית לשרת.
-    const fakeUser = {
-      fullName: "Tom Smith",
-      email: formData.email,
-      role: "user",
-    };
-
-    login(fakeUser);
-    navigate("/");
+    setIsLoading(true);
+    try {
+      const response = await axios.post(
+        "http://localhost:8000/user/login",
+        formData,
+        { withCredentials: true },
+      );
+      if (response.data.success) {
+        const { fullName, email, role } = response.data.user;
+        const connectedUser = {
+          fullName,
+          email,
+          role,
+        };
+        login(connectedUser);
+        navigate("/");
+      } else {
+        alert(response.data.message || "Login failed");
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || "An error occurred";
+      alert(error);
+    } finally {
+      setIsLoading(false); // מסיימים טעינה בכל מקרה (הצלחה או כישלון)
+    }
   };
 
   return (
@@ -80,7 +95,7 @@ export default function LoginForm() {
           />
 
           <Button type="submit" variant="primary">
-            Login
+            {isLoading ? "Signing in..." : "Sign In"}
           </Button>
         </div>
 

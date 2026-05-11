@@ -23,7 +23,7 @@ export default function RegisterForm() {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
-    password: "",
+    passwordHash: "",
     phone: "",
     address: "",
   });
@@ -37,21 +37,43 @@ export default function RegisterForm() {
     }));
   };
 
-  const handleSubmit = (event) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
-    // הדמיית הרשמה.
-    // בהמשך יוחלף בקריאת API אמיתית לשרת.
-    const newUser = {
-      fullName: formData.fullName,
-      email: formData.email,
-      phone: formData.phone,
-      address: formData.address,
-      role: "reader", // ברירת מחדל לתפקיד "קורא"
-    };
+    const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{6,20}$/;
 
-    register(newUser);
-    navigate("/");
+    if (!passwordRegex.test(formData.passwordHash)) {
+      alert(
+        "Password must be 6-20 characters long and include at least one letter and one number.",
+      );
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const response = await axios.post(
+        "http://localhost:8000/user/register",
+        formData,
+        { withCredentials: true },
+      );
+      if (response.data.success) {
+        const newUser = {
+          fullName: formData.fullName,
+          email: formData.email,
+          phone: formData.phone || null, // Optional field, set to null if not provided
+          role: "reader", // ברירת מחדל לתפקיד "קורא"
+        };
+        //register(newUser);
+        navigate("/login");
+      } else {
+        alert(response.data.message || "Registration failed");
+      }
+    } catch (error) {
+      console.error("Error during registration:", error);
+      alert("Server error. Please try again later.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -87,8 +109,8 @@ export default function RegisterForm() {
           <InputField
             label="Password"
             type="password"
-            name="password"
-            value={formData.password}
+            name="passwordHash"
+            value={formData.passwordHash}
             onChange={handleChange}
             placeholder="Enter your password"
             required
@@ -111,7 +133,7 @@ export default function RegisterForm() {
           />
 
           <Button type="submit" variant="primary">
-            Sign Up
+            {isSubmitting ? "Signing Up..." : "Sign Up"}
           </Button>
         </div>
 

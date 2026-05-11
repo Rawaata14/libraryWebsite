@@ -4,6 +4,8 @@
   רכיב שמציג אייקון אחד על גבי מפת הספרייה.
 */
 
+import { useRef } from "react";
+
 import singleSeatIcon from "../../assets/icons/single-seat.png";
 import table4Icon from "../../assets/icons/table-4.png";
 import table8Icon from "../../assets/icons/table-8.png";
@@ -18,7 +20,31 @@ const icons = {
   reception: receptionIcon,
 };
 
-export default function MapItem({ item, isSelected, onSelect }) {
+export default function MapItem({
+  item,
+  isSelected,
+  onSelect,
+  onMove,
+  isLibrarian,
+}) {
+  const draggingRef = useRef(false);
+
+  const handleMouseDown = () => {
+    if (!isLibrarian) return;
+
+    draggingRef.current = true;
+  };
+
+  const handleMouseMove = (event) => {
+    if (!draggingRef.current) return;
+
+    onMove(item.id, event.clientX, event.clientY);
+  };
+
+  const handleMouseUp = () => {
+    draggingRef.current = false;
+  };
+
   return (
     <button
       type="button"
@@ -28,9 +54,13 @@ export default function MapItem({ item, isSelected, onSelect }) {
         top: `${item.y}%`,
       }}
       onClick={() => onSelect(item.id)}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
       title={`${item.type} - ${item.status}`}
     >
-      <img src={icons[item.type]} alt={item.type} />
+      <img src={icons[item.type]} alt={item.type} draggable={false} />
     </button>
   );
 }

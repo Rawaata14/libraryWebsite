@@ -15,7 +15,10 @@ import { useNavigate } from "react-router-dom";
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
 import BookCard from "../components/common/BookCard";
+import useAuth from "../hooks/useAuth"; // ייבוא ה-Hook
+import Button from "../components/common/Button";
 
+// רשימת הספרים (נשארת אותו דבר...)
 const books = [
   {
     id: 1,
@@ -69,32 +72,30 @@ const books = [
 
 export default function BooksPage() {
   const navigate = useNavigate();
+  const { user } = useAuth(); // חילוץ המשתמש המחובר
 
-  // מצב מקומי זמני עבור חיפוש וסינון
+  // בדיקה האם המשתמש הוא ספרנית
+  const isLibrarian = user?.role === "librarian";
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
 
-  // רשימת קטגוריות ייחודיות עבור תיבת הבחירה
   const categories = useMemo(() => {
     const uniqueCategories = [...new Set(books.map((book) => book.category))];
     return ["All", ...uniqueCategories];
   }, []);
 
-  // סינון הספרים לפי חיפוש וקטגוריה
   const filteredBooks = useMemo(() => {
     return books.filter((book) => {
       const matchesSearch =
         book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         book.author.toLowerCase().includes(searchTerm.toLowerCase());
-
       const matchesCategory =
         selectedCategory === "All" || book.category === selectedCategory;
-
       return matchesSearch && matchesCategory;
     });
   }, [searchTerm, selectedCategory]);
 
-  // מעבר לדף שריון עם נתוני הספר הנבחר
   const handleReserve = (book) => {
     navigate(`/reserve-book/${book.id}`, { state: book });
   };
@@ -105,6 +106,18 @@ export default function BooksPage() {
 
       <div className="booksPageContainer">
         <div className="booksPageCard">
+          {/* כפתור הוספת ספר - יוצג רק לספרנית */}
+          {isLibrarian && (
+            <div style={{ marginBottom: "20px", textAlign: "right" }}>
+              <Button
+                variant="primary"
+                onClick={() => navigate("/admin/add-book")}
+              >
+                + Add New Book
+              </Button>
+            </div>
+          )}
+
           <div className="booksToolbar">
             <input
               type="text"
@@ -134,7 +147,6 @@ export default function BooksPage() {
           {filteredBooks.length === 0 ? (
             <div className="booksEmptyState">
               <h3>No books found</h3>
-              <p>Please try a different search or category.</p>
             </div>
           ) : (
             <div className="booksGrid">

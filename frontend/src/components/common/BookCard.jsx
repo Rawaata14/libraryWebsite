@@ -9,8 +9,10 @@
 */
 
 import Button from "./Button";
+import useAuth from "../../hooks/useAuth";
 
-export default function BookCard({ book, onReserve }) {
+export default function BookCard({ book, onReserve, onEdit, onDelete }) {
+  const { isLibrarian } = useAuth();
   return (
     <article className="bookCard">
       <img src={book.image} alt={book.title} />
@@ -23,6 +25,16 @@ export default function BookCard({ book, onReserve }) {
         <Button variant="success" onClick={onReserve}>
           Reserve
         </Button>
+        {isLibrarian && (
+          <>
+            <Button variant="secondary" onClick={() => onEdit?.(book)}>
+              Edit
+            </Button>
+            <Button variant="danger" onClick={() => onDelete?.(book)}>
+              Delete
+            </Button>
+          </>
+        )}
       </div>
     </article>
   );

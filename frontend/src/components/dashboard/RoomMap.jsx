@@ -1,15 +1,27 @@
 /*
   RoomMap.jsx
   -----------
-  קובץ מעבר שמציג את המפה הדינמית החדשה.
-
-  המטרה:
-  - לשמור על התאמה לקבצים שכבר משתמשים ב-RoomMap
-  - להשתמש בפועל ברכיב החדש LibraryMap
 */
 
+import useAuth from "../../hooks/useAuth";
 import LibraryMap from "../map/LibraryMap";
 
-export default function RoomMap({ isLibrarian = true }) {
-  return <LibraryMap isLibrarian={isLibrarian} />;
+export default function RoomMap({
+  selectedSeatId = null,
+  onSeatSelect = () => {},
+  showSelectionInfo = true,
+}) {
+  const { isLibrarian } = useAuth();
+
+  return (
+    <LibraryMap
+      isLibrarian={isLibrarian}
+      selectedSeatId={selectedSeatId}
+      onSeatSelect={onSeatSelect}
+      showSelectionInfo={showSelectionInfo}
+      enableDragAndDrop={isLibrarian}
+      enableAddPlaces={isLibrarian}
+      placeType="icon"
+    />
+  );
 }

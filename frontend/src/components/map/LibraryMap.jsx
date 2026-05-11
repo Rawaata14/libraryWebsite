@@ -1,15 +1,10 @@
 /*
   LibraryMap.jsx
   --------------
-  מפת ספרייה דינמית.
-
-  אחריות:
-  - הצגת תמונת רקע קבועה של המפה
-  - הצגת אייקונים מעל המפה
-  - ניהול הוספה, מחיקה, חסימה והזזה של מקומות
+  מפת ספרייה דינמית עם Drag & Drop.
 */
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import MapItem from "./MapItem";
 import MapToolbar from "./MapToolbar";
 
@@ -34,6 +29,8 @@ export default function LibraryMap({ isLibrarian = true }) {
   const [items, setItems] = useState(initialItems);
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [newItemType, setNewItemType] = useState("single-seat");
+
+  const mapRef = useRef(null);
 
   const selectedItem = items.find((item) => item.id === selectedItemId);
 
@@ -75,33 +72,27 @@ export default function LibraryMap({ isLibrarian = true }) {
     );
   };
 
-  const moveItem = (direction) => {
-    if (!selectedItemId) return;
+  const updateItemPosition = (id, clientX, clientY) => {
+    if (!mapRef.current) return;
 
-    const step = 2;
+    const rect = mapRef.current.getBoundingClientRect();
+
+    let x = ((clientX - rect.left) / rect.width) * 100;
+    let y = ((clientY - rect.top) / rect.height) * 100;
+
+    x = Math.max(0, Math.min(100, x));
+    y = Math.max(0, Math.min(100, y));
 
     setItems((prevItems) =>
-      prevItems.map((item) => {
-        if (item.id !== selectedItemId) return item;
-
-        if (direction === "up") {
-          return { ...item, y: Math.max(0, item.y - step) };
-        }
-
-        if (direction === "down") {
-          return { ...item, y: Math.min(100, item.y + step) };
-        }
-
-        if (direction === "left") {
-          return { ...item, x: Math.max(0, item.x - step) };
-        }
-
-        if (direction === "right") {
-          return { ...item, x: Math.min(100, item.x + step) };
-        }
-
-        return item;
-      }),
+      prevItems.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              x,
+              y,
+            }
+          : item,
+      ),
     );
   };
 
@@ -118,7 +109,7 @@ export default function LibraryMap({ isLibrarian = true }) {
         />
       )}
 
-      <div className="dynamicMapCanvas">
+      <div className="dynamicMapCanvas" ref={mapRef}>
         <img
           src="/images/library-map.png"
           alt="Library map"
@@ -131,6 +122,8 @@ export default function LibraryMap({ isLibrarian = true }) {
             item={item}
             isSelected={selectedItemId === item.id}
             onSelect={setSelectedItemId}
+            onMove={updateItemPosition}
+            isLibrarian={isLibrarian}
           />
         ))}
       </div>
@@ -138,23 +131,12 @@ export default function LibraryMap({ isLibrarian = true }) {
       {isLibrarian && selectedItem && (
         <div className="mapEditPanel">
           <strong>Selected:</strong> {selectedItem.type}
-          <div className="mapMoveButtons">
-            <button type="button" onClick={() => moveItem("up")}>
-              ↑
-            </button>
-            <button type="button" onClick={() => moveItem("left")}>
-              ←
-            </button>
-            <button type="button" onClick={() => moveItem("right")}>
-              →
-            </button>
-            <button type="button" onClick={() => moveItem("down")}>
-              ↓
-            </button>
-          </div>
           <p>
-            X: {selectedItem.x}% | Y: {selectedItem.y}% | Status:{" "}
-            {selectedItem.status}
+            X: {Math.round(selectedItem.x)}% | Y: {Math.round(selectedItem.y)}%
+            | Status: {selectedItem.status}
+          </p>
+          <p style={{ marginTop: "10px" }}>
+            Drag the item with the mouse to reposition it.
           </p>
         </div>
       )}

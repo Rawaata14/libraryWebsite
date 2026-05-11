@@ -8,7 +8,7 @@
   - הצגת מצב משתמש (אורח / מחובר)
   - מתן אפשרות להתנתקות
 */
-
+import { Link } from "react-router-dom";
 import { NavLink } from "react-router-dom";
 import useAuth from "../../hooks/useAuth";
 
@@ -54,7 +54,22 @@ export default function Header() {
           </NavLink>
         ) : (
           <>
-            <div className="userChip">Welcome {user.fullName}</div>
+            <div className="headerProfileSection">
+              <span className="headerWelcomeText">
+                Welcome {user?.fullName || user?.name}
+              </span>
+
+              <Link to="/profile" className="profileImageLink">
+                <img
+                  src={
+                    user?.profileImage ||
+                    "https://cdn-icons-png.flaticon.com/512/847/847969.png"
+                  }
+                  alt="Profile"
+                  className="headerProfileImage"
+                />
+              </Link>
+            </div>
 
             <button type="button" className="headerLogoutBtn" onClick={logout}>
               Logout

@@ -18,16 +18,27 @@ import AboutPage from "../pages/AboutPage";
 import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
 import ReserveBookPage from "../pages/ReserveBookPage";
+import AddBookPage from "../pages/AddBookPage";
+import ProfilePage from "../pages/ProfilePage";
+
 
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import GuestRoute from "../components/common/GuestRoute";
 import RoleRoute from "../components/common/RoleRoute";
+import PageShell from "../components/layout/PageShell";
 
-// דוגמת דף ספרן זמני לצורך בדיקת הרשאות
+/* דף זמני לספרן */
 function LibrarianDashboardPage() {
   return (
-    <div style={{ padding: "40px", color: "white", textAlign: "center" }}>
+    <div
+      style={{
+        padding: "40px",
+        color: "white",
+        textAlign: "center",
+      }}
+    >
       <h1>Librarian Dashboard</h1>
+
       <p>גישה מותרת רק למשתמש עם role = librarian</p>
     </div>
   );
@@ -37,14 +48,20 @@ export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* דפים ציבוריים */}
+        {/* ===== Public Pages ===== */}
+
         <Route path="/" element={<HomePage />} />
+
         <Route path="/map" element={<MapPage />} />
+
         <Route path="/books" element={<BooksPage />} />
+
         <Route path="/events" element={<EventsPage />} />
+
         <Route path="/about" element={<AboutPage />} />
 
-        {/* דפי אורח בלבד */}
+        {/* ===== Guest Only ===== */}
+
         <Route
           path="/login"
           element={
@@ -63,7 +80,8 @@ export default function AppRoutes() {
           }
         />
 
-        {/* דף שדורש התחברות */}
+        {/* ===== Protected ===== */}
+
         <Route
           path="/reserve-book/:id"
           element={
@@ -73,7 +91,21 @@ export default function AppRoutes() {
           }
         />
 
-        {/* דוגמה לדף מנהל / ספרן בלבד */}
+        {/* ===== Profile ===== */}
+
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <PageShell>
+                <ProfilePage />
+              </PageShell>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ===== Librarian Only ===== */}
+
         <Route
           path="/librarian"
           element={
@@ -83,7 +115,17 @@ export default function AppRoutes() {
           }
         />
 
-        {/* כל נתיב לא קיים יחזור לדף הבית */}
+        <Route
+          path="/admin/add-book"
+          element={
+            <RoleRoute allowedRoles={["librarian"]}>
+              <AddBookPage />
+            </RoleRoute>
+          }
+        />
+
+        {/* ===== Fallback ===== */}
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
