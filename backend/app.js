@@ -1,13 +1,13 @@
 const express = require("express");
 const cors = require("cors");
 const dbSingleton = require("./database/dbSingleton");
+const path = require("path");
 
 const app = express();
 const db = dbSingleton.getConnection();
 
-
-
 app.use(express.json());
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use(
   cors({
@@ -16,7 +16,6 @@ app.use(
     credentials: true,
   }),
 );
-
 
 // app.get("/users", (req, res) => {
 //   const sql = "SELECT user_id, full_name, email, phone, address FROM users";
@@ -36,6 +35,7 @@ app.use(
 
 const userRoutes = require("./routes/user");
 app.use("/user", userRoutes);
+app.use("/books", require("./routes/book"));
 console.log("Database connection established successfully.");
 app.listen(8000, () => {
   console.log("Server running on http://localhost:8000");

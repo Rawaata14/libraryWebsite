@@ -53,7 +53,9 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     setUser(null);
+    setIsAuthReady(true);
     localStorage.removeItem("libraryUser");
+    window.location.href = "/";
   };
 
   const isAuthenticated = !!user;
