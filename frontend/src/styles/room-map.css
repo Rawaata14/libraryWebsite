@@ -1,13 +1,21 @@
 /*
+  =========================================================
   room-map.css
-  ------------
-  עיצוב המפה הדינמית.
+  =========================================================
+
+  קובץ העיצוב הראשי של מערכת המפה.
 
   אחריות:
-  - הצגת תמונת הרקע
-  - הצגת אייקונים מעל המפה
-  - עיצוב כלי הניהול של הספרן
-  - Drag & Drop
+  ---------------------------------------------------------
+  ✔ עיצוב אזור המפה
+  ✔ עיצוב האייקונים
+  ✔ עיצוב כפתורי הניהול
+  ✔ עיצוב כותרות חדרים שקופות
+  ✔ הסתרת כותרת כאשר העכבר נמצא בתוך אותו אזור
+  ✔ עיצוב פאנל עריכה
+  ✔ תמיכה במובייל
+
+  =========================================================
 */
 
 .dynamicMapWrapper {
@@ -16,97 +24,118 @@
   gap: 18px;
 }
 
-/* ===== סרגל פעולות ===== */
+/* ===== סרגל ניהול ===== */
 
 .mapToolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 12px;
-
   padding: 14px;
-
   background: #efe0d7;
-
   border: 2px solid #7a4b3d;
   border-radius: 16px;
 }
 
-.mapToolbar select,
-.mapToolbar button {
-  padding: 10px 16px;
-
+.mapToolbarSelect {
+  width: 100%;
+  padding: 12px 16px;
   border: 1px solid #7a4b3d;
   border-radius: 10px;
-
+  background: #fff;
   font-weight: 700;
 }
 
-.mapToolbar select {
-  background: white;
+.mapToolbarButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
-.mapToolbar button {
+.mapToolbarButtons button {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 10px;
   background: #6f4039;
   color: white;
-
+  font-weight: 700;
   cursor: pointer;
-
   transition: 0.2s;
 }
 
-.mapToolbar button:hover {
+.mapToolbarButtons button:hover {
   background: #4f2d28;
 }
 
-.mapToolbar button:disabled {
+.mapToolbarButtons button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* ===== המפה ===== */
+/* ===== אזור המפה ===== */
 
 .dynamicMapCanvas {
   position: relative;
-
   width: 100%;
-
   aspect-ratio: 1600 / 1024;
-
   overflow: hidden;
-
   border: 3px solid #7a4b3d;
   border-radius: 20px;
-
   background: #e7d6c7;
 }
-
-/* תמונת רקע */
 
 .dynamicMapBackground {
   width: 100%;
   height: 100%;
-
   object-fit: cover;
-
   display: block;
 }
 
-/* ===== אייקונים ===== */
+/* ===== כותרות חדרים שקופות ===== */
+
+.mapZoneLabel {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+
+  background: rgba(70, 35, 25, 0.45);
+  backdrop-filter: blur(3px);
+
+  color: white;
+  padding: 10px 18px;
+  border-radius: 14px;
+
+  font-size: 18px;
+  font-weight: 800;
+
+  pointer-events: none;
+
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18);
+
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+/* הכותרת נעלמת כשהעכבר נמצא בתוך אותו אזור */
+.hiddenZoneLabel {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.95);
+}
+
+/* ===== אובייקטים במפה ===== */
 
 .mapIconItem {
   position: absolute;
-
-  transform: translate(-50%, -50%);
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--item-rotation, 0deg));
 
   border: none;
   background: transparent;
-
   padding: 0;
-
   cursor: grab;
-
-  z-index: 10;
-
+  z-index: 20;
   touch-action: none;
 }
 
@@ -114,13 +143,14 @@
   cursor: grabbing;
 }
 
+.mapIconItem:focus,
+.mapIconItem:focus-visible {
+  outline: none;
+}
+
 .mapIconItem img {
-  width: 75px;
-
   height: auto;
-
   display: block;
-
   user-select: none;
   pointer-events: none;
 
@@ -131,20 +161,37 @@
     opacity 0.2s;
 }
 
-/* hover */
-
 .mapIconItem:hover img {
   transform: scale(1.05);
 }
 
-/* בחירה */
+/* ===== גדלי אייקונים ===== */
 
-.mapIconItem.selected img {
-  outline: 3px solid #1f5fc4;
-  border-radius: 12px;
+.mapIconItem.seat img {
+  width: 42px;
 }
 
-/* חסום */
+.mapIconItem.single-seat img {
+  width: 150px;
+}
+
+.mapIconItem.table-4 img {
+  width: 105px;
+}
+
+.mapIconItem.table-8 img {
+  width: 155px;
+}
+
+.mapIconItem.computer-seat img {
+  width: 110px;
+}
+
+.mapIconItem.reception img {
+  width: 160px;
+}
+
+/* ===== אובייקט חסום ===== */
 
 .mapIconItem.blocked img {
   opacity: 0.4;
@@ -156,21 +203,14 @@
 
 .mapIconItem.blocked::after {
   content: "Blocked";
-
   position: absolute;
-
   left: 50%;
   bottom: -18px;
-
   transform: translateX(-50%);
-
   background: #7a2d26;
   color: white;
-
   font-size: 11px;
-
   padding: 3px 7px;
-
   border-radius: 6px;
 }
 
@@ -178,12 +218,9 @@
 
 .mapEditPanel {
   background: #efe0d7;
-
   border: 2px solid #7a4b3d;
   border-radius: 16px;
-
   padding: 16px;
-
   color: #3d2019;
 }
 
@@ -200,11 +237,40 @@
 /* ===== מובייל ===== */
 
 @media (max-width: 900px) {
-  .mapIconItem img {
-    width: 56px;
-  }
-
   .mapToolbar {
     flex-direction: column;
+  }
+
+  .mapToolbarButtons {
+    flex-direction: column;
+  }
+
+  .mapIconItem.seat img {
+    width: 32px;
+  }
+
+  .mapIconItem.single-seat img {
+    width: 110px;
+  }
+
+  .mapIconItem.table-4 img {
+    width: 82px;
+  }
+
+  .mapIconItem.table-8 img {
+    width: 120px;
+  }
+
+  .mapIconItem.computer-seat img {
+    width: 82px;
+  }
+
+  .mapIconItem.reception img {
+    width: 120px;
+  }
+
+  .mapZoneLabel {
+    font-size: 13px;
+    padding: 7px 10px;
   }
 }
