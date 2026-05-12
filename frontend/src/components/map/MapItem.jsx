@@ -6,6 +6,7 @@
 
 import { useRef } from "react";
 
+import chairIcon from "../../assets/icons/seat-to-add.png";
 import singleSeatIcon from "../../assets/icons/single-seat.png";
 import table4Icon from "../../assets/icons/table-4.png";
 import table8Icon from "../../assets/icons/table-8.png";
@@ -13,6 +14,7 @@ import computerSeatIcon from "../../assets/icons/computer-seat.png";
 import receptionIcon from "../../assets/icons/reception.png";
 
 const icons = {
+  seat: chairIcon,
   "single-seat": singleSeatIcon,
   "table-4": table4Icon,
   "table-8": table8Icon,
@@ -31,13 +33,11 @@ export default function MapItem({
 
   const handleMouseDown = () => {
     if (!isLibrarian) return;
-
     draggingRef.current = true;
   };
 
   const handleMouseMove = (event) => {
     if (!draggingRef.current) return;
-
     onMove(item.id, event.clientX, event.clientY);
   };
 
@@ -48,10 +48,13 @@ export default function MapItem({
   return (
     <button
       type="button"
-      className={`mapIconItem ${item.status} ${isSelected ? "selected" : ""}`}
+      className={`mapIconItem ${item.type} ${item.status} ${
+        isSelected ? "selected" : ""
+      }`}
       style={{
         left: `${item.x}%`,
         top: `${item.y}%`,
+        "--item-rotation": `${item.rotation || 0}deg`,
       }}
       onClick={() => onSelect(item.id)}
       onMouseDown={handleMouseDown}
