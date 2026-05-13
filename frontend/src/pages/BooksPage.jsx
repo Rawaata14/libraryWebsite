@@ -10,65 +10,14 @@
   - לאפשר מעבר לדף שריון ספר
 */
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
 import BookCard from "../components/common/BookCard";
 import useAuth from "../hooks/useAuth"; // ייבוא ה-Hook
 import Button from "../components/common/Button";
-
-// רשימת הספרים (נשארת אותו דבר...)
-const books = [
-  {
-    id: 1,
-    title: "Mystical 10",
-    author: "E.L. Timberly",
-    category: "Fantasy",
-    image:
-      "https://images.unsplash.com/photo-1544947950-fa07a98d237f?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 2,
-    title: "Realmlands",
-    author: "Alex Rovin",
-    category: "Fantasy",
-    image:
-      "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 3,
-    title: "The Wanderer",
-    author: "Rachel Morgan",
-    category: "Fantasy",
-    image:
-      "https://images.unsplash.com/photo-1516979187457-637abb4f9353?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 4,
-    title: "Mistmark Hour",
-    author: "S.D. Night",
-    category: "Mystery",
-    image:
-      "https://images.unsplash.com/photo-1495640388908-05fa85288e61?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 5,
-    title: "Science of Logic",
-    author: "John Rivers",
-    category: "Science",
-    image:
-      "https://images.unsplash.com/photo-1519682337058-a94d519337bc?auto=format&fit=crop&w=500&q=80",
-  },
-  {
-    id: 6,
-    title: "Silent Tides",
-    author: "Karen Blake",
-    category: "Mystery",
-    image:
-      "https://images.unsplash.com/photo-1526243741027-444d633d7365?auto=format&fit=crop&w=500&q=80",
-  },
-];
+import axios from "axios";
 
 export default function BooksPage() {
   const navigate = useNavigate();
@@ -76,14 +25,29 @@ export default function BooksPage() {
 
   // בדיקה האם המשתמש הוא ספרנית
   const isLibrarian = user?.role === "librarian";
-
+  const [books, setBooks] = useState([]); // כאן תוכל להוסיף לוגיקה לטעינת הספרים מהשרת
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+
+  useEffect(() => {
+    const fetchBooks = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:8000/books/all-books",
+        );
+        setBooks(response.data);
+      } catch (error) {
+        console.error("Error fetching books:", error);
+      }
+    };
+
+    fetchBooks();
+  }, []);
 
   const categories = useMemo(() => {
     const uniqueCategories = [...new Set(books.map((book) => book.category))];
     return ["All", ...uniqueCategories];
-  }, []);
+  }, [books]);
 
   const filteredBooks = useMemo(() => {
     return books.filter((book) => {
@@ -94,7 +58,7 @@ export default function BooksPage() {
         selectedCategory === "All" || book.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [searchTerm, selectedCategory]);
+  }, [searchTerm, selectedCategory, books]);
 
   const handleReserve = (book) => {
     navigate(`/reserve-book/${book.id}`, { state: book });
@@ -111,7 +75,7 @@ export default function BooksPage() {
             <div style={{ marginBottom: "20px", textAlign: "right" }}>
               <Button
                 variant="primary"
-                onClick={() => navigate("/admin/add-book")}
+                onClick={() => navigate("/librarian/add-book")}
               >
                 + Add New Book
               </Button>

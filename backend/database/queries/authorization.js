@@ -61,11 +61,9 @@ async function loginUser(email, password) {
     console.log("Attempting to log in user with email:", email);
     const getUserSQL = "SELECT * FROM user WHERE email = ?";
     const users = await doQuery(getUserSQL, [email]);
-
     if (users.length === 0) {
       return { success: false, message: "User not found" };
     }
-
     const user = users[0];
     const isMatch = await bcrypt.compare(password, user.passwordHash);
 

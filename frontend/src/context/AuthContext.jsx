@@ -18,22 +18,41 @@ export function AuthProvider({ children }) {
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("libraryUser");
-
-    if (storedUser) {
+    const checkAuth = async () => {
       try {
-        setUser(JSON.parse(storedUser));
+        const response = await fetch("http://localhost:8000/user/check-auth", {
+          credentials: "include",
+        });
+        if (response.ok) {
+          const userData = await response.json();
+          setUser(userData);
+        } else {
+          setUser(null);
+          localStorage.removeItem("libraryUser");
+        }
       } catch (error) {
-        console.error("שגיאה בקריאת נתוני המשתמש:", error);
+        console.error("Error checking authentication:", error);
+        setUser(null);
         localStorage.removeItem("libraryUser");
       }
+      setIsAuthReady(true);
     }
-
-    setIsAuthReady(true);
+    checkAuth();
   }, []);
+    // const storedUser = localStorage.getItem("libraryUser");
+
+    // if (storedUser) {
+    //   try {
+    //     setUser(JSON.parse(storedUser));
+    //   } catch (error) {
+    //     console.error("שגיאה בקריאת נתוני המשתמש:", error);
+    //     localStorage.removeItem("libraryUser");
+    //   }
+    // }
+
+    // setIsAuthReady(true);
 
   const login = (userData) => {
-    console.log("AuthContext received userData:", userData);
     setUser(userData);
     localStorage.setItem("libraryUser", JSON.stringify(userData));
   };

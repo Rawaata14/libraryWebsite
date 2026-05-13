@@ -1,13 +1,10 @@
 const express = require("express");
+const session = require("express-session");
 const cors = require("cors");
 const dbSingleton = require("./database/dbSingleton");
 const path = require("path");
 
 const app = express();
-const db = dbSingleton.getConnection();
-
-app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use(
   cors({
@@ -17,21 +14,23 @@ app.use(
   }),
 );
 
-// app.get("/users", (req, res) => {
-//   const sql = "SELECT user_id, full_name, email, phone, address FROM users";
+app.use(express.json());
 
-//   db.query(sql, (err, result) => {
-//     if (err) {
-//       console.error("SQL ERROR:", err);
-//       return res.status(500).json({
-//         message: "Failed to fetch users",
-//         error: err.message,
-//       });
-//     }
+app.use(
+  session({
+    secret: "your-secret-key",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: false, // Set to true if using HTTPS
+      httpOnly: true,
+      sameSite: "lax", // Adjust based on your needs (e.g., "strict" or "none")
+    },
+  }),
+);
 
-//     res.status(200).json(result);
-//   });
-// });
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+const db = dbSingleton.getConnection();
 
 const userRoutes = require("./routes/user");
 app.use("/user", userRoutes);

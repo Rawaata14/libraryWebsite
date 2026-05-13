@@ -57,7 +57,7 @@ export default function LoginForm() {
       }
     } catch (error) {
       const message = error.response?.data?.message || "An error occurred";
-      alert(error);
+      alert(message);
     } finally {
       setIsLoading(false); // מסיימים טעינה בכל מקרה (הצלחה או כישלון)
     }

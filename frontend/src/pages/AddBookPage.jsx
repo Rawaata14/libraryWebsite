@@ -50,10 +50,11 @@ export default function AddBookPage() {
     }
 
     const bookData = new FormData();
+    bookData.append("isbn", formData.isbn);
     bookData.append("title", formData.title);
     bookData.append("author", formData.author);
     bookData.append("category", formData.category);
-    bookData.append("publishYear", formData.publishYear);
+    bookData.append("publishYear", parseInt(formData.publishYear));
     bookData.append("status", formData.status);
     bookData.append("quantity", formData.quantity);
 
@@ -63,7 +64,7 @@ export default function AddBookPage() {
 
     try {
       const response = await axios.post(
-        "http://localhost:8000/admin/add-book",
+        "http://localhost:8000/books/add-book",
         bookData,
         {
           headers: {
