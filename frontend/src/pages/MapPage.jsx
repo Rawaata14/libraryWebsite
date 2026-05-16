@@ -41,9 +41,9 @@ const getSuggestedUse = (area) => {
 };
 
 export default function MapPage() {
-  const [selectedDate, setSelectedDate] = useState(availableDates[0]);
-  const [selectedTime, setSelectedTime] = useState(availableTimeSlots[3]);
-  const [selectedSeat, setSelectedSeat] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(availableDates[0]); // זוכר את התאריך הנבחר
+  const [selectedTime, setSelectedTime] = useState(availableTimeSlots[3]); // זוכר את חלון השעות הנבחר
+  const [selectedSeat, setSelectedSeat] = useState(null); // זוכר איזה כיסא נבחר (בהתחלה null - כלומר כלום)
 
   const handleConfirmReservation = () => {
     if (!selectedSeat) {

@@ -30,70 +30,70 @@ const mapZones = [
   {
     id: "quiet-room",
     label: "Quiet Room",
-    minX: 4,
-    maxX: 33,
-    minY: 12,
-    maxY: 55,
+    minX: 3, // גבול שמאלי
+    maxX: 34, // גבול ימני
+    minY: 16, // גבול עליון
+    maxY: 47, // גבול תחתון
     labelX: 18,
     labelY: 8,
   },
   {
     id: "computer-area",
     label: "Computer Area",
-    minX: 38,
-    maxX: 61,
-    minY: 12,
-    maxY: 55,
+    minX: 38, // גבול שמאלי
+    maxX: 61, // גבול ימני
+    minY: 16, // גבול עליון
+    maxY: 42, // גבול תחתון
     labelX: 49,
     labelY: 8,
   },
   {
     id: "group-room",
     label: "Group Study Rooms",
-    minX: 66,
-    maxX: 97,
-    minY: 12,
-    maxY: 55,
+    minX: 65, // גבול שמאלי
+    maxX: 97, // גבול ימני
+    minY: 16, // גבול עליון
+    maxY: 50, // גבול תחתון
     labelX: 81,
     labelY: 8,
   },
   {
     id: "reading-nook",
-    label: "Reading Nook",
-    minX: 5,
-    maxX: 31,
-    minY: 60,
-    maxY: 92,
+    label: "Reading Book",
+    minX: 2, // גבול שמאלי
+    maxX: 18, // גבול ימני
+    minY: 51, // גבול עליון
+    maxY: 80, // גבול תחתון
     labelX: 18,
     labelY: 57,
   },
   {
     id: "study-room-1",
     label: "Study Room 1",
-    minX: 50,
-    maxX: 64,
-    minY: 60,
-    maxY: 92,
+    minX: 49, // גבול שמאלי
+    maxX: 63.5, // גבול ימני
+    minY: 54, // גבול עליון
+    maxY: 80, // גבול תחתון
     labelX: 57,
     labelY: 57,
   },
   {
     id: "study-room-2",
     label: "Study Room 2",
-    minX: 66,
-    maxX: 80,
-    minY: 60,
-    maxY: 92,
-    labelX: 73,
+    minX: 65, // גבול שמאלי
+    maxX: 79.5, // גבול ימני
+    minY: 54, // גבול עליון
+    maxY: 80, // גבול תחתון
+    labelX: 72,
     labelY: 57,
   },
   {
     id: "study-room-3",
     label: "Study Room 3",
-    minX: 82,
-    maxX: 96,
-    minY: 60,
-    maxY: 92,
+    minX: 81.5, // גבול שמאלי
+    maxX: 98, // גבול ימני
+    minY: 54, // גבול עליון
+    maxY: 80, // גבול תחתון
     labelX: 89,
     labelY: 57,
   },
@@ -118,19 +118,21 @@ export default function LibraryMap({ isLibrarian = true }) {
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [newItemType, setNewItemType] = useState("seat");
   const [hoveredZoneId, setHoveredZoneId] = useState(null);
+  const [newItemPlacement, setNewItemPlacement] = useState(mapZones[0].id); // ברירת מחדל לאזור הראשון ברשימה
+  const [mouseCoords, setMouseCoords] = useState({ x: 0, y: 0 });
 
   const mapRef = useRef(null);
 
   const selectedItem = items.find((item) => item.id === selectedItemId);
 
   const addItem = () => {
-    const defaultZone = mapZones[0];
+    const zone = mapZones.find((z) => z.id === newItemPlacement);
 
     const newItem = {
       id: Date.now().toString(),
       type: newItemType,
-      x: (defaultZone.minX + defaultZone.maxX) / 2,
-      y: (defaultZone.minY + defaultZone.maxY) / 2,
+      x: (zone.minX + zone.maxX) / 2,
+      y: (zone.minY + zone.maxY) / 2,
       rotation: 0,
       status: "available",
       reservable: newItemType === "seat" || newItemType === "single-seat",
@@ -198,6 +200,7 @@ export default function LibraryMap({ isLibrarian = true }) {
     const position = getMapPercentPosition(event.clientX, event.clientY);
 
     if (!position) return;
+    //setMouseCoords({ x: Math.round(position.x), y: Math.round(position.y) });
 
     const hoveredZone = getZoneByPosition(position.x, position.y);
 
@@ -232,6 +235,9 @@ export default function LibraryMap({ isLibrarian = true }) {
         <MapToolbar
           newItemType={newItemType}
           onChangeType={setNewItemType}
+          newItemPlacement={newItemPlacement}
+          onChangePlacement={setNewItemPlacement}
+          mapZones={mapZones}
           onAdd={addItem}
           onDelete={deleteItem}
           onToggleBlock={toggleBlockItem}
@@ -278,7 +284,23 @@ export default function LibraryMap({ isLibrarian = true }) {
           />
         ))}
       </div>
-
+      {/* תיבת פיתוח זמנית להצגת קואורדינטות העכבר
+      <div
+        style={{
+          position: "fixed",
+          top: "10px",
+          left: "10px",
+          background: "black",
+          color: "lime",
+          padding: "10px",
+          fontFamily: "monospace",
+          zIndex: 9999,
+          borderRadius: "5px",
+          border: "1px solid lime",
+        }}
+      >
+        Mouse Position: X: {mouseCoords.x}% | Y: {mouseCoords.y}%
+      </div> */}
       {isLibrarian && selectedItem && (
         <div className="mapEditPanel">
           <strong>Selected:</strong> {selectedItem.type}

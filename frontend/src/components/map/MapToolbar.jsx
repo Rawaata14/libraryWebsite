@@ -22,22 +22,21 @@
 export default function MapToolbar({
   // סוג האובייקט החדש
   newItemType,
-
   // שינוי סוג האובייקט
   onChangeType,
-
+  // מיקום האובייקט החדש
+  newItemPlacement,
+  // שינוי מיקום האובייקט החדש
+  onChangePlacement,
+  mapZones,
   // הוספת אובייקט
   onAdd,
-
   // מחיקה
   onDelete,
-
   // חסימה / ביטול חסימה
   onToggleBlock,
-
   // סיבוב
   onRotate,
-
   // האם קיים אובייקט נבחר
   hasSelectedItem,
 }) {
@@ -63,6 +62,18 @@ export default function MapToolbar({
         <option value="computer-seat">Computer Seat</option>
 
         <option value="reception">Reception</option>
+      </select>
+
+      <select
+        className="mapToolbarSelect"
+        value={newItemPlacement} // משתמשים ב-Prop ששומר את החדר הנבחר
+        onChange={(event) => onChangePlacement(event.target.value)} // מעדכנים את האבא על השינוי
+      >
+        {mapZones.map((zone) => (
+          <option key={zone.id} value={zone.id}>
+            {zone.label}
+          </option>
+        ))}
       </select>
 
       {/* ======================================
