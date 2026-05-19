@@ -19,32 +19,22 @@
 }
 
 .frame {
-  background: rgba(239, 224, 215, 0.95);
-
-  backdrop-filter: blur(6px);
+  min-height: 100vh;
 
   border-radius: 22px;
 
   overflow: hidden;
 
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  display: flex;
 
-  box-shadow: var(--shadow);
-
-  min-height: 100vh;
+  flex-direction: column;
 }
 
 .libraryBg {
-  background-image:
-    linear-gradient(
-      rgba(40, 16, 14, 0.35),
-      rgba(40, 16, 14, 0.35)
-    ),
-    url("https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=1400&q=80");
-
-  background-size: cover;
-
-  background-position: center;
+  /*
+    הרקע הגלובלי מוגדר ב-globals.css.
+    המחלקה נשארת כדי לא לשבור קומפוננטות קיימות.
+  */
 }
 
 /* ===== Header ===== */

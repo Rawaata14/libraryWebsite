@@ -5,15 +5,34 @@
 
   אחריות:
   - ריכוז צבעים, צללים ומשתני עיצוב לשימוש חוזר
+  - הגדרת תמונת הרקע הגלובלית של כל האתר
 */
 
 :root {
   --paper: #efe0d7;
   --paper2: #e3cfc4;
+
   --brown-dark: #3a1f1d;
   --brown: #5d322d;
   --brown-soft: #6c3f37;
+
   --navy: #192a67;
   --gold: #f3d8ae;
+
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+
+  /*
+    תמונת רקע אחידה לכל האתר.
+    מיקום הקובץ:
+    public/images/library-background.png
+  */
+  --app-bg-image: url("/images/library-background.png");
+
+  --app-bg-overlay: linear-gradient(
+    rgba(20, 10, 8, 0.68),
+    rgba(20, 10, 8, 0.68)
+  );
+
+  --glass-card: rgba(45, 25, 20, 0.86);
+  --glass-border: rgba(255, 255, 255, 0.16);
 }

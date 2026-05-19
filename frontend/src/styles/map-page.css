@@ -11,7 +11,7 @@
 }
 
 .mapPageCard {
-  background: rgba(45, 25, 20, 0.84);
+  background: var(--glass-card);
   border-radius: 22px;
   padding: 24px;
   color: white;

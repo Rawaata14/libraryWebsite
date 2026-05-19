@@ -17,9 +17,9 @@
 }
 
 .homeCard {
-  background: rgba(45, 25, 20, 0.84);
+  background: var(--glass-card);
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--glass-border);
   backdrop-filter: blur(6px);
   padding: 24px 20px 30px;
   color: white;

@@ -41,11 +41,7 @@ select {
   display: grid;
   place-items: center;
   padding: 32px 16px;
-  background-image:
-    linear-gradient(rgba(30, 15, 14, 0.42), rgba(30, 15, 14, 0.42)),
-    url("https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=1400&q=80");
-  background-size: cover;
-  background-position: center;
+  /* הרקע מגיע מ-globals.css כדי לשמור אחידות בכל האתר. */
   position: relative;
 }
 

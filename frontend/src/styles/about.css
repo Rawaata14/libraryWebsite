@@ -2,6 +2,12 @@
   about.css
   ---------
   עיצוב דף האודות.
+
+  אחריות:
+  - עיצוב תוכן About Us
+  - עיצוב מצב עריכה לספרן
+  - עיצוב טופס יצירת קשר
+  - התאמה למסכים קטנים
 */
 
 .aboutPageContainer {
@@ -11,60 +17,322 @@
 }
 
 .aboutPageCard {
-  background: rgba(45, 25, 20, 0.84);
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--glass-card);
+  border-radius: 22px;
+  border: 1px solid var(--glass-border);
   backdrop-filter: blur(6px);
-  padding: 24px 20px 30px;
+  padding: 32px;
   color: white;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
 }
 
-.aboutHeroImage {
-  border-radius: 18px;
-  overflow: hidden;
-  border: 2px solid #8f6c5d;
+/* ===== Librarian Edit Bar ===== */
+
+.aboutAdminBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+
   margin-bottom: 24px;
+  padding: 14px 18px;
+
+  background: rgba(255, 255, 255, 0.08);
+
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+
+  color: #fff4eb;
+
+  font-weight: 800;
 }
 
-.aboutHeroImage img {
-  width: 100%;
-  height: 340px;
-  object-fit: cover;
+.aboutAdminBar button {
+  border: none;
+  border-radius: 12px;
+
+  padding: 10px 18px;
+
+  background: #7a3e2e;
+  color: white;
+
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition: 0.2s;
 }
 
+.aboutAdminBar button:hover {
+  background: #8d4b3b;
+}
+
+/* ===== Intro ===== */
+
+.aboutIntro {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.aboutBadge {
+  display: inline-block;
+
+  margin-bottom: 14px;
+
+  padding: 8px 16px;
+
+  border-radius: 999px;
+
+  background: rgba(180, 126, 88, 0.22);
+
+  border: 1px solid rgba(240, 210, 180, 0.35);
+
+  color: #f7dcc5;
+
+  font-weight: 800;
+}
+
+.aboutIntro h2 {
+  font-size: clamp(30px, 4vw, 46px);
+
+  margin-bottom: 16px;
+
+  color: #fff6ef;
+}
+
+.aboutIntro p {
+  max-width: 850px;
+
+  margin: 0 auto;
+
+  line-height: 1.8;
+
+  font-size: 18px;
+
+  color: #f3e3da;
+}
+
+/* ===== Content Cards ===== */
+
+.aboutGrid {
+  display: grid;
+
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 18px;
+
+  margin: 28px 0;
+}
+
+.aboutInfoBox,
 .aboutContent {
   background: linear-gradient(
     180deg,
     rgba(239, 224, 215, 0.97) 0%,
     rgba(227, 207, 196, 0.97) 100%
   );
+
   border: 2px solid #6c3f37;
+
   border-radius: 18px;
+
   padding: 24px;
+
   color: #3d2019;
 }
 
-.aboutContent h2 {
-  margin-bottom: 18px;
-  font-size: 34px;
-}
-
+.aboutInfoBox h3,
 .aboutContent h3 {
-  margin-top: 22px;
   margin-bottom: 12px;
+
   font-size: 24px;
 }
 
-.aboutContent p {
-  margin-bottom: 14px;
-  line-height: 1.8;
-  font-size: 18px;
+.aboutInfoBox p {
+  line-height: 1.7;
+
+  font-size: 17px;
 }
 
 .aboutContent ul {
   padding-left: 24px;
-  line-height: 1.8;
+
+  line-height: 1.9;
+
   font-size: 18px;
+}
+
+/* ===== Edit Inputs ===== */
+
+.aboutEditInput,
+.aboutEditTextarea {
+  width: 100%;
+
+  margin-top: 10px;
+
+  padding: 14px 16px;
+
+  border: 2px solid #8a5a4f;
+
+  border-radius: 14px;
+
+  background: #fffaf6;
+
+  color: #3d2019;
+
+  font-size: 16px;
+
+  outline: none;
+}
+
+.aboutEditTextarea {
+  min-height: 120px;
+
+  resize: vertical;
+}
+
+/* ===== Contact Section ===== */
+
+.contactSection {
+  margin-top: 34px;
+
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 24px;
+
+  background: rgba(255, 255, 255, 0.06);
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  border-radius: 20px;
+
+  padding: 28px;
+}
+
+.contactBadge {
+  display: inline-block;
+
+  margin-bottom: 12px;
+
+  padding: 7px 14px;
+
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.1);
+
+  color: #f7dcc5;
+
+  font-weight: 800;
+}
+
+.contactInfo h3 {
+  font-size: 30px;
+
+  margin-bottom: 16px;
+
+  color: #fff4eb;
+}
+
+.contactInfo p {
+  line-height: 1.8;
+
+  color: #f3ddd0;
+
+  margin-bottom: 20px;
+}
+
+.contactDetails {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 14px;
+
+  font-size: 18px;
+
+  font-weight: 700;
+
+  color: #ffe6d5;
+}
+
+.contactForm {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 16px;
+}
+
+.contactForm input,
+.contactForm textarea {
+  width: 100%;
+
+  border: 2px solid #8a5a4f;
+
+  background: rgba(255, 255, 255, 0.94);
+
+  border-radius: 14px;
+
+  padding: 14px 16px;
+
+  font-size: 16px;
+
+  outline: none;
+}
+
+.contactForm textarea {
+  resize: vertical;
+}
+
+.contactForm button {
+  align-self: flex-start;
+
+  border: none;
+
+  border-radius: 14px;
+
+  background: linear-gradient(135deg, #8d5447, #6f3f35);
+
+  color: white;
+
+  font-size: 16px;
+
+  font-weight: 800;
+
+  padding: 12px 24px;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+}
+
+.contactForm button:hover {
+  transform: translateY(-2px);
+
+  background: linear-gradient(135deg, #9d6153, #7a4539);
+}
+
+/* ===== Responsive ===== */
+
+@media (max-width: 900px) {
+  .aboutGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .aboutPageCard {
+    padding: 22px;
+  }
+
+  .contactSection {
+    grid-template-columns: 1fr;
+  }
+
+  .aboutAdminBar {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 @media (max-width: 768px) {
@@ -72,19 +340,7 @@
     padding: 12px;
   }
 
-  .aboutPageCard {
-    padding: 18px 14px 24px;
-  }
-
-  .aboutHeroImage img {
-    height: 240px;
-  }
-
-  .aboutContent h2 {
-    font-size: 28px;
-  }
-
-  .aboutContent p,
+  .aboutIntro p,
   .aboutContent ul {
     font-size: 16px;
   }
