@@ -75,9 +75,9 @@ export default function BooksPage() {
             <div style={{ marginBottom: "20px", textAlign: "right" }}>
               <Button
                 variant="primary"
-                onClick={() => navigate("/librarian/add-book")}
+                onClick={() => navigate("/admin/add-book")}
               >
-                + Add New Book
+                + Add Book
               </Button>
             </div>
           )}
