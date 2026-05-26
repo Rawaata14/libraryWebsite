@@ -8,11 +8,12 @@
   - להפעיל פעולת שריון דרך callback שמתקבל מההורה
 */
 
+import { useContext } from "react";
 import Button from "./Button";
-import useAuth from "../../hooks/useAuth";
+import { AuthContext } from "../../context/AuthContext";
 
 export default function BookCard({ book, onReserve, onEdit, onDelete }) {
-  const { isLibrarian } = useAuth();
+  const { isLibrarian } = useContext(AuthContext);
   return (
     <article className="bookCard">
       <img

@@ -23,6 +23,7 @@ import { useRef, useState } from "react";
 
 import MapItem from "./MapItem";
 import MapToolbar from "./MapToolbar";
+import axios from "axios";
 
 const initialItems = [];
 
@@ -101,52 +102,65 @@ const mapZones = [
 
 const isInsideAllowedZone = (x, y) => {
   return mapZones.some(
-    (zone) =>
-      x >= zone.minX && x <= zone.maxX && y >= zone.minY && y <= zone.maxY,
+    (location) =>
+      x >= location.minX &&
+      x <= location.maxX &&
+      y >= location.minY &&
+      y <= location.maxY,
   );
 };
 
 const getZoneByPosition = (x, y) => {
   return mapZones.find(
-    (zone) =>
-      x >= zone.minX && x <= zone.maxX && y >= zone.minY && y <= zone.maxY,
+    (location) =>
+      x >= location.minX &&
+      x <= location.maxX &&
+      y >= location.minY &&
+      y <= location.maxY,
   );
 };
 
-export default function LibraryMap({ isLibrarian = true }) {
-  const [items, setItems] = useState(initialItems);
+export default function LibraryMap({
+  isLibrarian = true,
+  items = [],
+  setItems,
+  onSeatSelect,
+}) {
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [newItemType, setNewItemType] = useState("seat");
   const [hoveredZoneId, setHoveredZoneId] = useState(null);
   const [newItemPlacement, setNewItemPlacement] = useState(mapZones[0].id); // ברירת מחדל לאזור הראשון ברשימה
   const [mouseCoords, setMouseCoords] = useState({ x: 0, y: 0 });
+  const [seats, setSeats] = useState([]); // מצב לשמירת המושבים מהשרת
 
   const mapRef = useRef(null);
 
-  const selectedItem = items.find((item) => item.id === selectedItemId);
+  const selectedItem = items.find((item) => item.seatId === selectedItemId);
 
   const addItem = () => {
     const zone = mapZones.find((z) => z.id === newItemPlacement);
 
     const newItem = {
-      id: Date.now().toString(),
+      seatId: Date.now().toString(),
       type: newItemType,
       x: (zone.minX + zone.maxX) / 2,
       y: (zone.minY + zone.maxY) / 2,
       rotation: 0,
       status: "available",
-      reservable: newItemType === "seat" || newItemType === "single-seat",
+      reservable:
+        newItemType === "seat-to-add" || newItemType === "single-seat",
+      location: zone.id,
     };
 
     setItems((prevItems) => [...prevItems, newItem]);
-    setSelectedItemId(newItem.id);
+    setSelectedItemId(newItem.seatId);
   };
 
   const deleteItem = () => {
     if (!selectedItemId) return;
 
     setItems((prevItems) =>
-      prevItems.filter((item) => item.id !== selectedItemId),
+      prevItems.filter((item) => item.seatId !== selectedItemId),
     );
 
     setSelectedItemId(null);
@@ -157,7 +171,7 @@ export default function LibraryMap({ isLibrarian = true }) {
 
     setItems((prevItems) =>
       prevItems.map((item) =>
-        item.id === selectedItemId
+        item.seatId === selectedItemId
           ? {
               ...item,
               status: item.status === "blocked" ? "available" : "blocked",
@@ -172,7 +186,7 @@ export default function LibraryMap({ isLibrarian = true }) {
 
     setItems((prevItems) =>
       prevItems.map((item) =>
-        item.id === selectedItemId
+        item.seatId === selectedItemId
           ? {
               ...item,
               rotation: ((item.rotation || 0) + 90) % 360,
@@ -180,6 +194,20 @@ export default function LibraryMap({ isLibrarian = true }) {
           : item,
       ),
     );
+  };
+
+  const handleItemSelect = (id) => {
+    setSelectedItemId(id);
+    if (onSeatSelect) {
+      const clickedItem = items.find((item) => item.seatId === id);
+      if (clickedItem) {
+        onSeatSelect({
+          id: clickedItem.seatId,
+          status: clickedItem.status,
+          location: clickedItem.location,
+        });
+      }
+    }
   };
 
   const getMapPercentPosition = (clientX, clientY) => {
@@ -218,7 +246,7 @@ export default function LibraryMap({ isLibrarian = true }) {
 
     setItems((prevItems) =>
       prevItems.map((item) =>
-        item.id === id
+        item.seatId === id
           ? {
               ...item,
               x: position.x,
@@ -227,6 +255,32 @@ export default function LibraryMap({ isLibrarian = true }) {
           : item,
       ),
     );
+  };
+
+  const saveMap = async () => {
+    const itemsToSave = items.map((item) => ({
+      ...item,
+      seatId: item.seatId.length > 6 ? null : item.seatId, // אם ה-seatId הוא מזהה זמני (מבוסס על timestamp), נשלח null כדי שיתווסף כחדש
+    }));
+    try {
+      const response = await axios.post(
+        "http://localhost:8000/seats/save-map",
+        itemsToSave,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+          withCredentials: true,
+        },
+      );
+      if (response.status === 201) {
+        alert("Map saved successfully!");
+      } else {
+        alert("Failed to save map. Please try again.");
+      }
+    } catch (error) {
+      alert("An error occurred while saving the map. Please try again.");
+    }
   };
 
   return (
@@ -243,6 +297,7 @@ export default function LibraryMap({ isLibrarian = true }) {
           onToggleBlock={toggleBlockItem}
           onRotate={rotateSelectedItem}
           hasSelectedItem={Boolean(selectedItemId)}
+          saveMap={saveMap}
         />
       )}
 
@@ -275,10 +330,10 @@ export default function LibraryMap({ isLibrarian = true }) {
 
         {items.map((item) => (
           <MapItem
-            key={item.id}
+            key={item.seatId}
             item={item}
-            isSelected={selectedItemId === item.id}
-            onSelect={setSelectedItemId}
+            isSelected={selectedItemId === item.seatId}
+            onSelect={handleItemSelect}
             onMove={updateItemPosition}
             isLibrarian={isLibrarian}
           />

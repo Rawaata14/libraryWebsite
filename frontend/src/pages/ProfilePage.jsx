@@ -8,10 +8,11 @@
   - הצגת דשבורד לפי role
 */
 
-import useAuth from "../hooks/useAuth";
+import { useContext } from "react";
+import { AuthContext } from "../../src/context/AuthContext";
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user } = useContext(AuthContext);
 
   const isLibrarian = user?.role === "librarian";
 

@@ -39,6 +39,8 @@ export default function MapToolbar({
   onRotate,
   // האם קיים אובייקט נבחר
   hasSelectedItem,
+
+  saveMap,
 }) {
   return (
     <div className="mapToolbar">
@@ -107,6 +109,14 @@ export default function MapToolbar({
 
         <button type="button" onClick={onDelete} disabled={!hasSelectedItem}>
           Delete
+        </button>
+
+        <button
+          type="button"
+          onClick={saveMap}
+          disabled={mapZones.length === 0}
+        >
+          Save Map
         </button>
       </div>
     </div>

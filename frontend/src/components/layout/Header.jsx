@@ -8,13 +8,22 @@
   - הצגת מצב משתמש (אורח / מחובר)
   - מתן אפשרות להתנתקות
 */
+import { useContext } from "react";
 import { Link } from "react-router-dom";
 import { NavLink } from "react-router-dom";
-import useAuth from "../../hooks/useAuth";
+import { AuthContext } from "../../context/AuthContext";
 
 export default function Header() {
-  const { user, isAuthenticated, logout } = useAuth();
-
+  const { user, isAuthenticated, isLibrarian, logout } =
+    useContext(AuthContext);
+  console.log(
+    "Header component - user:",
+    user,
+    "isAuthenticated:",
+    isAuthenticated,
+    "isLibrarian:",
+    isLibrarian,
+  );
   const navClassName = ({ isActive }) =>
     isActive ? "navItem activeNav" : "navItem";
 
@@ -29,19 +38,21 @@ export default function Header() {
         <NavLink to="/" className={navClassName}>
           Home
         </NavLink>
-
-        <NavLink to="/map" className={navClassName}>
+        <NavLink
+          to={isLibrarian ? "/admin/map" : "/map"}
+          className={navClassName}
+        >
           Study Rooms
         </NavLink>
-
-        <NavLink to="/books" className={navClassName}>
+        <NavLink
+          to={isLibrarian ? "/admin/books" : "/books"}
+          className={navClassName}
+        >
           Books
         </NavLink>
-
         <NavLink to="/events" className={navClassName}>
           Events
         </NavLink>
-
         <NavLink to="/about" className={navClassName}>
           About Us
         </NavLink>
