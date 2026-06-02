@@ -8,9 +8,9 @@
   - הפעלת מצב ניהול רק לספרן בתוך /map
 */
 
+import {useContext} from "react";
 import { useLocation } from "react-router-dom";
-
-import useAuth from "../../hooks/useAuth";
+import { AuthContext } from "../../context/AuthContext";
 import LibraryMap from "../map/LibraryMap";
 
 export default function RoomMap({
@@ -18,7 +18,7 @@ export default function RoomMap({
   onSeatSelect = () => {},
   showSelectionInfo = true,
 }) {
-  const { isLibrarian } = useAuth();
+  const { isLibrarian } = useContext(AuthContext);
 
   const location = useLocation();
 

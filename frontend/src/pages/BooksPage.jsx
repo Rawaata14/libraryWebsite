@@ -10,18 +10,18 @@
   - לאפשר מעבר לדף שריון ספר
 */
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
 import BookCard from "../components/common/BookCard";
-import useAuth from "../hooks/useAuth"; // ייבוא ה-Hook
+import { AuthContext } from "../../src/context/AuthContext";
 import Button from "../components/common/Button";
 import axios from "axios";
 
 export default function BooksPage() {
   const navigate = useNavigate();
-  const { user } = useAuth(); // חילוץ המשתמש המחובר
+  const { user } = useContext(AuthContext); // חילוץ המשתמש המחובר
 
   // בדיקה האם המשתמש הוא ספרנית
   const isLibrarian = user?.role === "librarian";

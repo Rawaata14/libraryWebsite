@@ -10,11 +10,12 @@
   - להציג סיכום הזמנה מעודכן לפי הבחירה
 */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
 import Button from "../components/common/Button";
-import RoomMap from "../components/dashboard/RoomMap";
+import LibraryMap from "../components/map/LibraryMap";
+import axios from "axios";
 
 const availableDates = ["2026-04-15", "2026-04-16", "2026-04-17", "2026-04-18"];
 
@@ -44,7 +45,31 @@ export default function MapPage() {
   const [selectedDate, setSelectedDate] = useState(availableDates[0]); // זוכר את התאריך הנבחר
   const [selectedTime, setSelectedTime] = useState(availableTimeSlots[3]); // זוכר את חלון השעות הנבחר
   const [selectedSeat, setSelectedSeat] = useState(null); // זוכר איזה כיסא נבחר (בהתחלה null - כלומר כלום)
+  const [items, setItems] = useState([]); // אובייקטים על המפה (כיסאות, שולחנות וכו')]
 
+  // כאן נוכל לטעון את המפה מהשרת אם יש צורך
+  useEffect(() => {
+    const fetchMapData = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:8000/seats/get-map",
+          {
+            withCredentials: true,
+          },
+        );
+        console.log("This is what comes from the backend:", response.data);
+        if (response.status === 200) {
+          const mapData =
+            response.data.map ||
+            (Array.isArray(response.data) ? response.data : []);
+          setItems(mapData);
+        }
+      } catch (error) {
+        console.error("Error fetching map data:", error);
+      }
+    };
+    fetchMapData();
+  }, []);
   const handleConfirmReservation = () => {
     if (!selectedSeat) {
       alert("יש לבחור כיסא לפני אישור ההזמנה");
@@ -94,11 +119,11 @@ export default function MapPage() {
                 </select>
               </div>
             </div>
-
-            <RoomMap
-              selectedSeatId={selectedSeat?.id || null}
+            <LibraryMap
+              items={items}
+              setItems={setItems}
+              isLibrarian={false}
               onSeatSelect={setSelectedSeat}
-              showSelectionInfo={false}
             />
           </div>
 

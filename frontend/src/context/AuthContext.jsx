@@ -25,7 +25,18 @@ export function AuthProvider({ children }) {
         });
         if (response.ok) {
           const userData = await response.json();
-          setUser(userData);
+
+          // 💡 בדיקה קריטית: תפתחי את ה-Console בדפדפן (F12) ותראי מה מודפס כאן!
+          console.log("This is the exact data from check-auth:", userData);
+
+          // בדיקה אם המשתמש מגיע ישירות או עטוף בתוך שדה user
+          if (userData.user) {
+            setUser(userData.user);
+          } else if (userData.data) {
+            setUser(userData.data);
+          } else {
+            setUser(userData);
+          }
         } else {
           setUser(null);
           localStorage.removeItem("libraryUser");
@@ -36,21 +47,21 @@ export function AuthProvider({ children }) {
         localStorage.removeItem("libraryUser");
       }
       setIsAuthReady(true);
-    }
+    };
     checkAuth();
   }, []);
-    // const storedUser = localStorage.getItem("libraryUser");
+  // const storedUser = localStorage.getItem("libraryUser");
 
-    // if (storedUser) {
-    //   try {
-    //     setUser(JSON.parse(storedUser));
-    //   } catch (error) {
-    //     console.error("שגיאה בקריאת נתוני המשתמש:", error);
-    //     localStorage.removeItem("libraryUser");
-    //   }
-    // }
+  // if (storedUser) {
+  //   try {
+  //     setUser(JSON.parse(storedUser));
+  //   } catch (error) {
+  //     console.error("שגיאה בקריאת נתוני המשתמש:", error);
+  //     localStorage.removeItem("libraryUser");
+  //   }
+  // }
 
-    // setIsAuthReady(true);
+  // setIsAuthReady(true);
 
   const login = (userData) => {
     setUser(userData);
@@ -70,11 +81,21 @@ export function AuthProvider({ children }) {
     });
   };
 
-  const logout = () => {
-    setUser(null);
-    setIsAuthReady(true);
-    localStorage.removeItem("libraryUser");
-    window.location.href = "/";
+  const logout = async () => {
+    try {
+      // 💡 פונים לשרת ומבקשים ממנו להרוס את הסשן ולמחוק את העוגייה
+      await fetch("http://localhost:8000/user/logout", {
+        method: "POST",
+        credentials: "include", // 💡 קריטי! גורם לדפדפן להעביר את העוגייה לשרת כדי שידע מי מתנתק
+      });
+    } catch (error) {
+      console.error("Error during server logout:", error);
+    } finally {
+      // 💡 בין אם השרת הצליח ובין אם לא, מנקים את הדפדפן ומחזירים לדף הבית
+      setUser(null);
+      localStorage.removeItem("libraryUser");
+      window.location.href = "/";
+    }
   };
 
   const isAuthenticated = !!user;

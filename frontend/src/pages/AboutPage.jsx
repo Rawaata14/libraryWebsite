@@ -14,14 +14,13 @@
   בהמשך ניתן לחבר אותה ל-backend ולשמור במסד נתונים.
 */
 
-import { useState } from "react";
-
+import { useState, useContext } from "react";
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
-import useAuth from "../hooks/useAuth";
+import { AuthContext } from "../../src/context/AuthContext";
 
 export default function AboutPage() {
-  const { user } = useAuth();
+  const { user } = useContext(AuthContext);
 
   const isLibrarian = user?.role === "librarian";
 

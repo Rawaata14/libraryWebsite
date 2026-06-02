@@ -20,8 +20,8 @@ import RegisterPage from "../pages/RegisterPage";
 import ReserveBookPage from "../pages/ReserveBookPage";
 import AddBookPage from "../pages/AddBookPage";
 import ProfilePage from "../pages/ProfilePage";
-
-
+import AdminMapPage from "../pages/AdminMapPage";
+import LibraryMap from "../components/map/LibraryMap";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import GuestRoute from "../components/common/GuestRoute";
 import RoleRoute from "../components/common/RoleRoute";
@@ -116,10 +116,28 @@ export default function AppRoutes() {
         />
 
         <Route
+          path="admin/books"
+          element={
+            <RoleRoute allowedRoles={["librarian"]}>
+              <BooksPage />
+            </RoleRoute>
+          }
+        />
+
+        <Route
           path="/admin/add-book"
           element={
             <RoleRoute allowedRoles={["librarian"]}>
               <AddBookPage />
+            </RoleRoute>
+          }
+        />
+
+        <Route
+          path="/admin/map"
+          element={
+            <RoleRoute allowedRoles={["librarian"]}>
+              <AdminMapPage />
             </RoleRoute>
           }
         />

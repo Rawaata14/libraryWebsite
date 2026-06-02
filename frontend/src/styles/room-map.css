@@ -74,6 +74,7 @@
 /* ===== אזור המפה ===== */
 
 .dynamicMapCanvas {
+  user-select: none;
   position: relative;
   width: 100%;
   aspect-ratio: 1600 / 1024;
@@ -127,9 +128,7 @@
 
 .mapIconItem {
   position: absolute;
-  transform:
-    translate(-50%, -50%)
-    rotate(var(--item-rotation, 0deg));
+  transform: translate(-50%, -50%) rotate(var(--item-rotation, 0deg));
 
   border: none;
   background: transparent;
@@ -196,9 +195,7 @@
 .mapIconItem.blocked img {
   opacity: 0.4;
 
-  filter:
-    grayscale(100%)
-    drop-shadow(0 8px 12px rgba(0, 0, 0, 0.35));
+  filter: grayscale(100%) drop-shadow(0 8px 12px rgba(0, 0, 0, 0.35));
 }
 
 .mapIconItem.blocked::after {

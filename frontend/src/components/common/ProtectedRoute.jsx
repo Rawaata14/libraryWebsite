@@ -9,11 +9,12 @@
   - אם כן, לאפשר גישה לתוכן
 */
 
+import { useContext } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import useAuth from "../../hooks/useAuth";
+import { AuthContext } from "../../context/AuthContext";
 
 export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, isAuthReady } = useAuth();
+  const { isAuthenticated, isAuthReady } = useContext(AuthContext);
   const location = useLocation();
 
   // ממתינים לסיום טעינת מצב המשתמש

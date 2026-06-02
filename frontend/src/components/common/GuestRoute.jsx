@@ -8,11 +8,12 @@
   - אם המשתמש כבר מחובר, להפנות לדף הבית
 */
 
+import { useContext } from "react";
 import { Navigate } from "react-router-dom";
-import useAuth from "../../hooks/useAuth";
+import { AuthContext } from "../../context/AuthContext";
 
 export default function GuestRoute({ children }) {
-  const { isAuthenticated, isAuthReady } = useAuth();
+  const { isAuthenticated, isAuthReady } = useContext(AuthContext);
 
   if (!isAuthReady) {
     return <div className="routeLoading">Loading...</div>;

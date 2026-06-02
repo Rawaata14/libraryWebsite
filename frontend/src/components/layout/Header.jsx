@@ -11,29 +11,13 @@ Header.jsx
 - הצגת תמונת פרופיל.
 - מעבר לדף הפרופיל.
 - התנתקות מהמערכת.
-
-הערה:
-תמונת הפרופיל נטענת מתוך תיקיית uploads בשרת.
 =========================================================
 */
 
 import { Link, NavLink } from "react-router-dom";
-import useAuth from "../../hooks/useAuth";
+import { useContext } from "react";
+import { AuthContext } from "../../context/AuthContext";
 
-/*
----------------------------------------------------------
-בניית כתובת תמונת הפרופיל
-
-תפקיד:
-מחזירה את כתובת התמונה המתאימה למשתמש.
-
-אם קיימת תמונה בשרת:
-יוצג הקובץ מתוך uploads.
-
-אם לא קיימת תמונה:
-תוצג תמונת ברירת מחדל.
----------------------------------------------------------
-*/
 function getProfileImage(user) {
   if (user?.profile_image_name) {
     return `http://localhost:8000/uploads/profile-images/${user.profile_image_name}`;
@@ -47,16 +31,17 @@ function getProfileImage(user) {
 }
 
 export default function Header() {
-  const { user, isAuthenticated, logout } = useAuth();
+ const { user, isAuthenticated, isLibrarian, logout } = useContext(AuthContext);
 
-  /*
-  ---------------------------------------------------------
-  עיצוב קישור ניווט פעיל
+  console.log(
+    "Header component - user:",
+    user,
+    "isAuthenticated:",
+    isAuthenticated,
+    "isLibrarian:",
+    isLibrarian,
+  );
 
-  תפקיד:
-  מוסיף class שונה לקישור של הדף הפעיל.
-  ---------------------------------------------------------
-  */
   const navClassName = ({ isActive }) =>
     isActive ? "navItem activeNav" : "navItem";
 
@@ -72,11 +57,17 @@ export default function Header() {
           Home
         </NavLink>
 
-        <NavLink to="/map" className={navClassName}>
+        <NavLink
+          to={isLibrarian ? "/admin/map" : "/map"}
+          className={navClassName}
+        >
           Study Rooms
         </NavLink>
 
-        <NavLink to="/books" className={navClassName}>
+        <NavLink
+          to={isLibrarian ? "/admin/books" : "/books"}
+          className={navClassName}
+        >
           Books
         </NavLink>
 

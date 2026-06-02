@@ -9,16 +9,16 @@
   - ניתוב לדף הבית לאחר הרשמה מוצלחת
 */
 
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import InputField from "../common/InputField";
 import Button from "../common/Button";
-import useAuth from "../../hooks/useAuth";
+import { AuthContext } from "../../context/AuthContext";
 import axios from "axios";
 
 export default function RegisterForm() {
   const navigate = useNavigate();
-  const { register } = useAuth();
+  const { register } = useContext(AuthContext);
 
   const [formData, setFormData] = useState({
     fullName: "",
