@@ -7,6 +7,7 @@ const seatQueries = require("../database/queries/seatQueries");
 // Route for saving the seat map
 router.post("/save-map", async (req, res) => {
   try {
+    console.log("Received seat map data:", req.body);
     if (!req.session.user || req.session.user.role !== "librarian") {
       return res
         .status(403)

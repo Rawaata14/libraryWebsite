@@ -132,6 +132,7 @@ export default function LibraryMap({
   const [newItemPlacement, setNewItemPlacement] = useState(mapZones[0].id); // ברירת מחדל לאזור הראשון ברשימה
   const [mouseCoords, setMouseCoords] = useState({ x: 0, y: 0 });
   const [seats, setSeats] = useState([]); // מצב לשמירת המושבים מהשרת
+  const [draggingItemId, setDraggingItemId] = useState(null); // מצב לשמירת ה-ID של הפריט הנגרר
 
   const mapRef = useRef(null);
 
@@ -150,6 +151,7 @@ export default function LibraryMap({
       reservable:
         newItemType === "seat-to-add" || newItemType === "single-seat",
       location: zone.id,
+      isNew: true, // סימון שהפריט חדש ולא קיים עדיין במסד הנתונים (לשימוש בשמירה)
     };
 
     setItems((prevItems) => [...prevItems, newItem]);
@@ -231,8 +233,44 @@ export default function LibraryMap({
     //setMouseCoords({ x: Math.round(position.x), y: Math.round(position.y) });
 
     const hoveredZone = getZoneByPosition(position.x, position.y);
-
     setHoveredZoneId(hoveredZone?.id || null);
+
+    if (draggingItemId) {
+      const currentItem = items.find((item) => item.seatId === draggingItemId);
+      if (!currentItem) return;
+
+      const allowedZone = mapZones.find(
+        (zone) => zone.id === currentItem.location,
+      );
+      let targetX = position.x;
+      let targetY = position.y;
+
+      if (allowedZone) {
+        targetX = Math.max(
+          allowedZone.minX,
+          Math.min(allowedZone.maxX, targetX),
+        );
+        targetY = Math.max(
+          allowedZone.minY,
+          Math.min(allowedZone.maxY, targetY),
+        );
+      } else {
+        if (!isInsideAllowedZone(position.x, position.y)) {
+          return;
+        }
+      }
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.seatId === draggingItemId
+            ? { ...item, x: targetX, y: targetY }
+            : item,
+        ),
+      );
+    }
+  };
+
+  const handleMapMouseUp = () => {
+    setDraggingItemId(null);
   };
 
   const updateItemPosition = (id, clientX, clientY) => {
@@ -258,10 +296,17 @@ export default function LibraryMap({
   };
 
   const saveMap = async () => {
-    const itemsToSave = items.map((item) => ({
-      ...item,
-      seatId: item.seatId.length > 6 ? null : item.seatId, // אם ה-seatId הוא מזהה זמני (מבוסס על timestamp), נשלח null כדי שיתווסף כחדש
-    }));
+    const itemsToSave = items.map((item) => {
+      const copy = { ...item };
+      if (copy.isNew) {
+        copy.seatId = null;
+        delete copy.isNew; // לא צריך את זה בשרת, זה רק לסימון בממשק
+      }
+      return copy;
+    });
+
+    console.log("1. Data being sent to Backend:", itemsToSave);
+
     try {
       const response = await axios.post(
         "http://localhost:8000/seats/save-map",
@@ -275,6 +320,12 @@ export default function LibraryMap({
       );
       if (response.status === 201) {
         alert("Map saved successfully!");
+
+        console.log("2. Response data received from Backend:", response.data);
+
+        if (response.data && Array.isArray(response.data)) {
+          setSeats(response.data);
+        }
       } else {
         alert("Failed to save map. Please try again.");
       }
@@ -304,8 +355,12 @@ export default function LibraryMap({
       <div
         className="dynamicMapCanvas"
         ref={mapRef}
-        onMouseMove={handleMapMouseMove}
-        onMouseLeave={() => setHoveredZoneId(null)}
+        onPointerMove={handleMapMouseMove}
+        onPointerUp={handleMapMouseUp}
+        onPointerLeave={() => {
+          setHoveredZoneId(null);
+          handleMapMouseUp(); // 💡 משחרר את הגרירה גם אם העכבר יצא מגבולות המפה לחלוטין!
+        }}
       >
         <img
           src="/images/library-map.png"
@@ -336,6 +391,7 @@ export default function LibraryMap({
             onSelect={handleItemSelect}
             onMove={updateItemPosition}
             isLibrarian={isLibrarian}
+            setDraggingItemId={setDraggingItemId}
           />
         ))}
       </div>

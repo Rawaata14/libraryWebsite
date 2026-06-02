@@ -1,10 +1,8 @@
 /*
   MapItem.jsx
   -----------
-  רכיב שמציג אייקון אחד על גבי מפת הספרייה.
+  רכיב שמציג אייקון אחד על גבי מפת הספרייה ומנהל לחיצה ונעילת גרירה.
 */
-
-import { useRef } from "react";
 
 import chairIcon from "../../assets/icons/seat-to-add.png";
 import singleSeatIcon from "../../assets/icons/single-seat.png";
@@ -26,24 +24,27 @@ export default function MapItem({
   item,
   isSelected,
   onSelect,
-  onMove,
   isLibrarian,
+  setDraggingItemId,
 }) {
-  const draggingRef = useRef(false);
-
-  const handleMouseDown = () => {
+  const handlePointerDown = (e) => {
     if (!isLibrarian) return;
-    draggingRef.current = true;
+
+    e.preventDefault();
+    // 🔒 נועל את כל תנועות העכבר/מצביע על הרהיט הזה
+    e.currentTarget.setPointerCapture(e.pointerId);
+
+    onSelect(item.seatId);
+    setDraggingItemId(item.seatId);
   };
 
-  const handleMouseMove = (event) => {
-    if (!draggingRef.current) return;
-    onMove(item.id, event.clientX, event.clientY);
+  const handlePointerUp = (e) => {
+    // 🔓 משחרר את הנעילה כשהרמנו את האצבע מהעכבר
+    e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
-  const handleMouseUp = () => {
-    draggingRef.current = false;
-  };
+  const isTable = item.type === "table-4" || item.type === "table-8";
+  const zIndexValue = isTable ? 2 : 1; 
 
   return (
     <button
@@ -55,12 +56,11 @@ export default function MapItem({
         left: `${item.x}%`,
         top: `${item.y}%`,
         "--item-rotation": `${item.rotation || 0}deg`,
+        touchAction: "none", // 📱 מונע מהדפדפן לגלול את המסך בניידים בזמן גרירה
+        zIndex: zIndexValue,
       }}
-      onClick={() => onSelect(item.id)}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
       title={`${item.type} - ${item.status}`}
     >
       <img src={icons[item.type]} alt={item.type} draggable={false} />
