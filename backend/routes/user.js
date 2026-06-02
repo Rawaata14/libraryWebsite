@@ -1,6 +1,79 @@
 const express = require("express");
 const session = require("express-session");
 const router = express.Router();
+
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
+
+/*
+  יצירת תיקיית שמירת תמונות פרופיל
+  לוודא שקיימת תיקייה בשרת עבור תמונות פרופיל.
+
+  למה נוצר:
+  אם התיקייה לא קיימת, multer לא יוכל לשמור את הקבצים.
+*/
+const profileImagesDir = path.join(
+  __dirname,
+  "../uploads/profile-images",
+);
+
+if (!fs.existsSync(profileImagesDir)) {
+  fs.mkdirSync(profileImagesDir, { recursive: true });
+}
+
+/*
+  הגדרת multer לשמירת תמונות פרופיל
+  קביעת מיקום שמירת הקובץ ושם הקובץ.
+
+  למה נוצר:
+  כדי לאפשר העלאת תמונה מהמחשב של המשתמש
+  ולשמור אותה בצורה מסודרת בשרת.
+*/
+const storage = multer.diskStorage({
+  /*
+    destination
+    קובע באיזו תיקייה לשמור את תמונת הפרופיל.
+  */
+  destination: (req, file, cb) => {
+    cb(null, profileImagesDir);
+  },
+
+  /*
+    filename
+    יוצר שם ייחודי לתמונה כדי למנוע דריסה של קבצים קיימים.
+  */
+  filename: (req, file, cb) => {
+    const uniqueName = `${Date.now()}-${file.originalname}`;
+
+    cb(null, uniqueName);
+  },
+});
+
+/*
+  fileFilter
+  מאפשר העלאת קבצי תמונה בלבד.
+
+  למה נוצר:
+  כדי למנוע העלאה של קבצים לא מתאימים כמו PDF או EXE.
+*/
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image/")) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only image files are allowed"), false);
+  }
+};
+
+/*
+  upload
+  middleware של multer שמטפל בהעלאת הקובץ.
+*/
+const upload = multer({
+  storage,
+  fileFilter,
+});
+
 // const authQueries = require("../database/queries/authorization");
 
 // Route for user registration
@@ -73,5 +146,66 @@ router.post("/logout", (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
+
+/*
+  Route: PUT /user/profile-image
+  העלאת תמונת פרופיל חדשה למשתמש המחובר.
+
+  איך זה עובד:
+  - בודק שיש משתמש מחובר בסשן.
+  - מקבל קובץ בשם profileImage.
+  - שומר את הקובץ בתיקיית uploads/profile-images.
+  - מעדכן במסד הנתונים את שם התמונה.
+  - מעדכן גם את פרטי המשתמש בסשן.
+*/
+router.put(
+  "/profile-image",
+  upload.single("profileImage"),
+  async (req, res) => {
+    try {
+      if (!req.session || !req.session.user) {
+        return res.status(401).json({
+          success: false,
+          message: "User is not authenticated",
+        });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "No image file uploaded",
+        });
+      }
+
+      const updateProfileImage =
+        require("../database/queries/authorization")
+          .updateProfileImage;
+
+      const userEmail = req.session.user.email;
+
+      const profileImageName = req.file.filename;
+
+      const result = await updateProfileImage(
+        userEmail,
+        profileImageName,
+      );
+
+      if (result.success) {
+        req.session.user = result.user;
+
+        return res.status(200).json(result);
+      }
+
+      return res.status(400).json(result);
+    } catch (error) {
+      console.error("Error uploading profile image:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error",
+      });
+    }
+  },
+);
 
 module.exports = router;

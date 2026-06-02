@@ -3,7 +3,7 @@ const session = require("express-session");
 const cors = require("cors");
 const dbSingleton = require("./database/dbSingleton");
 const path = require("path");
-
+const librarianRoutes = require("./routes/librarian");
 const app = express();
 
 app.use(
@@ -39,3 +39,5 @@ console.log("Database connection established successfully.");
 app.listen(8000, () => {
   console.log("Server running on http://localhost:8000");
 });
+
+app.use("/api/librarian", librarianRoutes);

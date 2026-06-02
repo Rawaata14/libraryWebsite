@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 10, 2026 at 09:06 AM
+-- Generation Time: May 19, 2026 at 01:17 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -33,8 +33,19 @@ CREATE TABLE `book` (
   `author` varchar(100) DEFAULT NULL,
   `publishYear` int(11) DEFAULT NULL,
   `status` varchar(20) DEFAULT 'available',
-  `quantity` int(11) DEFAULT 1
+  `total_quantity` int(11) NOT NULL DEFAULT 1,
+  `category` varchar(100) NOT NULL DEFAULT 'General',
+  `book_image_name` varchar(255) DEFAULT NULL,
+  `available_quantity` int(11) NOT NULL,
+  `isbn` varchar(20) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `book`
+--
+
+INSERT INTO `book` (`bookId`, `title`, `author`, `publishYear`, `status`, `total_quantity`, `category`, `book_image_name`, `available_quantity`, `isbn`) VALUES
+(1, 'harry potter and the deathly hallows', 'J.K. Rowling', 2007, 'available', 4, 'Fantasy', '1778694179358-81aCMT1zKtL.jpg', 4, '978-0545010221');
 
 -- --------------------------------------------------------
 
@@ -75,7 +86,11 @@ CREATE TABLE `notification` (
 CREATE TABLE `seat` (
   `seatId` int(11) NOT NULL,
   `location` varchar(50) DEFAULT NULL,
-  `status` varchar(20) DEFAULT 'available'
+  `status` varchar(20) DEFAULT 'available',
+  `type` varchar(50) NOT NULL,
+  `x` float NOT NULL,
+  `y` float NOT NULL,
+  `rotation` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -177,7 +192,8 @@ CREATE TABLE `waiting_list_seat` (
 -- Indexes for table `book`
 --
 ALTER TABLE `book`
-  ADD PRIMARY KEY (`bookId`);
+  ADD PRIMARY KEY (`bookId`),
+  ADD UNIQUE KEY `isbn` (`isbn`);
 
 --
 -- Indexes for table `loan`
@@ -246,7 +262,7 @@ ALTER TABLE `waiting_list_seat`
 -- AUTO_INCREMENT for table `book`
 --
 ALTER TABLE `book`
-  MODIFY `bookId` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `bookId` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `loan`

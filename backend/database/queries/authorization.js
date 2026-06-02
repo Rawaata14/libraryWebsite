@@ -80,7 +80,59 @@ async function loginUser(email, password) {
     };
   }
 }
+
+/*
+  updateProfileImage
+  ------------------
+  תפקיד:
+  עדכון שם קובץ תמונת הפרופיל של המשתמש במסד הנתונים.
+
+  למה נוצרה:
+  כאשר משתמש או ספרן מעלים תמונת פרופיל חדשה,
+  התמונה עצמה נשמרת בתיקיית uploads,
+  ובמסד הנתונים נשמר רק שם הקובץ.
+
+  פרמטרים:
+  - email: האימייל של המשתמש המחובר.
+  - profileImageName: שם קובץ התמונה שנשמר בשרת.
+*/
+async function updateProfileImage(email, profileImageName) {
+  try {
+    const updateImageSQL =
+      "UPDATE `user` SET profile_image_name = ? WHERE email = ?";
+
+    const result = await doQuery(updateImageSQL, [
+      profileImageName,
+      email,
+    ]);
+
+    if (result.affectedRows > 0) {
+      const getUserSQL = "SELECT * FROM `user` WHERE email = ?";
+      const users = await doQuery(getUserSQL, [email]);
+
+      return {
+        success: true,
+        message: "Profile image updated successfully",
+        user: users[0],
+      };
+    }
+
+    return {
+      success: false,
+      message: "User not found",
+    };
+  } catch (error) {
+    console.error("Error updating profile image:", error);
+
+    return {
+      success: false,
+      message: "Failed to update profile image",
+    };
+  }
+}
+
 module.exports = {
   registerUser,
   loginUser,
+  updateProfileImage,
 };
