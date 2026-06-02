@@ -26,6 +26,7 @@ export default function MapItem({
   onSelect,
   isLibrarian,
   setDraggingItemId,
+  style, // 💡 מקבלים את הסטייל שנשלח מ-LibraryMap (מכיל את ה-pointerEvents: "auto")
 }) {
   const handlePointerDown = (e) => {
     if (!isLibrarian) return;
@@ -39,12 +40,10 @@ export default function MapItem({
   };
 
   const handlePointerUp = (e) => {
+    if (!isLibrarian) return;
     // 🔓 משחרר את הנעילה כשהרמנו את האצבע מהעכבר
     e.currentTarget.releasePointerCapture(e.pointerId);
   };
-
-  const isTable = item.type === "table-4" || item.type === "table-8";
-  const zIndexValue = isTable ? 2 : 1; 
 
   return (
     <button
@@ -53,11 +52,11 @@ export default function MapItem({
         isSelected ? "selected" : ""
       }`}
       style={{
+        ...style, // 🔥 מיזוג הסטייל החיצוני (כולל pointerEvents: "auto" שמציל את הגרירה!)
         left: `${item.x}%`,
         top: `${item.y}%`,
         "--item-rotation": `${item.rotation || 0}deg`,
         touchAction: "none", // 📱 מונע מהדפדפן לגלול את המסך בניידים בזמן גרירה
-        zIndex: zIndexValue,
       }}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}

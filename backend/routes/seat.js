@@ -52,4 +52,19 @@ router.get("/get-map", async (req, res) => {
   }
 });
 
+router.delete("/delete-seat/:seatId", async (req, res) => {
+  try {
+    const seatId = req.params.seatId;
+    const result = await seatQueries.deleteSeat(seatId);
+    if (result.success) {
+      res.status(200).json({ message: "Seat deleted successfully" });
+    } else {
+      res.status(500).json({ message: "Failed to delete seat" });
+    }
+  } catch (error) {
+    console.error("Error in deleting seat:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 module.exports = router;

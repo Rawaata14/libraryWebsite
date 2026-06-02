@@ -136,6 +136,9 @@
   cursor: grab;
   z-index: 20;
   touch-action: none;
+  flex-shrink: 0;
+  width: max-content;
+  height: max-content;
 }
 
 .mapIconItem:active {
@@ -158,6 +161,8 @@
   transition:
     transform 0.2s,
     opacity 0.2s;
+
+  flex-shrink: 0;
 }
 
 .mapIconItem:hover img {

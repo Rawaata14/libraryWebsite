@@ -1,100 +1,76 @@
-/*
-  LibraryMap.jsx
-  =========================================================
-
-  קומפוננטת המפה הראשית של הספרייה.
-
-  אחריות:
-  ---------------------------------------------------------
-  ✔ הצגת תמונת הרקע של הספרייה
-  ✔ הצגת אייקונים של שולחנות וכיסאות
-  ✔ Drag & Drop
-  ✔ סיבוב אובייקטים
-  ✔ חסימת אובייקטים
-  ✔ מחיקת אובייקטים
-  ✔ כותרות שקופות לחדרים
-  ✔ הסתרת כותרת כאשר העכבר נמצא בתוך אותו אזור
-  ✔ מניעת גרירה על קירות ומדפים
-
-  =========================================================
-*/
-
 import { useRef, useState } from "react";
-
 import MapItem from "./MapItem";
 import MapToolbar from "./MapToolbar";
 import axios from "axios";
-
-const initialItems = [];
 
 const mapZones = [
   {
     id: "quiet-room",
     label: "Quiet Room",
-    minX: 3, // גבול שמאלי
-    maxX: 34, // גבול ימני
-    minY: 16, // גבול עליון
-    maxY: 47, // גבול תחתון
+    minX: 3,
+    maxX: 34,
+    minY: 16,
+    maxY: 47,
     labelX: 18,
     labelY: 8,
   },
   {
     id: "computer-area",
     label: "Computer Area",
-    minX: 38, // גבול שמאלי
-    maxX: 61, // גבול ימני
-    minY: 16, // גבול עליון
-    maxY: 42, // גבול תחתון
+    minX: 38,
+    maxX: 61,
+    minY: 16,
+    maxY: 42,
     labelX: 49,
     labelY: 8,
   },
   {
     id: "group-room",
     label: "Group Study Rooms",
-    minX: 65, // גבול שמאלי
-    maxX: 97, // גבול ימני
-    minY: 16, // גבול עליון
-    maxY: 50, // גבול תחתון
+    minX: 65,
+    maxX: 97,
+    minY: 16,
+    maxY: 50,
     labelX: 81,
     labelY: 8,
   },
   {
     id: "reading-nook",
     label: "Reading Book",
-    minX: 2, // גבול שמאלי
-    maxX: 18, // גבול ימני
-    minY: 51, // גבול עליון
-    maxY: 80, // גבול תחתון
+    minX: 2,
+    maxX: 18,
+    minY: 51,
+    maxY: 80,
     labelX: 18,
     labelY: 57,
   },
   {
     id: "study-room-1",
     label: "Study Room 1",
-    minX: 49, // גבול שמאלי
-    maxX: 63.5, // גבול ימני
-    minY: 54, // גבול עליון
-    maxY: 80, // גבול תחתון
+    minX: 49,
+    maxX: 63.5,
+    minY: 54,
+    maxY: 80,
     labelX: 57,
     labelY: 57,
   },
   {
     id: "study-room-2",
     label: "Study Room 2",
-    minX: 65, // גבול שמאלי
-    maxX: 79.5, // גבול ימני
-    minY: 54, // גבול עליון
-    maxY: 80, // גבול תחתון
+    minX: 65,
+    maxX: 79.5,
+    minY: 54,
+    maxY: 80,
     labelX: 72,
     labelY: 57,
   },
   {
     id: "study-room-3",
     label: "Study Room 3",
-    minX: 81.5, // גבול שמאלי
-    maxX: 98, // גבול ימני
-    minY: 54, // גבול עליון
-    maxY: 80, // גבול תחתון
+    minX: 81.5,
+    maxX: 98,
+    minY: 54,
+    maxY: 80,
     labelX: 89,
     labelY: 57,
   },
@@ -125,24 +101,23 @@ export default function LibraryMap({
   items = [],
   setItems,
   onSeatSelect,
+  fetchLatestSeats, // 💡 נקבל את פונקציית הרענון של השרת ישירות מקומפוננטת העטיפה האבא
 }) {
   const [selectedItemId, setSelectedItemId] = useState(null);
   const [newItemType, setNewItemType] = useState("seat");
   const [hoveredZoneId, setHoveredZoneId] = useState(null);
-  const [newItemPlacement, setNewItemPlacement] = useState(mapZones[0].id); // ברירת מחדל לאזור הראשון ברשימה
-  const [mouseCoords, setMouseCoords] = useState({ x: 0, y: 0 });
-  const [seats, setSeats] = useState([]); // מצב לשמירת המושבים מהשרת
-  const [draggingItemId, setDraggingItemId] = useState(null); // מצב לשמירת ה-ID של הפריט הנגרר
+  const [newItemPlacement, setNewItemPlacement] = useState(mapZones[0].id);
+  const [draggingItemId, setDraggingItemId] = useState(null);
 
   const mapRef = useRef(null);
-
   const selectedItem = items.find((item) => item.seatId === selectedItemId);
 
+  // פונקציה להוספת פריט חדש למפה
   const addItem = () => {
     const zone = mapZones.find((z) => z.id === newItemPlacement);
-
+    const generatedId = `temp-${Date.now()}`;
     const newItem = {
-      seatId: Date.now().toString(),
+      seatId: generatedId,
       type: newItemType,
       x: (zone.minX + zone.maxX) / 2,
       y: (zone.minY + zone.maxY) / 2,
@@ -151,21 +126,50 @@ export default function LibraryMap({
       reservable:
         newItemType === "seat-to-add" || newItemType === "single-seat",
       location: zone.id,
-      isNew: true, // סימון שהפריט חדש ולא קיים עדיין במסד הנתונים (לשימוש בשמירה)
     };
 
     setItems((prevItems) => [...prevItems, newItem]);
-    setSelectedItemId(newItem.seatId);
+    setSelectedItemId(generatedId);
   };
 
-  const deleteItem = () => {
+  // פונקציה למחיקת הפריט הנבחר
+  const deleteItem = async () => {
     if (!selectedItemId) return;
 
-    setItems((prevItems) =>
-      prevItems.filter((item) => item.seatId !== selectedItemId),
-    );
+    if (String(selectedItemId).startsWith("temp-")) {
+      setItems((prevItems) =>
+        prevItems.filter((item) => item.seatId !== selectedItemId),
+      );
+      setSelectedItemId(null);
+      return;
+    }
 
-    setSelectedItemId(null);
+    if (
+      window.confirm(
+        "האם את בטוחה שברצונך למחוק פריט זה לצמיתות מבסיס הנתונים?",
+      )
+    ) {
+      try {
+        const response = await axios.delete(
+          `http://localhost:8000/seats/delete-seat/${selectedItemId}`,
+          {
+            withCredentials: true,
+          },
+        );
+        if (response.status === 200 || response.status === 204) {
+          setItems((prevItems) =>
+            prevItems.filter((item) => item.seatId !== selectedItemId),
+          );
+          setSelectedItemId(null);
+          alert("הפריט נמחק בהצלחה!");
+        } else {
+          alert("מחיקת הפריט נכשלה בשרת.");
+        }
+      } catch (error) {
+        console.error("Error deleting item:", error);
+        alert("אירעה שגיאה בזמן מחיקת הפריט.");
+      }
+    }
   };
 
   const toggleBlockItem = () => {
@@ -189,10 +193,7 @@ export default function LibraryMap({
     setItems((prevItems) =>
       prevItems.map((item) =>
         item.seatId === selectedItemId
-          ? {
-              ...item,
-              rotation: ((item.rotation || 0) + 90) % 360,
-            }
+          ? { ...item, rotation: ((item.rotation || 0) + 90) % 360 }
           : item,
       ),
     );
@@ -216,21 +217,18 @@ export default function LibraryMap({
     if (!mapRef.current) return null;
 
     const rect = mapRef.current.getBoundingClientRect();
-
     let x = ((clientX - rect.left) / rect.width) * 100;
     let y = ((clientY - rect.top) / rect.height) * 100;
 
-    x = Math.max(0, Math.min(100, x));
-    y = Math.max(0, Math.min(100, y));
-
-    return { x, y };
+    return {
+      x: Math.max(0, Math.min(100, x)),
+      y: Math.max(0, Math.min(100, y)),
+    };
   };
 
   const handleMapMouseMove = (event) => {
     const position = getMapPercentPosition(event.clientX, event.clientY);
-
     if (!position) return;
-    //setMouseCoords({ x: Math.round(position.x), y: Math.round(position.y) });
 
     const hoveredZone = getZoneByPosition(position.x, position.y);
     setHoveredZoneId(hoveredZone?.id || null);
@@ -255,10 +253,9 @@ export default function LibraryMap({
           Math.min(allowedZone.maxY, targetY),
         );
       } else {
-        if (!isInsideAllowedZone(position.x, position.y)) {
-          return;
-        }
+        if (!isInsideAllowedZone(position.x, position.y)) return;
       }
+
       setItems((prevItems) =>
         prevItems.map((item) =>
           item.seatId === draggingItemId
@@ -275,61 +272,45 @@ export default function LibraryMap({
 
   const updateItemPosition = (id, clientX, clientY) => {
     const position = getMapPercentPosition(clientX, clientY);
-
     if (!position) return;
 
-    if (!isInsideAllowedZone(position.x, position.y)) {
-      return;
-    }
+    if (!isInsideAllowedZone(position.x, position.y)) return;
 
     setItems((prevItems) =>
       prevItems.map((item) =>
-        item.seatId === id
-          ? {
-              ...item,
-              x: position.x,
-              y: position.y,
-            }
-          : item,
+        item.seatId === id ? { ...item, x: position.x, y: position.y } : item,
       ),
     );
   };
 
   const saveMap = async () => {
-    const itemsToSave = items.map((item) => {
-      const copy = { ...item };
-      if (copy.isNew) {
-        copy.seatId = null;
-        delete copy.isNew; // לא צריך את זה בשרת, זה רק לסימון בממשק
-      }
-      return copy;
-    });
-
-    console.log("1. Data being sent to Backend:", itemsToSave);
+    const itemsToSave = items.map((item) => ({
+      ...item,
+      seatId: String(item.seatId).startsWith("temp-") ? null : item.seatId,
+    }));
 
     try {
       const response = await axios.post(
         "http://localhost:8000/seats/save-map",
         itemsToSave,
         {
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           withCredentials: true,
         },
       );
-      if (response.status === 201) {
+
+      if (response.status === 201 || response.status === 200) {
         alert("Map saved successfully!");
-
-        console.log("2. Response data received from Backend:", response.data);
-
-        if (response.data && Array.isArray(response.data)) {
-          setSeats(response.data);
+        setSelectedItemId(null);
+        // 💡 קורא לפונקציית הטעינה שעוברת מהרכיב האב ומעדכנת את הסטייט הראשי
+        if (fetchLatestSeats) {
+          await fetchLatestSeats();
         }
       } else {
         alert("Failed to save map. Please try again.");
       }
     } catch (error) {
+      console.error("Error saving map:", error);
       alert("An error occurred while saving the map. Please try again.");
     }
   };
@@ -359,7 +340,7 @@ export default function LibraryMap({
         onPointerUp={handleMapMouseUp}
         onPointerLeave={() => {
           setHoveredZoneId(null);
-          handleMapMouseUp(); // 💡 משחרר את הגרירה גם אם העכבר יצא מגבולות המפה לחלוטין!
+          handleMapMouseUp();
         }}
       >
         <img
@@ -371,47 +352,46 @@ export default function LibraryMap({
         {mapZones.map((zone) => (
           <div
             key={zone.id}
-            className={`mapZoneLabel ${
-              hoveredZoneId === zone.id ? "hiddenZoneLabel" : ""
-            }`}
-            style={{
-              left: `${zone.labelX}%`,
-              top: `${zone.labelY}%`,
-            }}
+            className={`mapZoneLabel ${hoveredZoneId === zone.id ? "hiddenZoneLabel" : ""}`}
+            style={{ left: `${zone.labelX}%`, top: `${zone.labelY}%` }}
           >
             {zone.label}
           </div>
         ))}
 
-        {items.map((item) => (
-          <MapItem
-            key={item.seatId}
-            item={item}
-            isSelected={selectedItemId === item.seatId}
-            onSelect={handleItemSelect}
-            onMove={updateItemPosition}
-            isLibrarian={isLibrarian}
-            setDraggingItemId={setDraggingItemId}
-          />
-        ))}
+        {/* לולאת הרינדור של הרהיטים - נקייה מכפילויות של אלמנטים מיותרים */}
+        {items.map((item) => {
+          const isTable = item.type === "table-4" || item.type === "table-8";
+          const zIndexStyle = isTable ? 2 : 1;
+
+          return (
+            <div
+              key={item.seatId}
+              style={{
+                position: "absolute",
+                zIndex: zIndexStyle,
+                left: 0,
+                top: 0,
+                width: "100%",
+                height: "100%",
+                pointerEvents: "none",
+              }}
+            >
+              {/* 💡 ה-pointerEvents מועבר ישירות כפרופ ל-MapItem, שמחיל אותו על ה-div הראשי שלו */}
+              <MapItem
+                item={item}
+                isSelected={selectedItemId === item.seatId}
+                onSelect={handleItemSelect}
+                onMove={updateItemPosition}
+                isLibrarian={isLibrarian}
+                setDraggingItemId={setDraggingItemId}
+                style={{ pointerEvents: "auto" }}
+              />
+            </div>
+          );
+        })}
       </div>
-      {/* תיבת פיתוח זמנית להצגת קואורדינטות העכבר
-      <div
-        style={{
-          position: "fixed",
-          top: "10px",
-          left: "10px",
-          background: "black",
-          color: "lime",
-          padding: "10px",
-          fontFamily: "monospace",
-          zIndex: 9999,
-          borderRadius: "5px",
-          border: "1px solid lime",
-        }}
-      >
-        Mouse Position: X: {mouseCoords.x}% | Y: {mouseCoords.y}%
-      </div> */}
+
       {isLibrarian && selectedItem && (
         <div className="mapEditPanel">
           <strong>Selected:</strong> {selectedItem.type}

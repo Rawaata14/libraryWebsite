@@ -17,6 +17,7 @@ import HeroSection from "../components/home/HeroSection";
 import RoomMapSection from "../components/home/RoomMapSection";
 import InfoSection from "../components/home/InfoSection";
 import RecommendedBooks from "../components/home/RecommendedBooks";
+import LibraryMap from "../components/map/LibraryMap";
 
 export default function HomePage() {
   return (

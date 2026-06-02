@@ -1,21 +1,14 @@
 /*
   MapPage.jsx
   -----------
-  דף מפת המקומות הראשי של המערכת.
-
-  אחריות:
-  - להציג למשתמש את מפת הספרייה
-  - לאפשר בחירת תאריך ושעת הזמנה
-  - לאפשר בחירת כיסא מהמפה
-  - להציג סיכום הזמנה מעודכן לפי הבחירה
+  דף מפת המקומות הראשי של המערכת (תצוגת סטודנט/אורח).
 */
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
 import Button from "../components/common/Button";
-import LibraryMap from "../components/map/LibraryMap";
-import axios from "axios";
+import RoomMap from "../components/dashboard/RoomMap"; // 💡 מייבאים את העטיפה החכמה
 
 const availableDates = ["2026-04-15", "2026-04-16", "2026-04-17", "2026-04-18"];
 
@@ -27,57 +20,43 @@ const availableTimeSlots = [
   "16:00 - 18:00",
 ];
 
-const getAreaLabel = (area) => {
-  if (area === "reading") return "Reading Room";
-  if (area === "computer") return "Computer Area";
-  if (area === "study") return "Study Rooms Area";
+// 💡 תוקן מ-area ל-location כדי להתאים למבנה הנתונים האמיתי של המפה
+const getAreaLabel = (location) => {
+  if (location === "quiet-room") return "Quiet Room";
+  if (location === "computer-area") return "Computer Area";
+  if (location === "group-room") return "Group Study Rooms";
+  if (location === "reading-nook") return "Reading Nook";
+  if (location.startsWith("study-room")) return "Private Study Room";
   return "-";
 };
 
-const getSuggestedUse = (area) => {
-  if (area === "reading") return "Quiet individual study";
-  if (area === "computer") return "Computer-based work";
-  if (area === "study") return "Group / study room use";
+const getSuggestedUse = (location) => {
+  if (location === "quiet-room") return "Quiet individual study";
+  if (location === "computer-area") return "Computer-based work";
+  if (location === "group-room" || location.startsWith("study-room"))
+    return "Group / study room use";
+  if (location === "reading-nook") return "Leisure reading & study";
   return "-";
 };
 
 export default function MapPage() {
-  const [selectedDate, setSelectedDate] = useState(availableDates[0]); // זוכר את התאריך הנבחר
-  const [selectedTime, setSelectedTime] = useState(availableTimeSlots[3]); // זוכר את חלון השעות הנבחר
-  const [selectedSeat, setSelectedSeat] = useState(null); // זוכר איזה כיסא נבחר (בהתחלה null - כלומר כלום)
-  const [items, setItems] = useState([]); // אובייקטים על המפה (כיסאות, שולחנות וכו')]
+  const [selectedDate, setSelectedDate] = useState(availableDates[0]);
+  const [selectedTime, setSelectedTime] = useState(availableTimeSlots[3]);
+  const [selectedSeat, setSelectedSeat] = useState(null); // יכיל את הנתונים שהמפה מחזירה בלחיצה
 
-  // כאן נוכל לטעון את המפה מהשרת אם יש צורך
-  useEffect(() => {
-    const fetchMapData = async () => {
-      try {
-        const response = await axios.get(
-          "http://localhost:8000/seats/get-map",
-          {
-            withCredentials: true,
-          },
-        );
-        console.log("This is what comes from the backend:", response.data);
-        if (response.status === 200) {
-          const mapData =
-            response.data.map ||
-            (Array.isArray(response.data) ? response.data : []);
-          setItems(mapData);
-        }
-      } catch (error) {
-        console.error("Error fetching map data:", error);
-      }
-    };
-    fetchMapData();
-  }, []);
   const handleConfirmReservation = () => {
     if (!selectedSeat) {
       alert("יש לבחור כיסא לפני אישור ההזמנה");
       return;
     }
 
+    if (selectedSeat.status !== "available") {
+      alert("הכיסא הנבחר אינו פנוי להזמנה");
+      return;
+    }
+
     alert(
-      `ההזמנה אושרה עבור ${selectedSeat.id}\nתאריך: ${selectedDate}\nשעה: ${selectedTime}`,
+      `ההזמנה אושרה עבור כיסא שמספרו: ${selectedSeat.id}\nתאריך: ${selectedDate}\nשעה: ${selectedTime}`,
     );
   };
 
@@ -119,11 +98,11 @@ export default function MapPage() {
                 </select>
               </div>
             </div>
-            <LibraryMap
-              items={items}
-              setItems={setItems}
-              isLibrarian={false}
+
+            {/* 🔥 משתמשים בעטיפה החכמה! אין יותר useEffect או setItems משוכפלים כאן */}
+            <RoomMap
               onSeatSelect={setSelectedSeat}
+              selectedSeatId={selectedSeat?.id}
             />
           </div>
 
@@ -141,9 +120,10 @@ export default function MapPage() {
               <p>
                 <strong>Time:</strong> {selectedTime}
               </p>
+              {/* 💡 שימוש ב-location במקום ב-area המושבת */}
               <p>
                 <strong>Area:</strong>{" "}
-                {selectedSeat ? getAreaLabel(selectedSeat.area) : "-"}
+                {selectedSeat ? getAreaLabel(selectedSeat.location) : "-"}
               </p>
               <p>
                 <strong>Status:</strong>{" "}
@@ -151,16 +131,14 @@ export default function MapPage() {
               </p>
               <p>
                 <strong>Suggested Use:</strong>{" "}
-                {selectedSeat ? getSuggestedUse(selectedSeat.area) : "-"}
+                {selectedSeat ? getSuggestedUse(selectedSeat.location) : "-"}
               </p>
             </div>
 
             <div
               className={
-                selectedSeat
-                  ? selectedSeat.status === "available"
-                    ? "mapAvailabilityBanner availableBanner"
-                    : "mapAvailabilityBanner reservedBanner"
+                selectedSeat && selectedSeat.status === "available"
+                  ? "mapAvailabilityBanner availableBanner"
                   : "mapAvailabilityBanner reservedBanner"
               }
             >
@@ -172,7 +150,11 @@ export default function MapPage() {
             </div>
 
             <div className="mapSummaryButtonRow">
-              <Button variant="primary" onClick={handleConfirmReservation}>
+              <Button
+                variant="primary"
+                onClick={handleConfirmReservation}
+                disabled={!selectedSeat || selectedSeat.status !== "available"}
+              >
                 Confirm Reservation
               </Button>
             </div>
