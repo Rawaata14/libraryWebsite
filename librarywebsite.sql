@@ -3,7 +3,11 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
+<<<<<<< HEAD
 -- Generation Time: May 19, 2026 at 01:17 PM
+=======
+-- Generation Time: Jun 02, 2026 at 10:41 AM
+>>>>>>> dde369358a0db2f0fca1e139b9f711743617d516
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -139,17 +143,18 @@ CREATE TABLE `user` (
   `passwordHash` varchar(255) NOT NULL,
   `role` varchar(20) DEFAULT 'reader',
   `status` varchar(20) DEFAULT 'active',
-  `createdAt` timestamp NOT NULL DEFAULT current_timestamp()
+  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
+  `profile_image_name` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `user`
 --
 
-INSERT INTO `user` (`userId`, `fullName`, `email`, `phone`, `passwordHash`, `role`, `status`, `createdAt`) VALUES
-(1, 'Rawaa Tareef', 'rawatareef1@gmail.com', NULL, '$2b$10$9h2I.bqSxw.lccsv2tR6Eetyv1.uZcHPhdxLqMKWeXH6LNMBzyBkq', 'librarian', 'active', '2026-05-05 11:07:26'),
-(2, 'Arjwan Abied', 'Arjwan.abied@gmail.com', NULL, '$2b$10$.DdEoyVR5LN0LVkpA8iOS.EI5EdUSpuxbTQsPhJqVgfkfyZwkNORm', 'reader', 'active', '2026-05-05 11:30:44'),
-(12, 'ADLA', 'ADLA@GMAIL.COM', NULL, '$2b$10$FU3CsfBmwqOzMcZGLgz/aubw.2izGIYseW/BAlh2nwFEBosBo7yB6', 'reader', 'active', '2026-05-05 12:21:57');
+INSERT INTO `user` (`userId`, `fullName`, `email`, `phone`, `passwordHash`, `role`, `status`, `createdAt`, `profile_image_name`) VALUES
+(1, 'Rawaa Tareef', 'rawatareef1@gmail.com', NULL, '$2b$10$9h2I.bqSxw.lccsv2tR6Eetyv1.uZcHPhdxLqMKWeXH6LNMBzyBkq', 'librarian', 'active', '2026-05-05 11:07:26', NULL),
+(2, 'Arjwan Abied', 'Arjwan.abied@gmail.com', NULL, '$2b$10$.DdEoyVR5LN0LVkpA8iOS.EI5EdUSpuxbTQsPhJqVgfkfyZwkNORm', 'librarian', 'active', '2026-05-05 11:30:44', '1780327895795-ArjwanP.png'),
+(12, 'ADLA', 'ADLA@GMAIL.COM', NULL, '$2b$10$FU3CsfBmwqOzMcZGLgz/aubw.2izGIYseW/BAlh2nwFEBosBo7yB6', 'reader', 'active', '2026-05-05 12:21:57', NULL);
 
 -- --------------------------------------------------------
 
