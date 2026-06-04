@@ -57,8 +57,20 @@ async function updateSeat(seatId, seatDetails) {
   }
 }
 
+async function deleteSeat(seatId) {
+  try {
+    const deleteSeatSQL = "DELETE FROM seat WHERE seatId = ?";
+    const result = await doQuery(deleteSeatSQL, [seatId]);
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Error in deleting seat:", error);
+    return { success: false, message: "Failed to delete seat" };
+  }
+}
+
 module.exports = {
   addSeat,
   getAllSeats,
   updateSeat,
+  deleteSeat,
 };
