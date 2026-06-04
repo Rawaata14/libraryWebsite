@@ -52,7 +52,7 @@ export default function MapItem({
       className={`mapIconItem ${item.type} ${item.status} ${
         isSelected ? "selected" : ""
       }`}
-      style={{
+  x    style={{
         left: `${item.x}%`,
         top: `${item.y}%`,
         "--item-rotation": `${item.rotation || 0}deg`,

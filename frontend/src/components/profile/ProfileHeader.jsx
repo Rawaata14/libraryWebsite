@@ -5,19 +5,25 @@ ProfileHeader.jsx
 תיאור הקובץ:
 קומפוננטת כותרת דף הפרופיל.
 
-תפקיד:
-- מציגה תמונת פרופיל.
-- מציגה שם, אימייל ותפקיד.
-- מאפשרת פתיחה וסגירה של עריכת תמונת פרופיל.
+הקובץ כולל:
+- הצגת תמונת פרופיל.
+- הצגת שם, אימייל ותפקיד.
+- פתיחה וסגירה של אזור עריכת פרופיל.
+- הצגת טופס עדכון תמונת פרופיל.
+- הצגת טופס עדכון פרטים אישיים.
 =========================================================
 */
 
+import ProfileForm from "../forms/ProfileForm";
+
 /*
 ---------------------------------------------------------
-בניית כתובת תמונת הפרופיל
+getProfileImageSrc
 
 תפקיד:
-מחזירה תמונת משתמש מהשרת או תמונת ברירת מחדל.
+מחזירה את כתובת תמונת הפרופיל.
+אם קיימת תמונה בשרת, היא מוצגת.
+אם לא קיימת תמונה, מוצגת תמונת ברירת מחדל.
 ---------------------------------------------------------
 */
 function getProfileImageSrc(user) {
@@ -32,6 +38,15 @@ function getProfileImageSrc(user) {
   return "https://cdn-icons-png.flaticon.com/512/847/847969.png";
 }
 
+/*
+---------------------------------------------------------
+ProfileHeader
+
+תפקיד:
+מציגה את אזור הפרטים העליון של המשתמש
+ומנהלת את הצגת אזור העריכה.
+---------------------------------------------------------
+*/
 export default function ProfileHeader({
   user,
   isLibrarian,
@@ -41,6 +56,9 @@ export default function ProfileHeader({
   profileImagePreview,
   handleProfileImageChange,
   handleSaveProfileImage,
+  profileForm,
+  handleProfileFormChange,
+  handleSaveProfileDetails,
 }) {
   return (
     <>
@@ -99,6 +117,14 @@ export default function ProfileHeader({
           >
             Save Profile Image
           </button>
+
+          <div className="profileEditDivider" />
+
+          <ProfileForm
+            profileForm={profileForm}
+            handleProfileFormChange={handleProfileFormChange}
+            handleSaveProfileDetails={handleSaveProfileDetails}
+          />
         </div>
       )}
     </>

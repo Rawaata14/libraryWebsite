@@ -208,4 +208,65 @@ router.put(
   },
 );
 
+/*
+---------------------------------------------------------
+Route: PUT /user/profile
+
+תפקיד:
+עדכון פרטים אישיים של המשתמש המחובר.
+
+הנתונים שניתן לעדכן:
+- fullName
+- email
+- phone
+- password
+
+לאחר עדכון מוצלח:
+מתבצע עדכון גם של session המשתמש.
+---------------------------------------------------------
+*/
+router.put("/profile", async (req, res) => {
+  try {
+    if (!req.session || !req.session.user) {
+      return res.status(401).json({
+        success: false,
+        message: "User is not authenticated",
+      });
+    }
+
+    const updateUserProfile =
+      require("../database/queries/authorization")
+        .updateUserProfile;
+
+    const currentEmail =
+      req.session.user.email;
+
+    const updatedData = req.body;
+
+    const result =
+      await updateUserProfile(
+        currentEmail,
+        updatedData
+      );
+
+    if (result.success) {
+      req.session.user = result.user;
+
+      return res.status(200).json(result);
+    }
+
+    return res.status(400).json(result);
+  } catch (error) {
+    console.error(
+      "Error updating profile:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
 module.exports = router;

@@ -131,8 +131,108 @@ async function updateProfileImage(email, profileImageName) {
   }
 }
 
+/*
+---------------------------------------------------------
+updateUserProfile
+
+תפקיד:
+עדכון פרטי המשתמש במסד הנתונים.
+
+למה נוצרה:
+מאפשרת למשתמש או לספרן לעדכן:
+- שם מלא
+- אימייל
+- טלפון
+- סיסמה
+
+במידה ולא הוכנסה סיסמה חדשה,
+הסיסמה הקיימת נשארת ללא שינוי.
+---------------------------------------------------------
+*/
+async function updateUserProfile(currentEmail, updatedData) {
+  try {
+    const { fullName, email, phone, password } = updatedData;
+
+    if (!fullName || !email) {
+      return {
+        success: false,
+        message: "Full name and email are required",
+      };
+    }
+
+    if (email !== currentEmail) {
+      const existingUserSQL =
+        "SELECT * FROM `user` WHERE email = ?";
+
+      const existingUsers =
+        await doQuery(existingUserSQL, [email]);
+
+      if (existingUsers.length > 0) {
+        return {
+          success: false,
+          message: "Email already exists",
+        };
+      }
+    }
+
+    let updateSQL =
+      "UPDATE `user` SET fullName = ?, email = ?, phone = ?";
+
+    const params = [
+      fullName,
+      email,
+      phone || null,
+    ];
+
+    if (password && password.trim() !== "") {
+      const hashedPassword =
+        await bcrypt.hash(password, 10);
+
+      updateSQL += ", passwordHash = ?";
+
+      params.push(hashedPassword);
+    }
+
+    updateSQL += " WHERE email = ?";
+
+    params.push(currentEmail);
+
+    const result = await doQuery(updateSQL, params);
+
+    if (result.affectedRows > 0) {
+      const getUserSQL =
+        "SELECT * FROM `user` WHERE email = ?";
+
+      const users =
+        await doQuery(getUserSQL, [email]);
+
+      return {
+        success: true,
+        message: "Profile updated successfully",
+        user: users[0],
+      };
+    }
+
+    return {
+      success: false,
+      message: "User not found",
+    };
+  } catch (error) {
+    console.error(
+      "Error updating user profile:",
+      error
+    );
+
+    return {
+      success: false,
+      message: "Failed to update profile",
+    };
+  }
+}
+
 module.exports = {
   registerUser,
   loginUser,
   updateProfileImage,
+  updateUserProfile,
 };
