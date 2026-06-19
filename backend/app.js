@@ -36,9 +36,8 @@ const userRoutes = require("./routes/user");
 app.use("/user", userRoutes);
 app.use("/books", require("./routes/book"));
 app.use("/seats", require("./routes/seat"));
+app.use("/api/librarian", librarianRoutes);
 console.log("Database connection established successfully.");
 app.listen(8000, () => {
   console.log("Server running on http://localhost:8000");
 });
-
-app.use("/api/librarian", librarianRoutes);

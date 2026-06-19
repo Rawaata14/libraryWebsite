@@ -2,11 +2,6 @@
   RoomMap.jsx
   -----------
   עטיפה חכמה למפת הספרייה.
-
-  אחריות:
-  - משיכת הרהיטים וניהול הסטייט מול מסד הנתונים
-  - בדיקה האם אנחנו בדף המפה הראשי או דף המנהל
-  - הפעלת מצב ניהול רק לספרן ובתוך הדף המתאים
 */
 
 import { useContext, useEffect, useState } from "react";
@@ -17,8 +12,10 @@ import axios from "axios";
 
 export default function RoomMap({
   selectedSeatId = null,
-  onSeatSelect = () => {},
+  onSeatSelect,
   showSelectionInfo = true,
+  selectedDate, // 💡 פרופ חדש שנוסף כדי להאזין לשינויי תאריך מהדף הראשי
+  selectedTime, // 💡 פרופ חדש שנוסף כדי להאזין לשינויי שעה מהדף הראשי
 }) {
   const { isLibrarian } = useContext(AuthContext);
   const location = useLocation();
@@ -26,10 +23,14 @@ export default function RoomMap({
   // הסטייט הראשי של הרהיטים באפליקציה (Single Source of Truth)
   const [items, setItems] = useState([]);
 
-  // 💡 הוצאת פונקציית הטעינה החוצה כדי שנוכל להעביר אותה גם ל-LibraryMap
+  // 💡 פונקציית הטעינה שולחת כעת את התאריך והשעה כפרמטרים לשרת כדי לקבל סטטוס עדכני
   const fetchSeats = async () => {
     try {
       const response = await axios.get("http://localhost:8000/seats/get-map", {
+        params: {
+          date: selectedDate,
+          time: selectedTime,
+        },
         withCredentials: true,
       });
       if (response.status === 200) {
@@ -43,10 +44,10 @@ export default function RoomMap({
     }
   };
 
-  // משיכת הרהיטים המעודכנים מהשרת ברגע שהקומפוננטה נטענת לראשונה
+  // משיכת הרהיטים המעודכנים בכל פעם שהקומפוננטה נטענת או כשהתאריך/שעה משתנים
   useEffect(() => {
     fetchSeats();
-  }, []);
+  }, [selectedDate, selectedTime]);
 
   /* toolbar וניהול יוצגו רק בדף המפה הראשי או בדף המנהל */
   const isMapPage =
@@ -57,7 +58,7 @@ export default function RoomMap({
       isLibrarian={isLibrarian && isMapPage}
       items={items}
       setItems={setItems}
-      fetchLatestSeats={fetchSeats} // 🔥 הוספת הפרופ החדש! מאפשר ל-LibraryMap לרענן את המפה אחרי שמירה
+      fetchLatestSeats={fetchSeats}
       selectedSeatId={selectedSeatId}
       onSeatSelect={onSeatSelect}
       showSelectionInfo={showSelectionInfo}

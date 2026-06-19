@@ -27,6 +27,7 @@ export default function MapItem({
   isLibrarian,
   setDraggingItemId,
   style, // 💡 מקבלים את הסטייל שנשלח מ-LibraryMap (מכיל את ה-pointerEvents: "auto")
+  isClickable = true, // 💡 פרופ חדש שמאפשר לשלוט אם הפריט ניתן ללחיצה או לא (ברירת מחדל: כן)
 }) {
   const handlePointerDown = (e) => {
     if (!isLibrarian) return;
@@ -35,7 +36,7 @@ export default function MapItem({
     // 🔒 נועל את כל תנועות העכבר/מצביע על הרהיט הזה
     e.currentTarget.setPointerCapture(e.pointerId);
 
-    onSelect(item.seatId);
+    if (onSelect) onSelect(item.seatId);
     setDraggingItemId(item.seatId);
   };
 
@@ -43,6 +44,12 @@ export default function MapItem({
     if (!isLibrarian) return;
     // 🔓 משחרר את הנעילה כשהרמנו את האצבע מהעכבר
     e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
+  const handleClick = () => {
+    if (!isLibrarian && isClickable && onSelect) {
+      onSelect(item.seatId);
+    }
   };
 
   return (
@@ -58,9 +65,12 @@ export default function MapItem({
         top: `${item.y}%`,
         "--item-rotation": `${item.rotation || 0}deg`,
         touchAction: "none", // 📱 מונע מהדפדפן לגלול את המסך בניידים בזמן גרירה
+        pointerEvents: isClickable ? "auto" : "none", // 💡 אם הפריט לא ניתן ללחיצה, מבטל את האירוע
+        cursor: isClickable ? "pointer" : "default", // 💡 משנה את הסמן בהתאם ליכולת הלחיצה
       }}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
+      onClick={handleClick}
       title={`${item.type} - ${item.status}`}
     >
       <img src={icons[item.type]} alt={item.type} draggable={false} />

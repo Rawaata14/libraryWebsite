@@ -44,13 +44,8 @@ export default function LoginForm() {
         { withCredentials: true },
       );
       if (response.data.success) {
-        const { fullName, email, role } = response.data.user;
-        const connectedUser = {
-          fullName,
-          email,
-          role,
-        };
-        login(connectedUser);
+        const user = response.data.user;
+        login(user);
         navigate("/");
       } else {
         alert(response.data.message || "Login failed");

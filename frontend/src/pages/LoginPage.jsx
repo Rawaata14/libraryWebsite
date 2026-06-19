@@ -13,7 +13,7 @@ import LoginForm from "../components/forms/LoginForm";
 export default function LoginPage() {
   return (
     <PageShell>
-      <LoginForm />
+      <LoginForm/>
     </PageShell>
   );
 }

@@ -26,6 +26,7 @@ import ProtectedRoute from "../components/common/ProtectedRoute";
 import GuestRoute from "../components/common/GuestRoute";
 import RoleRoute from "../components/common/RoleRoute";
 import PageShell from "../components/layout/PageShell";
+import { useRef   } from "react";
 
 /* דף זמני לספרן */
 function LibrarianDashboardPage() {
@@ -66,7 +67,7 @@ export default function AppRoutes() {
           path="/login"
           element={
             <GuestRoute>
-              <LoginPage />
+              <LoginPage  />
             </GuestRoute>
           }
         />
@@ -98,7 +99,7 @@ export default function AppRoutes() {
           element={
             <ProtectedRoute>
               <PageShell>
-                <ProfilePage />
+                <ProfilePage  />
               </PageShell>
             </ProtectedRoute>
           }
