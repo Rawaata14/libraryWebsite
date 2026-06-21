@@ -33,6 +33,7 @@ ProfilePage
 */
 export default function ProfilePage() {
   const { user, updateUser } = useContext(AuthContext);
+  console.log("ProfilePage user: 35 profilePage (pages)", user);
 
   const isLibrarian = user?.role === "librarian";
 

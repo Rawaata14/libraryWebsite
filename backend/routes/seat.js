@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const path = require("path");
 const seatQueries = require("../database/queries/seatQueries");
+const reservationQueries = require("../database/queries/reservationQueries");
 
 // Route for saving the seat map
 router.post("/save-map", async (req, res) => {
@@ -38,6 +39,7 @@ router.post("/save-map", async (req, res) => {
   }
 });
 
+// Route for fetching the seat map
 router.get("/get-map", async (req, res) => {
   try {
     const result = await seatQueries.getAllSeats();
@@ -52,6 +54,7 @@ router.get("/get-map", async (req, res) => {
   }
 });
 
+// Route for deleting a seat
 router.delete("/delete-seat/:seatId", async (req, res) => {
   try {
     const seatId = req.params.seatId;
@@ -67,4 +70,29 @@ router.delete("/delete-seat/:seatId", async (req, res) => {
   }
 });
 
+router.post("/reserve-seat", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const { seatId, date, startTime, endTime } = req.body;
+    const result = await reservationQueries.reserveSeat({
+      userId: req.session.user.userId,
+      seatId,
+      reservationDate: date,
+      startTime,
+      endTime,
+      status: "occupied",
+    });
+    
+    if (result.success) {
+      res.status(200).json({ message: "Seat occupied successfully" });
+    } else {
+      res.status(500).json({ message: "Failed to occupy seat" });
+    }
+  } catch (error) {
+    console.error("Error in reserving seat:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 module.exports = router;

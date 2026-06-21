@@ -27,6 +27,7 @@ getProfileImageSrc
 ---------------------------------------------------------
 */
 function getProfileImageSrc(user) {
+  console.log("getProfileImageSrc user:", user);
   if (user?.profile_image_name) {
     return `http://localhost:8000/uploads/profile-images/${user.profile_image_name}`;
   }
@@ -35,7 +36,7 @@ function getProfileImageSrc(user) {
     return user.profileImage;
   }
 
-  return "https://cdn-icons-png.flaticon.com/512/847/847969.png";
+  //return "https://cdn-icons-png.flaticon.com/512/847/847969.png";
 }
 
 /*
@@ -64,7 +65,7 @@ export default function ProfileHeader({
     <>
       <div className="profileHeader">
         <img
-          src={profileImagePreview || getProfileImageSrc(user)}
+          src={getProfileImageSrc(user) || profileImagePreview}
           alt="Profile"
           className="profileImage"
         />

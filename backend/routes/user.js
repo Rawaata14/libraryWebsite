@@ -13,10 +13,7 @@ const fs = require("fs");
   למה נוצר:
   אם התיקייה לא קיימת, multer לא יוכל לשמור את הקבצים.
 */
-const profileImagesDir = path.join(
-  __dirname,
-  "../uploads/profile-images",
-);
+const profileImagesDir = path.join(__dirname, "../uploads/profile-images");
 
 if (!fs.existsSync(profileImagesDir)) {
   fs.mkdirSync(profileImagesDir, { recursive: true });
@@ -116,6 +113,7 @@ router.post("/login", async (req, res) => {
 router.get("/check-auth", async (req, res) => {
   try {
     if (req.session && req.session.user) {
+      req.session.user = req.session.user; // שמירת פרטי המשתמש בסשן
       res.status(200).json(req.session.user);
     } else {
       res.status(401).json({ message: "Not authenticated" });
@@ -178,17 +176,13 @@ router.put(
       }
 
       const updateProfileImage =
-        require("../database/queries/authorization")
-          .updateProfileImage;
+        require("../database/queries/authorization").updateProfileImage;
 
       const userEmail = req.session.user.email;
 
       const profileImageName = req.file.filename;
 
-      const result = await updateProfileImage(
-        userEmail,
-        profileImageName,
-      );
+      const result = await updateProfileImage(userEmail, profileImageName);
 
       if (result.success) {
         req.session.user = result.user;
@@ -235,19 +229,13 @@ router.put("/profile", async (req, res) => {
     }
 
     const updateUserProfile =
-      require("../database/queries/authorization")
-        .updateUserProfile;
+      require("../database/queries/authorization").updateUserProfile;
 
-    const currentEmail =
-      req.session.user.email;
+    const currentEmail = req.session.user.email;
 
     const updatedData = req.body;
 
-    const result =
-      await updateUserProfile(
-        currentEmail,
-        updatedData
-      );
+    const result = await updateUserProfile(currentEmail, updatedData);
 
     if (result.success) {
       req.session.user = result.user;
@@ -257,10 +245,7 @@ router.put("/profile", async (req, res) => {
 
     return res.status(400).json(result);
   } catch (error) {
-    console.error(
-      "Error updating profile:",
-      error
-    );
+    console.error("Error updating profile:", error);
 
     return res.status(500).json({
       success: false,

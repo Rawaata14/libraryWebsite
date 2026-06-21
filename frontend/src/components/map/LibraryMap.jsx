@@ -35,7 +35,7 @@ const mapZones = [
     labelY: 8,
   },
   {
-    id: "reading-nook",
+    id: "reading-book",
     label: "Reading Book",
     minX: 2,
     maxX: 18,
@@ -102,15 +102,16 @@ export default function LibraryMap({
   setItems,
   onSeatSelect,
   fetchLatestSeats, // 💡 נקבל את פונקציית הרענון של השרת ישירות מקומפוננטת העטיפה האבא
+  selectedSeatId, // 💡 מזהה הכיסא הנבחר שמגיע מהקומפוננטה האב
 }) {
-  const [selectedItemId, setSelectedItemId] = useState(null);
+  //const [selectedItemId, setSelectedItemId] = useState(null);
   const [newItemType, setNewItemType] = useState("seat");
   const [hoveredZoneId, setHoveredZoneId] = useState(null);
   const [newItemPlacement, setNewItemPlacement] = useState(mapZones[0].id);
   const [draggingItemId, setDraggingItemId] = useState(null);
 
   const mapRef = useRef(null);
-  const selectedItem = items.find((item) => item.seatId === selectedItemId);
+  const selectedItem = items.find((item) => item.seatId === selectedSeatId);
 
   // פונקציה להוספת פריט חדש למפה
   const addItem = () => {
@@ -129,18 +130,22 @@ export default function LibraryMap({
     };
 
     setItems((prevItems) => [...prevItems, newItem]);
-    setSelectedItemId(generatedId);
+    onSeatSelect({
+      id: generatedId,
+      status: "available",
+      location: newItem.location,
+    });
   };
 
   // פונקציה למחיקת הפריט הנבחר
   const deleteItem = async () => {
-    if (!selectedItemId) return;
+    if (!selectedSeatId) return;
 
-    if (String(selectedItemId).startsWith("temp-")) {
+    if (String(selectedSeatId).startsWith("temp-")) {
       setItems((prevItems) =>
-        prevItems.filter((item) => item.seatId !== selectedItemId),
+        prevItems.filter((item) => item.seatId !== selectedSeatId),
       );
-      setSelectedItemId(null);
+      onSeatSelect(null);
       return;
     }
 
@@ -151,16 +156,16 @@ export default function LibraryMap({
     ) {
       try {
         const response = await axios.delete(
-          `http://localhost:8000/seats/delete-seat/${selectedItemId}`,
+          `http://localhost:8000/seats/delete-seat/${selectedSeatId}`,
           {
             withCredentials: true,
           },
         );
         if (response.status === 200 || response.status === 204) {
           setItems((prevItems) =>
-            prevItems.filter((item) => item.seatId !== selectedItemId),
+            prevItems.filter((item) => item.seatId !== selectedSeatId),
           );
-          setSelectedItemId(null);
+          onSeatSelect(null);
           alert("הפריט נמחק בהצלחה!");
         } else {
           alert("מחיקת הפריט נכשלה בשרת.");
@@ -173,11 +178,11 @@ export default function LibraryMap({
   };
 
   const toggleBlockItem = () => {
-    if (!selectedItemId) return;
+    if (!selectedSeatId) return;
 
     setItems((prevItems) =>
       prevItems.map((item) =>
-        item.seatId === selectedItemId
+        item.seatId === selectedSeatId
           ? {
               ...item,
               status: item.status === "blocked" ? "available" : "blocked",
@@ -188,11 +193,11 @@ export default function LibraryMap({
   };
 
   const rotateSelectedItem = () => {
-    if (!selectedItemId) return;
+    if (!selectedSeatId) return;
 
     setItems((prevItems) =>
       prevItems.map((item) =>
-        item.seatId === selectedItemId
+        item.seatId === selectedSeatId
           ? { ...item, rotation: ((item.rotation || 0) + 90) % 360 }
           : item,
       ),
@@ -200,19 +205,17 @@ export default function LibraryMap({
   };
 
   const handleItemSelect = (id) => {
-    setSelectedItemId(id);
     if (onSeatSelect) {
       const clickedItem = items.find((item) => item.seatId === id);
       if (clickedItem) {
         onSeatSelect({
-          id: clickedItem.seatId,
+          id: clickedItem.seatId, // 💡 כאן את שולחת מפתח שנקרא id
           status: clickedItem.status,
           location: clickedItem.location,
         });
       }
     }
   };
-
   const getMapPercentPosition = (clientX, clientY) => {
     if (!mapRef.current) return null;
 
@@ -301,7 +304,7 @@ export default function LibraryMap({
 
       if (response.status === 201 || response.status === 200) {
         alert("Map saved successfully!");
-        setSelectedItemId(null);
+        onSeatSelect(null);
         // 💡 קורא לפונקציית הטעינה שעוברת מהרכיב האב ומעדכנת את הסטייט הראשי
         if (fetchLatestSeats) {
           await fetchLatestSeats();
@@ -328,7 +331,7 @@ export default function LibraryMap({
           onDelete={deleteItem}
           onToggleBlock={toggleBlockItem}
           onRotate={rotateSelectedItem}
-          hasSelectedItem={Boolean(selectedItemId)}
+          hasSelectedItem={Boolean(selectedSeatId)}
           saveMap={saveMap}
         />
       )}
@@ -363,6 +366,7 @@ export default function LibraryMap({
         {items.map((item) => {
           const isTable = item.type === "table-4" || item.type === "table-8";
           const zIndexStyle = isTable ? 2 : 1;
+          const isSeatClickable = isLibrarian || !isTable;
 
           return (
             <div
@@ -380,12 +384,12 @@ export default function LibraryMap({
               {/* 💡 ה-pointerEvents מועבר ישירות כפרופ ל-MapItem, שמחיל אותו על ה-div הראשי שלו */}
               <MapItem
                 item={item}
-                isSelected={selectedItemId === item.seatId}
+                isSelected={selectedSeatId === item.seatId}
                 onSelect={handleItemSelect}
                 onMove={updateItemPosition}
                 isLibrarian={isLibrarian}
                 setDraggingItemId={setDraggingItemId}
-                style={{ pointerEvents: "auto" }}
+                isClickable={isSeatClickable} // 💡 שולח את היכולת ללחוץ על הכיסא בהתאם למנהל או סוג הרהיט
               />
             </div>
           );
