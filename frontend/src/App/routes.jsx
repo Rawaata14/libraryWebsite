@@ -21,6 +21,10 @@ import ReserveBookPage from "../pages/ReserveBookPage";
 import AddBookPage from "../pages/AddBookPage";
 import ProfilePage from "../pages/ProfilePage";
 import AdminMapPage from "../pages/AdminMapPage";
+import MessagesPage from "../pages/MessagesPage";
+import UsersManagementPage from "../pages/UsersManagementPage";
+import ReportsPage from "../pages/ReportsPage";
+
 import LibraryMap from "../components/map/LibraryMap";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import GuestRoute from "../components/common/GuestRoute";
@@ -139,6 +143,33 @@ export default function AppRoutes() {
           element={
             <RoleRoute allowedRoles={["librarian"]}>
               <AdminMapPage />
+            </RoleRoute>
+          }
+        />
+
+        <Route
+          path="/messages"
+          element={
+            <RoleRoute allowedRoles={["librarian"]}>
+              <MessagesPage />
+            </RoleRoute>
+          }
+        />
+
+        <Route
+          path="/admin/users"
+          element={
+            <RoleRoute allowedRoles={["librarian"]}>
+              <UsersManagementPage />
+            </RoleRoute>
+          }
+        />
+
+        <Route
+          path="/reports"
+          element={
+            <RoleRoute allowedRoles={["librarian"]}>
+              <ReportsPage />
             </RoleRoute>
           }
         />

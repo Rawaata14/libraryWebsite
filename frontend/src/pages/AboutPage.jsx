@@ -4,20 +4,17 @@
   דף אודות מקצועי.
 
   אחריות:
-  - הצגת מידע על מערכת הספרייה
-  - מתן אפשרות לספרן לערוך טקסטים בדף
-  - הצגת טופס יצירת קשר למשתמשים
-  - שליחת הודעה לספרייה דרך mailto
-
-  הערה:
-  כרגע העריכה נשמרת זמנית ב-state.
-  בהמשך ניתן לחבר אותה ל-backend ולשמור במסד נתונים.
+  - הצגת מידע על מערכת הספרייה.
+  - מתן אפשרות לספרן לערוך טקסטים בדף.
+  - הצגת טופס יצירת קשר למשתמשים.
+  - שליחת הודעות לספרייה דרך Backend ולא דרך mailto.
 */
 
 import { useState, useContext } from "react";
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
-import { AuthContext } from "../../src/context/AuthContext";
+import ContactForm from "../components/forms/ContactForm";
+import { AuthContext } from "../context/AuthContext";
 
 export default function AboutPage() {
   const { user } = useContext(AuthContext);
@@ -42,36 +39,19 @@ export default function AboutPage() {
       "Librarians can manage books, reservations, seating areas, and system activity from one clear interface.",
   });
 
-  const [contact, setContact] = useState({
-    name: "",
-    email: "",
-    message: "",
-  });
+  /*
+  ---------------------------------------------------------
+  handleContentChange
 
+  תפקיד:
+  מעדכן את הטקסטים בדף About בזמן מצב עריכה של הספרן.
+  ---------------------------------------------------------
+  */
   const handleContentChange = (field, value) => {
     setContent((prevContent) => ({
       ...prevContent,
       [field]: value,
     }));
-  };
-
-  const handleContactChange = (field, value) => {
-    setContact((prevContact) => ({
-      ...prevContact,
-      [field]: value,
-    }));
-  };
-
-  const handleSendEmail = (event) => {
-    event.preventDefault();
-
-    const subject = encodeURIComponent("Message from Library Website");
-
-    const body = encodeURIComponent(
-      `Name: ${contact.name}\nEmail: ${contact.email}\n\nMessage:\n${contact.message}`,
-    );
-
-    window.location.href = `mailto:info@library.com?subject=${subject}&body=${body}`;
   };
 
   return (
@@ -117,7 +97,6 @@ export default function AboutPage() {
             ) : (
               <>
                 <h2>{content.title}</h2>
-
                 <p>{content.intro}</p>
               </>
             )}
@@ -203,39 +182,7 @@ export default function AboutPage() {
               </div>
             </div>
 
-            <form className="contactForm" onSubmit={handleSendEmail}>
-              <input
-                type="text"
-                placeholder="Your Name"
-                value={contact.name}
-                onChange={(event) =>
-                  handleContactChange("name", event.target.value)
-                }
-                required
-              />
-
-              <input
-                type="email"
-                placeholder="Your Email"
-                value={contact.email}
-                onChange={(event) =>
-                  handleContactChange("email", event.target.value)
-                }
-                required
-              />
-
-              <textarea
-                placeholder="Write your message..."
-                rows="5"
-                value={contact.message}
-                onChange={(event) =>
-                  handleContactChange("message", event.target.value)
-                }
-                required
-              />
-
-              <button type="submit">Send Message</button>
-            </form>
+            <ContactForm />
           </section>
         </div>
       </div>
