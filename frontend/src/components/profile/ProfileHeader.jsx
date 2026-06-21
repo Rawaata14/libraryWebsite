@@ -14,7 +14,7 @@ ProfileHeader.jsx
 =========================================================
 */
 
-import ProfileForm from "../forms/ProfileForm";
+import ProfileForm from "./ProfileForm";
 
 /*
 ---------------------------------------------------------

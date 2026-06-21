@@ -56,24 +56,86 @@ async function registerUser(detailsToInsert) {
   }
 }
 
+/*
+---------------------------------------------------------
+loginUser
+
+תפקיד:
+מבצע התחברות למערכת.
+
+שלבי הפעולה:
+1. מחפש את המשתמש לפי אימייל.
+2. בודק התאמה בין הסיסמה שהוזנה לסיסמה השמורה במסד הנתונים.
+3. מעדכן את זמן ההתחברות האחרון.
+4. מחזיר את נתוני המשתמש המעודכנים.
+---------------------------------------------------------
+*/
 async function loginUser(email, password) {
   try {
     console.log("Attempting to log in user with email:", email);
+
     const getUserSQL = "SELECT * FROM user WHERE email = ?";
+
     const users = await doQuery(getUserSQL, [email]);
+
     if (users.length === 0) {
-      return { success: false, message: "User not found" };
+      return {
+        success: false,
+        message: "User not found",
+      };
     }
+
     const user = users[0];
-    const isMatch = await bcrypt.compare(password, user.passwordHash);
+
+    const isMatch = await bcrypt.compare(
+      password,
+      user.passwordHash
+    );
 
     if (!isMatch) {
-      return { success: false, message: "Invalid password" };
+      return {
+        success: false,
+        message: "Invalid password",
+      };
     }
 
-    return { success: true, message: "Login successful", user };
+    /*
+    ---------------------------------------------------------
+    עדכון זמן התחברות אחרון
+
+    תפקיד:
+    שמירת זמן ההתחברות האחרון של המשתמש.
+    ---------------------------------------------------------
+    */
+    const updateLastLoginSQL =
+      "UPDATE user SET lastLoginAt = NOW() WHERE email = ?";
+
+    await doQuery(updateLastLoginSQL, [email]);
+
+    /*
+    ---------------------------------------------------------
+    שליפת המשתמש לאחר עדכון זמן התחברות
+
+    תפקיד:
+    מחזירה את הנתונים המעודכנים של המשתמש
+    כולל lastLoginAt החדש.
+    ---------------------------------------------------------
+    */
+    const updatedUsers = await doQuery(
+      getUserSQL,
+      [email]
+    );
+
+    const updatedUser = updatedUsers[0];
+
+    return {
+      success: true,
+      message: "Login successful",
+      user: updatedUser,
+    };
   } catch (error) {
     console.error("Error during login:", error);
+
     return {
       success: false,
       message: "An error occurred while logging in",
@@ -230,9 +292,131 @@ async function updateUserProfile(currentEmail, updatedData) {
   }
 }
 
+/*
+---------------------------------------------------------
+getAllUsers
+
+תפקיד:
+שליפת כל המשתמשים עבור דף ניהול המשתמשים של הספרן.
+כולל זמן התחברות אחרון.
+---------------------------------------------------------
+*/
+async function getAllUsers() {
+  try {
+    const sql =
+      "SELECT fullName, email, phone, role, status, createdAt, lastLoginAt, profile_image_name FROM `user` ORDER BY createdAt DESC";
+
+    const users = await doQuery(sql);
+
+    return {
+      success: true,
+      users,
+    };
+  } catch (error) {
+    console.error("Error getting users:", error);
+
+    return {
+      success: false,
+      message: "Failed to get users",
+    };
+  }
+}
+
+/*
+---------------------------------------------------------
+updateUserStatus
+
+תפקיד:
+עדכון סטטוס משתמש ל-active או blocked.
+---------------------------------------------------------
+*/
+async function updateUserStatus(email, status) {
+  try {
+    if (!email || !status) {
+      return {
+        success: false,
+        message: "Email and status are required",
+      };
+    }
+
+    const sql = "UPDATE `user` SET status = ? WHERE email = ?";
+
+    const result = await doQuery(sql, [status, email]);
+
+    return {
+      success: result.affectedRows > 0,
+      message: "User status updated successfully",
+    };
+  } catch (error) {
+    console.error("Error updating user status:", error);
+
+    return {
+      success: false,
+      message: "Failed to update user status",
+    };
+  }
+}
+
+/*
+---------------------------------------------------------
+getUserDashboardStats
+
+תפקיד:
+שליפת נתוני דשבורד עבור משתמש רגיל לפי userId.
+---------------------------------------------------------
+*/
+async function getUserDashboardStats(userId) {
+  try {
+    const borrowedBooks = await doQuery(
+      "SELECT COUNT(*) AS count FROM `loan` WHERE userId = ? AND status = 'ACTIVE'",
+      [userId]
+    );
+
+    const activeReservations = await doQuery(
+      "SELECT COUNT(*) AS count FROM `seat_reservation` WHERE userId = ? AND status IN ('pending', 'active')",
+      [userId]
+    );
+
+    const unreadNotifications = await doQuery(
+      "SELECT COUNT(*) AS count FROM `notification` WHERE userId = ? AND isRead = 0",
+      [userId]
+    );
+
+    const upcomingReservations = await doQuery(
+      `SELECT reservationId, seatId, reservationDate, startTime, endTime, status
+       FROM seat_reservation
+       WHERE userId = ?
+       AND reservationDate >= CURDATE()
+       ORDER BY reservationDate ASC, startTime ASC
+       LIMIT 5`,
+      [userId]
+    );
+
+    return {
+      success: true,
+      stats: {
+        borrowedBooks: borrowedBooks[0].count,
+        activeReservations: activeReservations[0].count,
+        unreadNotifications: unreadNotifications[0].count,
+        upcomingReservations,
+      },
+    };
+  } catch (error) {
+    console.error("Error loading user dashboard stats:", error);
+
+    return {
+      success: false,
+      message: "Failed to load user dashboard stats",
+    };
+  }
+}
+
 module.exports = {
   registerUser,
   loginUser,
   updateProfileImage,
   updateUserProfile,
+  getAllUsers,
+  updateUserStatus,
+  getUserDashboardStats,
 };

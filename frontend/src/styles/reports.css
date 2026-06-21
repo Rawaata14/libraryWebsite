@@ -1,0 +1,59 @@
+/*
+=========================================================
+reports.css
+
+תיאור הקובץ:
+עיצוב דף הדוחות של הספרן.
+
+הקובץ כולל:
+- עיצוב מיכל הדוחות.
+- עיצוב כרטיסי סטטיסטיקה.
+- התאמה למסכים קטנים.
+=========================================================
+*/
+
+.reportsContainer {
+  max-width: 1100px;
+  margin: 20px auto 40px;
+  padding: 20px;
+}
+
+.reportsCard {
+  background: rgba(43, 29, 23, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  padding: 28px;
+  color: white;
+}
+
+.reportsCard h2 {
+  margin-bottom: 24px;
+}
+
+.reportsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 20px;
+}
+
+.reportBox {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+}
+
+.reportBox span {
+  font-size: 32px;
+}
+
+.reportBox h3 {
+  margin: 12px 0 6px;
+  font-size: 34px;
+  color: #ffb74d;
+}
+
+.reportBox p {
+  color: #f3dccb;
+}

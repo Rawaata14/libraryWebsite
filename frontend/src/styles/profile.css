@@ -285,6 +285,162 @@ profile.css
 
 /*
 =========================================================
+דשבורד ספרן - מידע חשוב ופעילות יומית
+
+תיאור:
+עיצוב אזורי הדשבורד החדשים:
+- Important Updates
+- Today's Activity
+- Quick Management
+=========================================================
+*/
+
+.dashboardBlock {
+  margin-bottom: 32px;
+}
+
+.dashboardBlockTitle {
+  margin-bottom: 16px;
+  color: #ffb74d;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.dashboardStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 18px;
+}
+
+.dashboardStatCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 183, 77, 0.25);
+  border-radius: 16px;
+
+  padding: 18px;
+}
+
+.dashboardStatIcon {
+  font-size: 2rem;
+}
+
+.dashboardStatCard h4 {
+  margin: 0;
+  color: #ffb74d;
+  font-size: 2rem;
+}
+
+.dashboardStatCard p {
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.dashboardActivityList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+
+  padding: 18px;
+}
+
+.dashboardActivityItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboardActivityItem span {
+  color: #ffb74d;
+  font-size: 1.4rem;
+  font-weight: bold;
+}
+
+.dashboardActivityItem p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.dashboardEmptyText {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/*
+=========================================================
+Quick Management
+
+תיאור:
+אזור כרטיסי הניהול של הספרן.
+=========================================================
+*/
+
+.librarianProfileGrid {
+  margin-top: 8px;
+}
+/*
+=========================================================
+דשבורד משתמש - הזמנות קרובות
+
+תיאור:
+עיצוב רשימת ההזמנות הקרובות של המשתמש.
+=========================================================
+*/
+
+.userReservationsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+
+  padding: 18px;
+}
+
+.userReservationItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.userReservationItem:last-child {
+  border-bottom: none;
+}
+
+.userReservationItem strong {
+  color: #ffffff;
+}
+
+.userReservationItem p {
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.reservationStatus {
+  padding: 6px 12px;
+  border-radius: 999px;
+
+  background: rgba(255, 183, 77, 0.16);
+  color: #ffb74d;
+
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/*
+=========================================================
 רספונסיביות
 =========================================================
 */

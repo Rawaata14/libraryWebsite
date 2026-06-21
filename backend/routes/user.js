@@ -269,4 +269,149 @@ router.put("/profile", async (req, res) => {
   }
 });
 
+/*
+---------------------------------------------------------
+Route: GET /user/all
+
+תפקיד:
+שליפת כל המשתמשים עבור הספרן.
+---------------------------------------------------------
+*/
+router.get("/all", async (req, res) => {
+  try {
+    if (!req.session.user || req.session.user.role !== "librarian") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    const getAllUsers =
+      require("../database/queries/authorization").getAllUsers;
+
+    const result = await getAllUsers();
+
+    return res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error("Error getting users:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
+/*
+---------------------------------------------------------
+Route: PUT /user/status
+
+תפקיד:
+עדכון סטטוס משתמש על ידי הספרן.
+---------------------------------------------------------
+*/
+router.put("/status", async (req, res) => {
+  try {
+    if (!req.session.user || req.session.user.role !== "librarian") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    const updateUserStatus =
+      require("../database/queries/authorization").updateUserStatus;
+
+    const { email, status } = req.body;
+
+    const result = await updateUserStatus(email, status);
+
+    return res.status(result.success ? 200 : 400).json(result);
+  } catch (error) {
+    console.error("Error updating user status:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
+/*
+---------------------------------------------------------
+Route: GET /user/all
+
+תפקיד:
+שליפת כל המשתמשים במערכת עבור דף ניהול המשתמשים של הספרן.
+
+הרשאה:
+רק משתמש עם role = librarian יכול לגשת לנתיב הזה.
+---------------------------------------------------------
+*/
+router.get("/all", async (req, res) => {
+  try {
+    if (!req.session || !req.session.user) {
+      return res.status(401).json({
+        success: false,
+        message: "User is not authenticated",
+      });
+    }
+
+    if (req.session.user.role !== "librarian") {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Librarian privileges required.",
+      });
+    }
+
+    const getAllUsers =
+      require("../database/queries/authorization").getAllUsers;
+
+    const result = await getAllUsers();
+
+    return res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error("Error getting users:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
+/*
+---------------------------------------------------------
+Route: GET /user/dashboard-stats
+
+תפקיד:
+מחזיר נתוני דשבורד אמיתיים עבור המשתמש המחובר.
+---------------------------------------------------------
+*/
+router.get("/dashboard-stats", async (req, res) => {
+  try {
+    if (!req.session || !req.session.user) {
+      return res.status(401).json({
+        success: false,
+        message: "User is not authenticated",
+      });
+    }
+
+    const getUserDashboardStats =
+      require("../database/queries/authorization")
+        .getUserDashboardStats;
+
+    const result = await getUserDashboardStats(req.session.user.userId);
+
+    return res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error("Error loading user dashboard:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
 module.exports = router;

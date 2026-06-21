@@ -5,37 +5,48 @@ LibrarianProfileDashboard.jsx
 תיאור הקובץ:
 דשבורד ספרן בדף הפרופיל.
 
-תפקיד:
-- מציג כרטיסי ניהול לספרן.
-- שולף עדכונים מהשרת.
-- מציג נתוני גיבוי אם השרת לא זמין.
+הקובץ כולל:
+- הצגת נתונים חשובים ודחופים לספרן מתוך ה-DB.
+- הצגת פעילות יומית אחרונה.
+- הצגת כרטיסי Quick Management לניווט לדפי ניהול.
+- הפרדה בין מידע להצגה בלבד לבין פעולות לחיצות.
 =========================================================
 */
 
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+/*
+---------------------------------------------------------
+LibrarianProfileDashboard
+
+תפקיד:
+מציג לספרן מרכז בקרה מקצועי:
+נתונים חשובים, פעילות אחרונה וקישורי ניהול מהירים.
+---------------------------------------------------------
+*/
 export default function LibrarianProfileDashboard() {
   const navigate = useNavigate();
 
-  const [stats, setStats] = useState({
-    books: [],
-    seats: [],
-    users: [],
-    reports: [],
-    messages: [],
+  const [dashboardData, setDashboardData] = useState({
+    activeLoans: 0,
+    overdueBooks: 0,
+    unreadMessages: 0,
+    blockedSeats: 0,
+    todayActivity: [],
   });
 
   /*
   ---------------------------------------------------------
-  טעינת נתוני Dashboard של הספרן
+  טעינת נתוני דשבורד הספרן
 
   תפקיד:
-  שולפת עדכונים מהשרת ומציגה נתוני גיבוי במקרה של שגיאה.
+  שולפת מהשרת נתונים אמיתיים מה-DB.
+  אם השרת לא זמין, מוצגים נתוני גיבוי זמניים.
   ---------------------------------------------------------
   */
   useEffect(() => {
-    const fetchLibrarianStats = async () => {
+    const fetchDashboardData = async () => {
       try {
         const response = await fetch(
           "http://localhost:8000/api/librarian/dashboard-stats",
@@ -47,92 +58,123 @@ export default function LibrarianProfileDashboard() {
         const data = await response.json();
 
         if (data.success) {
-          setStats({
-            books: data.stats.books || [],
-            seats: data.stats.seats || [],
-            users: data.stats.users || [],
-            reports: data.stats.reports || [],
-            messages: data.stats.messages || [],
+          setDashboardData({
+            activeLoans: data.stats.activeLoans || 0,
+            overdueBooks: data.stats.overdueBooks || 0,
+            unreadMessages: data.stats.unreadMessages || 0,
+            blockedSeats: data.stats.blockedSeats || 0,
+            todayActivity: data.stats.todayActivity || [],
           });
         }
       } catch (error) {
         console.error("Dashboard Error:", error);
 
-        setStats({
-          books: [
-            { text: "3 בקשות השאלת ספרים ממתינות", link: "/manage-books" },
-          ],
-          seats: [{ text: "80% תפוסה בחדרי הלימוד", link: "/manage-seats" }],
-          users: [{ text: "2 משתמשים חדשים נרשמו", link: "/manage-users" }],
-          reports: [{ text: "הספר המבוקש ביותר: ההוביט", link: "/reports" }],
-          messages: [{ text: "2 הודעות חדשות ממשתמשים", link: "/messages" }],
+        setDashboardData({
+          activeLoans: 0,
+          overdueBooks: 0,
+          unreadMessages: 0,
+          blockedSeats: 0,
+          todayActivity: [],
         });
       }
     };
 
-    fetchLibrarianStats();
+    fetchDashboardData();
   }, []);
-
-  /*
-  ---------------------------------------------------------
-  הצגת התראות בכרטיס ניהול
-
-  תפקיד:
-  מקבלת מערך התראות ומציגה אותן מתחת לכרטיס המתאים.
-  ---------------------------------------------------------
-  */
-  const renderUpdates = (items) => (
-    <div className="updatesContainer">
-      {items.map((item, index) => (
-        <div
-          key={index}
-          className="updateNotification"
-          onClick={(event) => {
-            event.stopPropagation();
-            navigate(item.link);
-          }}
-        >
-          {item.text}
-        </div>
-      ))}
-    </div>
-  );
 
   return (
     <div className="profileSection">
       <h2>Librarian Dashboard</h2>
 
-      <div className="profileGrid librarianProfileGrid">
-        <div className="profileBox" onClick={() => navigate("/manage-books")}>
-          <h3>📖 Manage Books</h3>
-          <p>Add / Edit / Remove Books</p>
-          {renderUpdates(stats.books)}
-        </div>
+      <section className="dashboardBlock">
+        <h3 className="dashboardBlockTitle">Important Updates</h3>
 
-        <div className="profileBox" onClick={() => navigate("/manage-seats")}>
-          <h3>🪑 Manage Seats</h3>
-          <p>Control Library Map</p>
-          {renderUpdates(stats.seats)}
-        </div>
+        <div className="dashboardStatsGrid">
+          <div className="dashboardStatCard">
+            <span className="dashboardStatIcon">📚</span>
 
-        <div className="profileBox" onClick={() => navigate("/manage-users")}>
-          <h3>👥 Users Management</h3>
-          <p>Manage Library Users</p>
-          {renderUpdates(stats.users)}
-        </div>
+            <div>
+              <h4>{dashboardData.activeLoans}</h4>
+              <p>Active Loans</p>
+            </div>
+          </div>
 
-        <div className="profileBox" onClick={() => navigate("/reports")}>
-          <h3>📊 Reports</h3>
-          <p>Library Statistics & Reports</p>
-          {renderUpdates(stats.reports)}
-        </div>
+          <div className="dashboardStatCard">
+            <span className="dashboardStatIcon">⏰</span>
 
-        <div className="profileBox" onClick={() => navigate("/messages")}>
-          <h3>✉️ Messages</h3>
-          <p>Messages From Users</p>
-          {renderUpdates(stats.messages)}
+            <div>
+              <h4>{dashboardData.overdueBooks}</h4>
+              <p>Overdue Books</p>
+            </div>
+          </div>
+
+          <div className="dashboardStatCard">
+            <span className="dashboardStatIcon">✉️</span>
+
+            <div>
+              <h4>{dashboardData.unreadMessages}</h4>
+              <p>Unread Messages</p>
+            </div>
+          </div>
+
+          <div className="dashboardStatCard">
+            <span className="dashboardStatIcon">🪑</span>
+
+            <div>
+              <h4>{dashboardData.blockedSeats}</h4>
+              <p>Blocked Seats</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </section>
+
+      <section className="dashboardBlock">
+        <h3 className="dashboardBlockTitle">Today&apos;s Activity</h3>
+
+        <div className="dashboardActivityList">
+          {dashboardData.todayActivity.length > 0 ? (
+            dashboardData.todayActivity.map((activity, index) => (
+              <div key={index} className="dashboardActivityItem">
+                <span>•</span>
+                <p>{activity}</p>
+              </div>
+            ))
+          ) : (
+            <p className="dashboardEmptyText">No activity today.</p>
+          )}
+        </div>
+      </section>
+
+      <section className="dashboardBlock">
+        <h3 className="dashboardBlockTitle">Quick Management</h3>
+
+        <div className="profileGrid librarianProfileGrid">
+          <div className="profileBox" onClick={() => navigate("/books")}>
+            <h3>📖 Manage Books</h3>
+            <p>View, add, edit and remove books</p>
+          </div>
+
+          <div className="profileBox" onClick={() => navigate("/admin/map")}>
+            <h3>🪑 Manage Seats</h3>
+            <p>Control library map and seating areas</p>
+          </div>
+
+          <div className="profileBox" onClick={() => navigate("/admin/users")}>
+            <h3>👥 Users Management</h3>
+            <p>Manage readers and librarians</p>
+          </div>
+
+          <div className="profileBox" onClick={() => navigate("/reports")}>
+            <h3>📊 Reports</h3>
+            <p>View library statistics and reports</p>
+          </div>
+
+          <div className="profileBox" onClick={() => navigate("/messages")}>
+            <h3>✉️ Messages</h3>
+            <p>View messages from users</p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
