@@ -21,26 +21,58 @@ export default function UserProfileDashboard() {
         { withCredentials: true },
       );
       if (response.data.success) {
-        setStats({
+        setStats((prevStats) => ({
+          ...prevStats, // שומר על מה שפונקציות אחרות כבר עדכנו (כמו activeReservations)
           borrowedBooks: response.data.stats.borrowedBooks || 0,
-          activeReservations: response.data.stats.activeReservations || 0,
           unreadNotifications: response.data.stats.unreadNotifications || 0,
-        });
+          // ✂️ מחקנו מכאן את העדכון הישיר של activeReservations כדי שלא ידרוס!
+        }));
       }
     } catch (error) {
       console.error("User dashboard stats error:", error);
     }
   };
 
-  // 3. פונקציה שנייה: הבאת ההזמנות מהראוטר החדש
+  // 2. הפונקציה של ההזמנות
   const getUserReservations = async () => {
     try {
       const response = await axios.get(
         "http://localhost:8000/reservations/get-reservations",
         { withCredentials: true },
       );
+
       if (response.status === 200) {
-        setUpcomingReservations(response.data.reservations || []);
+        const reservationsList = response.data.reservations || [];
+        setUpcomingReservations(reservationsList);
+
+        const now = new Date();
+        const offset = now.getTimezoneOffset() * 60000;
+        const todayStr = new Date(now.getTime() - offset)
+          .toISOString()
+          .split("T")[0];
+        const currentTimeStr = now.toTimeString().split(" ")[0].substring(0, 5);
+
+        const activeCount = reservationsList.filter((reservation) => {
+          if (!reservation.reservationDate) return false;
+
+          const dbDateObj = new Date(reservation.reservationDate);
+          const dbOffset = dbDateObj.getTimezoneOffset() * 60000;
+          const dbLocalDateStr = new Date(dbDateObj.getTime() - dbOffset)
+            .toISOString()
+            .split("T")[0];
+
+          const isToday = dbLocalDateStr === todayStr;
+          const isStarted = currentTimeStr >= reservation.startTime;
+          const isNotEnded = currentTimeStr < reservation.endTime;
+
+          return isToday && isStarted && isNotEnded;
+        }).length;
+
+        // מעדכן בבטחה את ה-Counter האמיתי שחישבנו כאן
+        setStats((prevStats) => ({
+          ...prevStats,
+          activeReservations: activeCount, // קובע את המספר האמיתי מהסינון
+        }));
       }
     } catch (error) {
       console.error("Error fetching reservations:", error);
@@ -100,7 +132,8 @@ export default function UserProfileDashboard() {
                 <div>
                   <strong>Seat {reservation.seatId}</strong>
                   <p>
-                    {reservation.reservationDate} | {reservation.startTime} -{" "}
+                    {reservation.reservationDate} | {reservation.startTime} -
+                    {""}
                     {reservation.endTime}
                   </p>
                 </div>
