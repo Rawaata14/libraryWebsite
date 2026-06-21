@@ -70,29 +70,4 @@ router.delete("/delete-seat/:seatId", async (req, res) => {
   }
 });
 
-router.post("/reserve-seat", async (req, res) => {
-  try {
-    if (!req.session.user) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
-    const { seatId, date, startTime, endTime } = req.body;
-    const result = await reservationQueries.reserveSeat({
-      userId: req.session.user.userId,
-      seatId,
-      reservationDate: date,
-      startTime,
-      endTime,
-      status: "occupied",
-    });
-    
-    if (result.success) {
-      res.status(200).json({ message: "Seat occupied successfully" });
-    } else {
-      res.status(500).json({ message: "Failed to occupy seat" });
-    }
-  } catch (error) {
-    console.error("Error in reserving seat:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
 module.exports = router;

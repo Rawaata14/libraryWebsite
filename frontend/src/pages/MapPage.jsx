@@ -63,7 +63,7 @@ export default function MapPage() {
 
     try {
       const response = await axios.post(
-        "http://localhost:8000/seats/reserve-seat",
+        "http://localhost:8000/reservations/reserve-seat",
         {
           userId: user.userId || user.id, // 💡 בטיחות: תומך גם ב-userId וגם ב-id
           seatId: selectedSeat.id,

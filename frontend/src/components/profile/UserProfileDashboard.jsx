@@ -11,10 +11,27 @@ UserProfileDashboard.jsx
 */
 
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function UserProfileDashboard() {
   const navigate = useNavigate();
 
+  const getUserReservations = async () => {
+    try {
+      const response = await axios.get(
+        "http://localhost:8000/reservations/get-reservations",
+        { withCredentials: true },
+      );
+      if (response.status === 200) {
+        console.log("User Reservations:", response.data.reservations);
+      } else {
+        console.error("Failed to fetch reservations");
+      }
+    } catch (error) {
+      console.error("Error fetching reservations:", error);
+    }
+  };
+  
   return (
     <div className="profileSection">
       <h2>My Activity</h2>

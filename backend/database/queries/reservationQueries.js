@@ -1,5 +1,6 @@
 const doQuery = require("../query");
 
+// Function to reserve a seat
 async function reserveSeat(reservationDetails) {
   const { userId, seatId, reservationDate, startTime, endTime, status } =
     reservationDetails;
@@ -21,6 +22,19 @@ async function reserveSeat(reservationDetails) {
   }
 }
 
+// Function to fetch all reservations (for admin/librarian view)
+async function getAllReservations() {
+  try {
+    const getReservationsSQL = "SELECT * FROM seat_reservation";
+    const reservations = await doQuery(getReservationsSQL);
+    return { success: true, data: reservations };
+  } catch (error) {
+    console.error("Error in fetching reservations:", error);
+    return { success: false, message: "Failed to fetch reservations" };
+  }
+}
+
 module.exports = {
   reserveSeat,
+  getAllReservations,
 };
