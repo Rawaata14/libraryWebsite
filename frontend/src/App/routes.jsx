@@ -1,11 +1,13 @@
 /*
   routes.jsx
   ----------
+
   קובץ ניהול הניווט של המערכת.
 
   אחריות:
-  - הגדרת כל הנתיבים במקום אחד
-  - הגנה על דפים לפי מצב התחברות והרשאות
+  - הגדרת כל הנתיבים במקום אחד.
+  - הגנה על דפים לפי מצב התחברות והרשאות.
+  - הפניית נתיבים לא קיימים לדף הבית.
 */
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -24,15 +26,21 @@ import AdminMapPage from "../pages/AdminMapPage";
 import MessagesPage from "../pages/MessagesPage";
 import UsersManagementPage from "../pages/UsersManagementPage";
 import ReportsPage from "../pages/ReportsPage";
+import MyReservationsPage from "../pages/MyReservationsPage";
 
-import LibraryMap from "../components/map/LibraryMap";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import GuestRoute from "../components/common/GuestRoute";
 import RoleRoute from "../components/common/RoleRoute";
 import PageShell from "../components/layout/PageShell";
-import { useRef   } from "react";
 
-/* דף זמני לספרן */
+/*
+---------------------------------------------------------
+LibrarianDashboardPage
+
+תפקיד:
+דף זמני שמוגן ומאפשר כניסה לספרנים בלבד.
+---------------------------------------------------------
+*/
 function LibrarianDashboardPage() {
   return (
     <div
@@ -49,11 +57,19 @@ function LibrarianDashboardPage() {
   );
 }
 
+/*
+---------------------------------------------------------
+AppRoutes
+
+תפקיד:
+מגדיר את כל נתיבי המערכת ואת הרשאות הגישה לכל עמוד.
+---------------------------------------------------------
+*/
 export default function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ===== Public Pages ===== */}
+        {/* ===== דפים ציבוריים ===== */}
 
         <Route path="/" element={<HomePage />} />
 
@@ -65,13 +81,13 @@ export default function AppRoutes() {
 
         <Route path="/about" element={<AboutPage />} />
 
-        {/* ===== Guest Only ===== */}
+        {/* ===== דפים לאורחים בלבד ===== */}
 
         <Route
           path="/login"
           element={
             <GuestRoute>
-              <LoginPage  />
+              <LoginPage />
             </GuestRoute>
           }
         />
@@ -85,7 +101,7 @@ export default function AppRoutes() {
           }
         />
 
-        {/* ===== Protected ===== */}
+        {/* ===== דפים למשתמשים מחוברים ===== */}
 
         <Route
           path="/reserve-book/:id"
@@ -96,20 +112,27 @@ export default function AppRoutes() {
           }
         />
 
-        {/* ===== Profile ===== */}
-
         <Route
           path="/profile"
           element={
             <ProtectedRoute>
               <PageShell>
-                <ProfilePage  />
+                <ProfilePage />
               </PageShell>
             </ProtectedRoute>
           }
         />
 
-        {/* ===== Librarian Only ===== */}
+        <Route
+          path="/my-reservations"
+          element={
+            <ProtectedRoute>
+              <MyReservationsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* ===== דפים לספרן בלבד ===== */}
 
         <Route
           path="/librarian"
@@ -121,7 +144,7 @@ export default function AppRoutes() {
         />
 
         <Route
-          path="admin/books"
+          path="/admin/books"
           element={
             <RoleRoute allowedRoles={["librarian"]}>
               <BooksPage />
@@ -174,7 +197,7 @@ export default function AppRoutes() {
           }
         />
 
-        {/* ===== Fallback ===== */}
+        {/* ===== נתיב ברירת מחדל ===== */}
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

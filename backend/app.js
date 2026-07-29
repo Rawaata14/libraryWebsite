@@ -37,6 +37,13 @@ app.use("/user", userRoutes);
 app.use("/books", require("./routes/book"));
 app.use("/seats", require("./routes/seat"));
 app.use("/reservations", require("./routes/reservation"));
+
+// חיבור הנתיבים של מערכת ההודעות לשרת
+app.use("/messages", require("./routes/message"));
+
+// חיבור הנתיבים של מערכת הדוחות לשרת
+app.use("/reports", require("./routes/report"));
+
 app.use("/api/librarian", librarianRoutes);
 console.log("Database connection established successfully.");
 app.listen(8000, () => {

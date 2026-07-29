@@ -1,0 +1,472 @@
+/*
+=========================================================
+my-reservations.css
+
+תיאור הקובץ:
+עיצוב דף ההזמנות האישיות של המשתמש.
+
+הקובץ כולל:
+- כרטיס ראשי.
+- כרטיסי סיכום.
+- כפתורי סינון.
+- רשימת הזמנות.
+- כפתור ביטול הזמנה.
+- הודעות הצלחה ושגיאה.
+- התאמה למסכים קטנים.
+=========================================================
+*/
+
+.myReservationsPage {
+  width: 100%;
+  min-height: 70vh;
+  padding: 40px 6%;
+}
+
+.myReservationsCard {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  padding: 32px;
+
+  background: rgba(34, 17, 11, 0.94);
+  border: 2px solid rgba(164, 107, 86, 0.8);
+  border-radius: 24px;
+
+  color: #ffffff;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+}
+
+.myReservationsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.myReservationsHeader h2 {
+  margin: 0 0 8px;
+
+  color: #ffffff;
+  font-size: 2rem;
+}
+
+.myReservationsHeader p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.refreshReservationsButton,
+.retryReservationsButton {
+  padding: 11px 20px;
+
+  border: none;
+  border-radius: 12px;
+
+  background: #914a36;
+  color: #ffffff;
+
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.refreshReservationsButton:hover,
+.retryReservationsButton:hover {
+  background: #a95b43;
+  transform: translateY(-2px);
+}
+
+.refreshReservationsButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.reservationFeedback {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  margin-bottom: 22px;
+  padding: 14px 16px;
+
+  border-radius: 14px;
+}
+
+.reservationFeedback > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+
+  border-radius: 50%;
+  font-weight: 900;
+}
+
+.reservationFeedback p {
+  flex: 1;
+  margin: 0;
+}
+
+.reservationFeedback button {
+  border: none;
+  background: transparent;
+
+  color: inherit;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.successFeedback {
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  color: #9ce4a0;
+}
+
+.successFeedback > span {
+  background: rgba(76, 175, 80, 0.25);
+}
+
+.errorFeedback {
+  background: rgba(244, 67, 54, 0.15);
+  border: 1px solid rgba(244, 67, 54, 0.4);
+  color: #ff9a93;
+}
+
+.errorFeedback > span {
+  background: rgba(244, 67, 54, 0.25);
+}
+
+.reservationSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+
+  margin-bottom: 30px;
+}
+
+.reservationSummaryCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  padding: 20px;
+
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 183, 77, 0.25);
+  border-radius: 16px;
+}
+
+.reservationSummaryCard > span {
+  font-size: 2rem;
+}
+
+.reservationSummaryCard strong {
+  display: block;
+  margin-bottom: 4px;
+
+  color: #ffb74d;
+  font-size: 1.8rem;
+}
+
+.reservationSummaryCard p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.reservationFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  margin-bottom: 24px;
+}
+
+.reservationFilterButton {
+  padding: 10px 20px;
+
+  border: 1px solid rgba(255, 183, 77, 0.35);
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.82);
+
+  font-weight: 700;
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.reservationFilterButton:hover,
+.reservationFilterButton.active {
+  background: rgba(255, 183, 77, 0.2);
+  border-color: #ffb74d;
+  color: #ffb74d;
+}
+
+.myReservationsList {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.myReservationItem {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
+  padding: 22px;
+
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 18px;
+
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.myReservationItem:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 183, 77, 0.45);
+}
+
+.reservationSeatIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+
+  border-radius: 16px;
+
+  background: rgba(255, 183, 77, 0.13);
+  font-size: 1.9rem;
+}
+
+.reservationMainDetails {
+  flex: 1;
+  min-width: 0;
+}
+
+.reservationMainDetails h3 {
+  margin: 0 0 14px;
+
+  color: #ffffff;
+  font-size: 1.2rem;
+}
+
+.reservationDetailsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 14px;
+}
+
+.reservationDetailsGrid p {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  margin: 0;
+}
+
+.reservationDetailsGrid span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.85rem;
+}
+
+.reservationDetailsGrid strong {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.96rem;
+}
+
+.reservationActionsColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+
+  flex-shrink: 0;
+}
+
+.myReservationStatus {
+  padding: 7px 14px;
+  border-radius: 999px;
+
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.myReservationStatus.confirmed {
+  background: rgba(76, 175, 80, 0.17);
+  color: #80d985;
+}
+
+.myReservationStatus.pending {
+  background: rgba(255, 183, 77, 0.17);
+  color: #ffb74d;
+}
+
+.myReservationStatus.cancelled {
+  background: rgba(244, 67, 54, 0.17);
+  color: #ff7c73;
+}
+
+.myReservationStatus.completed {
+  background: rgba(33, 150, 243, 0.17);
+  color: #70bfff;
+}
+
+.myReservationStatus.default {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.cancelReservationButton {
+  padding: 9px 14px;
+
+  border: 1px solid rgba(244, 67, 54, 0.55);
+  border-radius: 10px;
+
+  background: rgba(244, 67, 54, 0.12);
+  color: #ff8d85;
+
+  font-weight: 700;
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.cancelReservationButton:hover {
+  background: rgba(244, 67, 54, 0.24);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.cancelReservationButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.reservationsMessage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 250px;
+  padding: 34px;
+
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 18px;
+
+  text-align: center;
+}
+
+.reservationsMessage > span {
+  margin-bottom: 12px;
+  font-size: 2.4rem;
+}
+
+.reservationsMessage h3 {
+  margin: 0 0 8px;
+  color: #ffffff;
+}
+
+.reservationsMessage p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.reservationsLoadingIcon {
+  animation: reservationsPulse 1.1s ease-in-out infinite;
+}
+
+@keyframes reservationsPulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.92);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 850px) {
+  .reservationSummaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .reservationDetailsGrid {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .myReservationsPage {
+    padding: 24px 16px;
+  }
+
+  .myReservationsCard {
+    padding: 22px 16px;
+  }
+
+  .myReservationsHeader {
+    flex-direction: column;
+  }
+
+  .refreshReservationsButton {
+    width: 100%;
+  }
+
+  .myReservationItem {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .reservationMainDetails {
+    width: calc(100% - 80px);
+  }
+
+  .reservationDetailsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .reservationActionsColumn {
+    width: 100%;
+    align-items: stretch;
+    margin-left: 78px;
+  }
+
+  .myReservationStatus {
+    width: fit-content;
+  }
+
+  .cancelReservationButton {
+    width: 100%;
+  }
+}
