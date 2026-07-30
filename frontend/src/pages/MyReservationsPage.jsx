@@ -242,8 +242,19 @@ export default function MyReservationsPage() {
   - סטטוס ההזמנה מתעדכן מקומית.
   - ההזמנה עוברת אוטומטית להיסטוריה.
   - מוצגת הודעת הצלחה.
+/*
   ---------------------------------------------------------
-  */
+  handleCancelReservation
+
+  תפקיד:
+  שולחת בקשה לשרת לביטול ההזמנה שנבחרה.
+
+  לאחר הצלחה:
+  - סטטוס ההזמנה מתעדכן מקומית.
+  - ההזמנה עוברת אוטומטית להיסטוריה.
+  - מוצגת הודעת הצלחה.
+  ---------------------------------------------------------
+*/
   const handleCancelReservation = async (reservationId) => {
     const userConfirmed = window.confirm(
       "Are you sure you want to cancel this reservation?",
@@ -267,9 +278,9 @@ export default function MyReservationsPage() {
       );
 
       /*
-        עדכון ה-state המקומי מונע צורך
-        בטעינה מחדש של כל הדף.
-      */
+      עדכון ה-state המקומי מונע צורך
+      בטעינה מחדש של כל הדף.
+    */
       setReservations((previousReservations) =>
         previousReservations.map((reservation) =>
           reservation.reservationId === reservationId
@@ -282,9 +293,27 @@ export default function MyReservationsPage() {
       );
 
       setSuccessMessage(
-        response.data.message || "Reservation cancelled successfully.",
+        response.data?.message || "Reservation cancelled successfully.",
       );
-    
+    } catch (error) {
+      console.error("Error cancelling reservation:", error);
+      console.error("Cancellation status:", error.response?.status);
+      console.error("Cancellation response:", error.response?.data);
+
+      if (error.response?.status === 401) {
+        setErrorMessage("You must be logged in to cancel a reservation.");
+      } else if (error.response?.status === 404) {
+        setErrorMessage("The reservation or cancellation route was not found.");
+      } else {
+        setErrorMessage(
+          error.response?.data?.message ||
+            "An error occurred while cancelling the reservation.",
+        );
+      }
+    } finally {
+      setCancellingReservationId(null);
+    }
+  };
 
   /*
   ---------------------------------------------------------
