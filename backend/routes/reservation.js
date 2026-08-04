@@ -233,4 +233,230 @@ router.patch("/:reservationId/cancel", async (req, res) => {
   }
 });
 
+/*
+---------------------------------------------------------
+PATCH /reservations/:reservationId/librarian-cancel
+
+תפקיד:
+מאפשר לספרן לבטל הזמנה במקרה חריג.
+
+הנתיב:
+- בודק שהמשתמש מחובר.
+- בודק שהמשתמש הוא ספרן.
+- מבטל את ההזמנה.
+- יוצר התראה למשתמש בעל ההזמנה.
+---------------------------------------------------------
+*/
+router.patch(
+  "/:reservationId/librarian-cancel",
+  async (req, res) => {
+    try {
+      if (!req.session.user) {
+        return res.status(401).json({
+          message: "Unauthorized",
+        });
+      }
+
+      if (req.session.user.role !== "librarian") {
+        return res.status(403).json({
+          message: "Access denied",
+        });
+      }
+
+      const reservationId = Number(req.params.reservationId);
+      const { reason } = req.body;
+
+      if (!Number.isInteger(reservationId) || reservationId <= 0) {
+        return res.status(400).json({
+          message: "Invalid reservation ID",
+        });
+      }
+
+      if (!reason || !reason.trim()) {
+        return res.status(400).json({
+          message: "Cancellation reason is required",
+        });
+      }
+
+      const result =
+        await reservationQueries.cancelReservationByLibrarian(
+          reservationId,
+        );
+
+      if (result.notFound) {
+        return res.status(404).json({
+          message: result.message,
+        });
+      }
+
+      if (result.alreadyCancelled) {
+        return res.status(409).json({
+          message: result.message,
+        });
+      }
+
+      if (!result.success) {
+        return res.status(500).json({
+          message:
+            result.message || "Failed to cancel reservation",
+        });
+      }
+
+      /*
+        שליחת התראה למשתמש שהזמנתו בוטלה על ידי הספרן.
+      */
+      const notificationResult =
+        await notificationQueries.addNotification(
+          result.data.userId,
+          `Your reservation for seat ${result.data.seatId} was cancelled by the librarian. Reason: ${reason.trim()}`,
+          "reservation_cancelled_by_librarian",
+        );
+
+      if (!notificationResult?.success) {
+        console.error(
+          "Reservation was cancelled, but notification creation failed.",
+        );
+      }
+
+      return res.status(200).json({
+        message:
+          "Reservation cancelled successfully by librarian",
+        reservationId,
+      });
+    } catch (error) {
+      console.error(
+        "Error in librarian reservation cancellation:",
+        error,
+      );
+
+      return res.status(500).json({
+        message: "Internal server error",
+      });
+    }
+  },
+);
+
+/*
+---------------------------------------------------------
+POST /reservations/:reservationId/message
+
+תפקיד:
+מאפשר לספרן לשלוח הודעה פנימית למשתמש
+שביצע את ההזמנה.
+
+הנתיב:
+- בודק שהמשתמש מחובר.
+- בודק שהמשתמש הוא ספרן.
+- מאתר את בעל ההזמנה.
+- שומר את ההודעה בטבלת notification.
+---------------------------------------------------------
+*/
+router.post("/:reservationId/message", async (req, res) => {
+  try {
+    // בדיקה שהמשתמש מחובר
+    if (!req.session.user) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
+
+    // רק ספרן רשאי לשלוח הודעה מתוך ניהול ההזמנות
+    if (req.session.user.role !== "librarian") {
+      return res.status(403).json({
+        message: "Access denied",
+      });
+    }
+
+    const reservationId = Number(req.params.reservationId);
+    const { subject, message } = req.body;
+
+    if (!Number.isInteger(reservationId) || reservationId <= 0) {
+      return res.status(400).json({
+        message: "Invalid reservation ID",
+      });
+    }
+
+    if (!subject || !subject.trim()) {
+      return res.status(400).json({
+        message: "Message subject is required",
+      });
+    }
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({
+        message: "Message content is required",
+      });
+    }
+
+    if (subject.trim().length > 100) {
+      return res.status(400).json({
+        message: "Message subject cannot exceed 100 characters",
+      });
+    }
+
+    if (message.trim().length > 500) {
+      return res.status(400).json({
+        message: "Message cannot exceed 500 characters",
+      });
+    }
+
+    /*
+      שליפת בעל ההזמנה.
+
+      אין לסמוך על userId שמגיע מה-Frontend,
+      משום שמשתמש יכול לשנות אותו ידנית.
+    */
+    const reservationResult =
+      await reservationQueries.getReservationById(reservationId);
+
+    if (reservationResult.notFound) {
+      return res.status(404).json({
+        message: reservationResult.message,
+      });
+    }
+
+    if (!reservationResult.success) {
+      return res.status(500).json({
+        message:
+          reservationResult.message ||
+          "Failed to load reservation details",
+      });
+    }
+
+    const reservation = reservationResult.data;
+
+    const notificationMessage =
+      `${subject.trim()}: ${message.trim()} ` +
+      `(Reservation #${reservationId}, Seat ${reservation.seatId})`;
+
+    const notificationResult =
+      await notificationQueries.addNotification(
+        reservation.userId,
+        notificationMessage,
+        "librarian_message",
+      );
+
+    if (!notificationResult.success) {
+      return res.status(500).json({
+        message: "Failed to send message",
+      });
+    }
+
+    return res.status(201).json({
+      message: "Message sent successfully",
+      reservationId,
+      userId: reservation.userId,
+    });
+  } catch (error) {
+    console.error(
+      "Error sending reservation message:",
+      error,
+    );
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+});
+
 module.exports = router;

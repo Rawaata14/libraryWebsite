@@ -27,6 +27,7 @@ import MessagesPage from "../pages/MessagesPage";
 import UsersManagementPage from "../pages/UsersManagementPage";
 import ReportsPage from "../pages/ReportsPage";
 import MyReservationsPage from "../pages/MyReservationsPage";
+import ManageReservationsPage from "../pages/ManageReservationsPage";
 
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import GuestRoute from "../components/common/GuestRoute";
@@ -193,6 +194,15 @@ export default function AppRoutes() {
           element={
             <RoleRoute allowedRoles={["librarian"]}>
               <ReportsPage />
+            </RoleRoute>
+          }
+        />
+
+        <Route
+          path="/admin/reservations"
+          element={
+            <RoleRoute allowedRoles={["librarian"]}>
+              <ManageReservationsPage />
             </RoleRoute>
           }
         />

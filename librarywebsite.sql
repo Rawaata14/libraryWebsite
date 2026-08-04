@@ -78,8 +78,9 @@ CREATE TABLE `notification` (
   `userId` int(11) DEFAULT NULL,
   `message` text NOT NULL,
   `sentDate` timestamp NOT NULL DEFAULT current_timestamp(),
-  `type` varchar(30) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+  `type` varchar(30) DEFAULT NULL,
+  `isRead` tinyint(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;NGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 

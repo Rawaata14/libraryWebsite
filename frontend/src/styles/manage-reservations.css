@@ -1,0 +1,539 @@
+/*
+=========================================================
+manage-reservations.css
+
+תיאור הקובץ:
+עיצוב דף ניהול ההזמנות של הספרן.
+
+הקובץ כולל:
+- כרטיס ראשי.
+- נתוני סיכום.
+- חיפוש וסינון.
+- טבלת הזמנות.
+- סטטוסים.
+- חלון ביטול הזמנה.
+- התאמה למסכים קטנים.
+=========================================================
+*/
+
+.manageReservationsPage {
+  width: 100%;
+  min-height: 75vh;
+  padding: 40px 5%;
+}
+
+.manageReservationsCard {
+  width: min(1200px, 100%);
+  margin: 0 auto;
+  padding: 30px;
+
+  color: #ffffff;
+  background: rgba(35, 18, 12, 0.95);
+  border: 2px solid rgba(164, 107, 86, 0.75);
+  border-radius: 22px;
+  box-shadow: 0 16px 35px rgba(0, 0, 0, 0.35);
+}
+
+.manageReservationsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.manageReservationsHeader h2 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+}
+
+.manageReservationsHeader p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.refreshManagementButton {
+  padding: 11px 20px;
+
+  border: none;
+  border-radius: 12px;
+
+  color: #ffffff;
+  background: #914a36;
+
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.refreshManagementButton:hover {
+  background: #a85a42;
+}
+
+.refreshManagementButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.managementFeedback {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  margin-bottom: 20px;
+  padding: 14px 16px;
+
+  border-radius: 13px;
+}
+
+.managementFeedback p {
+  flex: 1;
+  margin: 0;
+}
+
+.managementFeedback > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 28px;
+  height: 28px;
+
+  border-radius: 50%;
+  font-weight: 900;
+}
+
+.managementFeedback button {
+  border: none;
+  color: inherit;
+  background: transparent;
+
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.managementFeedback.successFeedback {
+  color: #a8e8ab;
+  background: rgba(76, 175, 80, 0.14);
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+.managementFeedback.errorFeedback {
+  color: #ff9b94;
+  background: rgba(244, 67, 54, 0.14);
+  border: 1px solid rgba(244, 67, 54, 0.4);
+}
+
+.managementSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+
+  margin-bottom: 26px;
+}
+
+.managementSummaryCard {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+
+  padding: 19px;
+
+  background: rgba(255, 255, 255, 0.065);
+  border: 1px solid rgba(255, 183, 77, 0.28);
+  border-radius: 16px;
+}
+
+.managementSummaryCard > span {
+  font-size: 2rem;
+}
+
+.managementSummaryCard strong {
+  display: block;
+
+  color: #ffb74d;
+  font-size: 1.75rem;
+}
+
+.managementSummaryCard p {
+  margin: 3px 0 0;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.managementFilters {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(190px, 260px);
+  gap: 16px;
+
+  margin-bottom: 24px;
+}
+
+.managementFilters input,
+.managementFilters select {
+  width: 100%;
+  padding: 12px 14px;
+
+  border: 2px solid #a46b56;
+  border-radius: 11px;
+
+  color: #2b1d17;
+  background: rgba(255, 255, 255, 0.96);
+
+  font-size: 15px;
+}
+
+.managementFilters input:focus,
+.managementFilters select:focus {
+  outline: none;
+  border-color: #ffb74d;
+  box-shadow: 0 0 0 3px rgba(255, 183, 77, 0.2);
+}
+
+.reservationsTableWrapper {
+  width: 100%;
+  overflow-x: auto;
+
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 16px;
+}
+
+.reservationsManagementTable {
+  width: 100%;
+  min-width: 980px;
+
+  border-collapse: collapse;
+}
+
+.reservationsManagementTable th,
+.reservationsManagementTable td {
+  padding: 16px 14px;
+  text-align: left;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.reservationsManagementTable th {
+  color: #ffb74d;
+  background: rgba(255, 255, 255, 0.06);
+
+  font-size: 0.92rem;
+}
+
+.reservationsManagementTable tbody tr {
+  transition: background 0.2s ease;
+}
+
+.reservationsManagementTable tbody tr:hover {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.reservationsManagementTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.reservationUserDetails,
+.reservationSeatDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reservationUserDetails span,
+.reservationSeatDetails span {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.85rem;
+}
+
+.managementStatus {
+  display: inline-block;
+  padding: 7px 12px;
+
+  border-radius: 999px;
+
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.managementStatus.confirmed {
+  color: #86de8b;
+  background: rgba(76, 175, 80, 0.17);
+}
+
+.managementStatus.cancelled {
+  color: #ff8e86;
+  background: rgba(244, 67, 54, 0.17);
+}
+
+.managementStatus.completed {
+  color: #79c4ff;
+  background: rgba(33, 150, 243, 0.17);
+}
+
+.managementStatus.default {
+  color: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.librarianCancelButton {
+  padding: 8px 14px;
+
+  border: 1px solid rgba(244, 67, 54, 0.55);
+  border-radius: 9px;
+
+  color: #ff928b;
+  background: rgba(244, 67, 54, 0.12);
+
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.librarianCancelButton:hover {
+  color: #ffffff;
+  background: rgba(244, 67, 54, 0.25);
+}
+
+.noActionText {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.88rem;
+}
+
+.managementEmptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 250px;
+  padding: 30px;
+
+  text-align: center;
+
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+}
+
+.managementEmptyState > span {
+  margin-bottom: 10px;
+  font-size: 2.4rem;
+}
+
+.managementEmptyState h3 {
+  margin: 0 0 7px;
+}
+
+.managementEmptyState p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.cancellationModalOverlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+}
+
+.cancellationModal {
+  width: min(580px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+
+  padding: 26px;
+
+  color: #ffffff;
+  background: #2b1710;
+  border: 2px solid #a46b56;
+  border-radius: 20px;
+
+  box-shadow: 0 22px 55px rgba(0, 0, 0, 0.55);
+}
+
+.cancellationModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+
+  padding-bottom: 17px;
+  margin-bottom: 20px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.cancellationModalHeader h2 {
+  margin: 0 0 5px;
+}
+
+.cancellationModalHeader p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.closeCancellationModalButton {
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  background: transparent;
+
+  font-size: 1.8rem;
+  cursor: pointer;
+}
+
+.cancellationReservationInfo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+
+  margin-bottom: 20px;
+}
+
+.cancellationReservationInfo p {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  margin: 0;
+  padding: 12px;
+
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 11px;
+}
+
+.cancellationReservationInfo span {
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.83rem;
+}
+
+.cancellationReasonField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cancellationReasonField > span {
+  font-weight: 800;
+}
+
+.cancellationReasonField textarea {
+  width: 100%;
+  resize: vertical;
+
+  padding: 12px 14px;
+
+  border: 2px solid #a46b56;
+  border-radius: 11px;
+
+  color: #2b1d17;
+  background: rgba(255, 255, 255, 0.96);
+
+  font: inherit;
+}
+
+.cancellationReasonField textarea:focus {
+  outline: none;
+  border-color: #ffb74d;
+  box-shadow: 0 0 0 3px rgba(255, 183, 77, 0.2);
+}
+
+.cancellationReasonField small {
+  align-self: flex-end;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.cancellationWarning {
+  margin: 14px 0 0;
+  padding: 11px 13px;
+
+  color: #ffcb78;
+  background: rgba(255, 183, 77, 0.1);
+  border-left: 3px solid #ffb74d;
+  border-radius: 8px;
+}
+
+.cancellationModalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+
+  margin-top: 22px;
+}
+
+.keepReservationButton,
+.confirmCancellationButton {
+  padding: 10px 17px;
+
+  border-radius: 10px;
+
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.keepReservationButton {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.confirmCancellationButton {
+  color: #ffffff;
+  background: #a13f32;
+  border: 1px solid #c55748;
+}
+
+.confirmCancellationButton:disabled,
+.keepReservationButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 800px) {
+  .managementSummaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .managementFilters {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .manageReservationsPage {
+    padding: 24px 14px;
+  }
+
+  .manageReservationsCard {
+    padding: 21px 15px;
+  }
+
+  .manageReservationsHeader {
+    flex-direction: column;
+  }
+
+  .refreshManagementButton {
+    width: 100%;
+  }
+
+  .cancellationReservationInfo {
+    grid-template-columns: 1fr;
+  }
+
+  .cancellationModalActions {
+    flex-direction: column-reverse;
+  }
+
+  .keepReservationButton,
+  .confirmCancellationButton {
+    width: 100%;
+  }
+}

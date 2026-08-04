@@ -26,6 +26,22 @@ Route: GET /api/librarian/dashboard-stats
 */
 router.get("/dashboard-stats", async (req, res) => {
   try {
+    /*
+---------------------------------------------------------
+שליפת מספר ההזמנות של היום
+
+תפקיד:
+מחזירה את מספר הזמנות המקומות שתאריך ההזמנה שלהן
+הוא התאריך הנוכחי ושלא בוטלו.
+---------------------------------------------------------
+*/
+    const todayReservationsResult = await doQuery(`
+  SELECT COUNT(*) AS count
+  FROM seat_reservation
+  WHERE reservationDate = CURDATE()
+    AND status <> 'cancelled'
+`);
+
     const activeLoans = await doQuery(
       "SELECT COUNT(*) AS count FROM `loan` WHERE status = 'ACTIVE'",
     );
@@ -76,6 +92,7 @@ router.get("/dashboard-stats", async (req, res) => {
         overdueBooks: overdueBooks[0].count,
         unreadMessages: unreadMessages[0].count,
         blockedSeats: blockedSeats[0].count,
+        todayReservations: todayReservationsResult[0]?.count || 0,
         todayActivity,
       },
     });

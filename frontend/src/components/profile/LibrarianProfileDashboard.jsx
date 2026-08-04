@@ -33,6 +33,7 @@ export default function LibrarianProfileDashboard() {
     overdueBooks: 0,
     unreadMessages: 0,
     blockedSeats: 0,
+    todayReservations: 0,
     todayActivity: [],
   });
 
@@ -58,13 +59,14 @@ export default function LibrarianProfileDashboard() {
         const data = await response.json();
 
         if (data.success) {
-          setDashboardData({
-            activeLoans: data.stats.activeLoans || 0,
-            overdueBooks: data.stats.overdueBooks || 0,
-            unreadMessages: data.stats.unreadMessages || 0,
-            blockedSeats: data.stats.blockedSeats || 0,
-            todayActivity: data.stats.todayActivity || [],
-          });
+         setDashboardData({
+           pendingBookRequests: data.stats.pendingBookRequests || 0,
+           unreadMessages: data.stats.unreadMessages || 0,
+           newUsers: data.stats.newUsers || 0,
+           blockedSeats: data.stats.blockedSeats || 0,
+           todayReservations: data.stats.todayReservations || 0,
+           todayActivity: data.stats.todayActivity || [],
+         });
         }
       } catch (error) {
         console.error("Dashboard Error:", error);
@@ -74,6 +76,7 @@ export default function LibrarianProfileDashboard() {
           overdueBooks: 0,
           unreadMessages: 0,
           blockedSeats: 0,
+          todayReservations: 0,
           todayActivity: [],
         });
       }
@@ -88,6 +91,15 @@ export default function LibrarianProfileDashboard() {
 
       <section className="dashboardBlock">
         <h3 className="dashboardBlockTitle">Important Updates</h3>
+
+        <div className="dashboardStatCard">
+          <span className="dashboardStatIcon">📅</span>
+
+          <div>
+            <h4>{dashboardData.todayReservations}</h4>
+            <p>Today&apos;s Reservations</p>
+          </div>
+        </div>
 
         <div className="dashboardStatsGrid">
           <div className="dashboardStatCard">
@@ -147,6 +159,14 @@ export default function LibrarianProfileDashboard() {
 
       <section className="dashboardBlock">
         <h3 className="dashboardBlockTitle">Quick Management</h3>
+
+        <div
+          className="profileBox"
+          onClick={() => navigate("/admin/reservations")}
+        >
+          <h3>📅 Manage Reservations</h3>
+          <p>View reservations and handle exceptional cancellations</p>
+        </div>
 
         <div className="profileGrid librarianProfileGrid">
           <div className="profileBox" onClick={() => navigate("/books")}>
