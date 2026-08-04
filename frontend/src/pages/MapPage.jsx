@@ -4,22 +4,12 @@
   דף מפת המקומות הראשי של המערכת (תצוגת סטודנט/אורח).
 */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
 import Button from "../components/common/Button";
 import RoomMap from "../components/dashboard/RoomMap";
-import axios from "axios"; // 💡 תוקן: נוסף הייבוא החסר של axios
-// import { useContext } from "react";
-// import { AuthContext } from "../context/AuthContext";
-
-const availableTimeSlots = [
-  "08:00 - 10:00",
-  "10:00 - 12:00",
-  "12:00 - 14:00",
-  "14:00 - 16:00",
-  "16:00 - 18:00",
-];
+import axios from "axios";
 
 const getAreaLabel = (location) => {
   if (location === "quiet-room") return "Quiet Room";
@@ -43,18 +33,49 @@ export default function MapPage() {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0],
   ); // תאריך ברירת מחדל: היום
-  const [selectedTime, setSelectedTime] = useState(availableTimeSlots[0]); // זמן ברירת מחדל: הסלוט הראשון
+  const [availableSlots, setAvailableSlots] = useState([]); // רשימת השעות הזמינות מהשרת
+  const [selectedTime, setSelectedTime] = useState(""); // זמן נבחר
   const [selectedSeat, setSelectedSeat] = useState(null);
 
-  // const { user } = useContext(AuthContext);
   const storedUser = localStorage.getItem("libraryUser");
-  const user = storedUser ? JSON.parse(storedUser) : null; // 💡 קריאה ישירה מ-localStorage במקום שימוש בקונטקסט
-  // const user = JSON.parse(localStorage.getItem("libraryUser")); // 💡 קריאה ישירה מ-localStorage במקום שימוש בקונטקסט
+  const user = storedUser ? JSON.parse(storedUser) : null;
+
+  // פונקציה לשליפת השעות הפנויות מהשרת לפי התאריך הנבחר
+  const fetchAvailableSlots = async (date) => {
+    try {
+      const response = await axios.get(
+        "http://localhost:8000/reservations/available-slots",
+        {
+          params: { date },
+          withCredentials: true,
+        },
+      );
+      console.log("Response from server:", response.data);
+      const slots = response.data.slots || [];
+      setAvailableSlots(slots);
+
+      // אם השעה הנוכחית הנבחרת לא קיימת ברשימה החדשה, נבחר אוטומטית את הראשונה שפנויה
+      if (slots.length > 0) {
+        if (!slots.includes(selectedTime)) {
+          setSelectedTime(slots[0]);
+        }
+      } else {
+        setSelectedTime(""); // אין שעות פנויות בכלל היום
+      }
+    } catch (error) {
+      console.error("Error fetching available slots:", error);
+    }
+  };
+
+  // שליפת שעות פנויות בעליית הדף ובכל פעם שהתאריך משתנה
+  useEffect(() => {
+    fetchAvailableSlots(selectedDate);
+  }, [selectedDate]);
 
   const handleConfirmReservation = async () => {
     if (!user) {
       alert("User not logged in. Please log in to reserve a seat.");
-      window.location.href = "/login"; // ניתוב לדף ההתחברות
+      window.location.href = "/login";
       return;
     }
     console.log("Confirming reservation for seat:", selectedSeat);
@@ -68,11 +89,16 @@ export default function MapPage() {
       return;
     }
 
+    if (!selectedTime) {
+      alert("יש לבחור שעה תקינה להזמנה");
+      return;
+    }
+
     try {
       const response = await axios.post(
         "http://localhost:8000/reservations/reserve-seat",
         {
-          userId: user.userId || user.id, // 💡 בטיחות: תומך גם ב-userId וגם ב-id
+          userId: user.userId || user.id,
           seatId: selectedSeat.id,
           date: selectedDate,
           startTime: selectedTime.split(" - ")[0],
@@ -85,17 +111,18 @@ export default function MapPage() {
         alert(
           `ההזמנה אושרה עבור כיסא שמספרו: ${selectedSeat.id}\nתאריך: ${selectedDate}\nשעה: ${selectedTime}`,
         );
-        selectedSeat.status = "occupied"; // עדכון סטטוס הכיסא ל-"occupied" לאחר אישור ההזמנה
-        setSelectedSeat({ ...selectedSeat }); // עדכון הסטייט כדי לגרום לרינדור מחדש
-        setSelectedSeat(null); // איפוס הבחירה לאחר הזמנה מוצלחת
+        selectedSeat.status = "occupied";
+        setSelectedSeat({ ...selectedSeat });
+        setSelectedSeat(null);
+
+        // רענון השעות הפנויות לאחר הזמנה מוצלחת (במידה ונסגרו כל המקומות בשעה מסוימת)
+        fetchAvailableSlots(selectedDate);
       }
     } catch (error) {
       console.error("Error occurred while confirming reservation:", error);
       alert("An error occurred while confirming the reservation.");
     }
   };
-  console.log("=== MapPage State ===", selectedSeat);
-  console.log("userID:",user ? (user.userId || user.id) : "No user logged in (Guest)");
 
   return (
     <PageShell userType="guest" userName={user?.name}>
@@ -114,7 +141,7 @@ export default function MapPage() {
                   className="mapFilterInput"
                   onChange={(e) => {
                     setSelectedDate(e.target.value);
-                    setSelectedSeat(null); // איפוס הבחירה כשמשנים תאריך
+                    setSelectedSeat(null);
                   }}
                 />
               </div>
@@ -126,19 +153,24 @@ export default function MapPage() {
                   value={selectedTime}
                   onChange={(event) => {
                     setSelectedTime(event.target.value);
-                    setSelectedSeat(null); // איפוס הבחירה כשמשנים שעה
+                    setSelectedSeat(null);
                   }}
                 >
-                  {availableTimeSlots.map((slot) => (
-                    <option key={slot} value={slot}>
-                      {slot}
+                  {availableSlots.length > 0 ? (
+                    availableSlots.map((slot) => (
+                      <option key={slot} value={slot}>
+                        {slot}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="" disabled>
+                      No available slots for this date
                     </option>
-                  ))}
+                  )}
                 </select>
               </div>
             </div>
 
-            {/* 🔥 תוקן: מעבירים את התאריך והשעה כפרופס כדי שהמפה תתרענן ותציג נתונים נכונים */}
             <RoomMap
               onSeatSelect={setSelectedSeat}
               selectedSeatId={selectedSeat?.id}
@@ -159,7 +191,7 @@ export default function MapPage() {
                 <strong>Date:</strong> {selectedDate}
               </p>
               <p>
-                <strong>Time:</strong> {selectedTime}
+                <strong>Time:</strong> {selectedTime || "-"}
               </p>
               <p>
                 <strong>Area:</strong>{" "}
@@ -193,7 +225,11 @@ export default function MapPage() {
               <Button
                 variant="primary"
                 onClick={handleConfirmReservation}
-                disabled={!selectedSeat || selectedSeat.status !== "available"}
+                disabled={
+                  !selectedSeat ||
+                  selectedSeat.status !== "available" ||
+                  !selectedTime
+                }
               >
                 Confirm Reservation
               </Button>

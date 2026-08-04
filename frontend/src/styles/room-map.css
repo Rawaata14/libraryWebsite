@@ -216,6 +216,24 @@
   border-radius: 6px;
 }
 
+/* ===== צביעה אוטומטית לכל מה שסטטוס available, חוץ משולחנות ===== */
+.mapIconItem.available:not(.table-4):not(.table-8) img {
+  filter: brightness(0.9) sepia(1) hue-rotate(60deg) saturate(4)
+    drop-shadow(0 8px 12px rgba(46, 122, 58, 0.5));
+}
+
+/* ===== תפוס (Occupied - אדום עז וצועק) ===== */
+.mapIconItem.occupied:not(.table-4):not(.table-8) img {
+  filter: brightness(1.1) sepia(1) hue-rotate(-50deg) saturate(10)
+    drop-shadow(0 0 10px #a30303) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+}
+
+/* ===== בחירה (Selected) ===== */
+.mapIconItem.selected img {
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 10px #7a4b3d);
+}
+
 /* ===== פאנל עריכה ===== */
 
 .mapEditPanel {

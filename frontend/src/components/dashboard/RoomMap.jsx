@@ -52,7 +52,6 @@ export default function RoomMap({
       }
     } catch (error) {
       console.error("Error fetching seats inside RoomMap wrapper:", error);
-      setItems([]); // במקרה של שגיאה, נעדכן את הסטייט לריק כדי למנוע בעיות ברינדור
     }
   };
 
