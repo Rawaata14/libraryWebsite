@@ -23,6 +23,17 @@ export default function RoomMap({
   // הסטייט הראשי של הרהיטים באפליקציה (Single Source of Truth)
   const [items, setItems] = useState([]);
 
+  const [internalSelectedSeatId, setInternalSelectedSeatId] =
+    useState(selectedSeatId);
+
+  const handleSeatSelect = (seatData) => {
+    const newId = seatData ? seatData.seatId || seatData.id : null;
+    setInternalSelectedSeatId(newId);
+    if (onSeatSelect) {
+      onSeatSelect(seatData);
+    }
+  };
+
   // 💡 פונקציית הטעינה שולחת כעת את התאריך והשעה כפרמטרים לשרת כדי לקבל סטטוס עדכני
   const fetchSeats = async () => {
     try {
@@ -41,6 +52,7 @@ export default function RoomMap({
       }
     } catch (error) {
       console.error("Error fetching seats inside RoomMap wrapper:", error);
+      setItems([]); // במקרה של שגיאה, נעדכן את הסטייט לריק כדי למנוע בעיות ברינדור
     }
   };
 
@@ -59,8 +71,8 @@ export default function RoomMap({
       items={items}
       setItems={setItems}
       fetchLatestSeats={fetchSeats}
-      selectedSeatId={selectedSeatId}
-      onSeatSelect={onSeatSelect}
+      selectedSeatId={internalSelectedSeatId}
+      onSeatSelect={handleSeatSelect}
       showSelectionInfo={showSelectionInfo}
       enableDragAndDrop={isLibrarian && isMapPage}
       enableAddPlaces={isLibrarian && isMapPage}

@@ -47,9 +47,16 @@ export default function MapPage() {
   const [selectedSeat, setSelectedSeat] = useState(null);
 
   // const { user } = useContext(AuthContext);
-  const user = JSON.parse(localStorage.getItem("libraryUser")); // 💡 תוקן: קריאה ישירה מ-localStorage במקום שימוש בקונטקסט
+  const storedUser = localStorage.getItem("libraryUser");
+  const user = storedUser ? JSON.parse(storedUser) : null; // 💡 קריאה ישירה מ-localStorage במקום שימוש בקונטקסט
+  // const user = JSON.parse(localStorage.getItem("libraryUser")); // 💡 קריאה ישירה מ-localStorage במקום שימוש בקונטקסט
 
   const handleConfirmReservation = async () => {
+    if (!user) {
+      alert("User not logged in. Please log in to reserve a seat.");
+      window.location.href = "/login"; // ניתוב לדף ההתחברות
+      return;
+    }
     console.log("Confirming reservation for seat:", selectedSeat);
     if (!selectedSeat) {
       alert("יש לבחור כיסא לפני אישור ההזמנה");
@@ -88,10 +95,10 @@ export default function MapPage() {
     }
   };
   console.log("=== MapPage State ===", selectedSeat);
-  console.log("userID:", user.userId || user.id);
+  console.log("userID:",user ? (user.userId || user.id) : "No user logged in (Guest)");
 
   return (
-    <PageShell userType="guest">
+    <PageShell userType="guest" userName={user?.name}>
       <PageBanner title="Reserve Study Room" />
 
       <div className="mapPageContainer">

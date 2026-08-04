@@ -36,8 +36,10 @@ export default function MapItem({
     // 🔒 נועל את כל תנועות העכבר/מצביע על הרהיט הזה
     e.currentTarget.setPointerCapture(e.pointerId);
 
-    if (onSelect) onSelect(item.seatId);
-    setDraggingItemId(item.seatId);
+    if (onSelect) {
+      onSelect(item.seatId);
+      setDraggingItemId(item.seatId);
+    }
   };
 
   const handlePointerUp = (e) => {
@@ -47,7 +49,7 @@ export default function MapItem({
   };
 
   const handleClick = () => {
-    if (!isLibrarian && isClickable && onSelect) {
+    if (isClickable && onSelect) {
       onSelect(item.seatId);
     }
   };

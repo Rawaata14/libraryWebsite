@@ -15,12 +15,13 @@ import Footer from "./Footer";
 export default function PageShell({
   children,
   userType = "guest",
-  userName = "Guest",
+  userName,
 }) {
+  const resolvedUserName = userName || (userType === "guest" ? "Guest" : "User"); // ברירת מחדל לשם המשתמש אם לא סופק
   return (
     <div className="pageShell">
       <div className="frame libraryBg">
-        <Header userType={userType} userName={userName} />
+        <Header userType={userType} userName={resolvedUserName} />
         {children}
         <Footer />
       </div>
