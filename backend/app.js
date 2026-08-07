@@ -49,3 +49,8 @@ console.log("Database connection established successfully.");
 app.listen(8000, () => {
   console.log("Server running on http://localhost:8000");
 });
+
+// חיבור נתיבי ההתראות של המשתמשים
+app.use("/notifications",
+  require("./routes/notification"),
+);
