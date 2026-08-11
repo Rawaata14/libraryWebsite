@@ -1,37 +1,83 @@
-// dbSingleton.js
-const mysql = require("mysql2/promise"); 
+/*
+=========================================================
+dbSingleton.js
 
-let connection;
+תיאור הקובץ:
+ניהול חיבור מרכזי למסד הנתונים MySQL.
 
-const dbSingleton = {
-  getConnection: async () => {
-    if (!connection) {
-      try {
-        connection = await mysql.createConnection({
-          host: "localhost",
-          user: "root",
-          password: "",
-          database: "librarywebsite",
-        });
+הקובץ אחראי על:
+- טעינת הגדרות מסד הנתונים מקובץ .env.
+- יצירת Connection Pool יחיד.
+- בדיקת החיבור לפני השימוש הראשון.
+- החזרת אותו Pool לכל שכבות ה-Queries.
+=========================================================
+*/
 
-        console.log("Connected to MySQL successfully (Promise-based)!");
 
-        // טיפול בניתוקים
-        connection.on("error", (err) => {
-          console.error("Database error:", err);
-          if (err.code === "PROTOCOL_CONNECTION_LOST") {
-            connection = null;
-          }
-        });
-      } catch (err) {
-        console.error("Error connecting to database:", err);
-        connection = null;
-        throw err; // זריקת השגיאה כדי שהשרת ידע שהחיבור נכשל
-      }
+const mysql = require("mysql2/promise");
+
+let connectionPool = null;
+
+/*
+---------------------------------------------------------
+createConnectionPool
+
+תפקיד:
+יוצרת Connection Pool חדש עבור MySQL.
+
+למה נוצרה:
+Pool מאפשר לשרת לטפל בכמה שאילתות במקביל,
+במקום להסתמך על חיבור יחיד שעלול להתנתק.
+---------------------------------------------------------
+*/
+function createConnectionPool() {
+  return mysql.createPool({
+    host: process.env.DB_HOST || "localhost",
+    user: process.env.DB_USER || "root",
+    password: process.env.DB_PASSWORD || "",
+    database: process.env.DB_NAME || "librarywebsite",
+
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+  });
+}
+
+/*
+---------------------------------------------------------
+getConnection
+
+תפקיד:
+מחזירה את ה-Connection Pool המרכזי של המערכת.
+
+בפעם הראשונה:
+- יוצרת את ה-Pool.
+- מריצה שאילתת בדיקה.
+
+בפעמים הבאות:
+- מחזירה את אותו Pool שכבר נוצר.
+---------------------------------------------------------
+*/
+async function getConnection() {
+  if (!connectionPool) {
+    connectionPool = createConnectionPool();
+
+    try {
+      await connectionPool.query("SELECT 1");
+
+      console.log("Connected to MySQL successfully.");
+    } catch (error) {
+      connectionPool = null;
+
+      console.error("Failed to connect to MySQL:", error.message);
+
+      throw error;
     }
+  }
 
-    return connection;
-  },
+  return connectionPool;
+}
+
+module.exports = {
+  getConnection,
 };
-
-module.exports = dbSingleton;
