@@ -7,8 +7,14 @@ CancellationModal.jsx
 
 הקומפוננטה מציגה:
 - פרטי ההזמנה.
+- שם המשתמש.
+- מספר הכיסא.
+- תאריך ושעות.
 - שדה להזנת סיבת הביטול.
 - כפתורי אישור וסגירה.
+
+הקומפוננטה אינה מבצעת קריאת API.
+פעולת הביטול מתקבלת דרך onConfirm.
 =========================================================
 */
 
@@ -17,17 +23,6 @@ import {
   formatReservationTime,
 } from "./reservationUtils";
 
-/*
----------------------------------------------------------
-CancellationModal
-
-תפקיד:
-מציגה חלון לביטול הזמנה במקרה חריג.
-
-הקומפוננטה אינה מבצעת קריאת API.
-היא מפעילה את onConfirm שמתקבל מהעמוד הראשי.
----------------------------------------------------------
-*/
 export default function CancellationModal({
   reservation,
   cancellationReason,
@@ -36,6 +31,10 @@ export default function CancellationModal({
   onClose,
   onConfirm,
 }) {
+  /*
+    אם לא נבחרה הזמנה,
+    אין צורך להציג את החלון.
+  */
   if (!reservation) {
     return null;
   }

@@ -8,39 +8,38 @@ ReservationsTable.jsx
 הקומפוננטה אחראית על:
 - מצב טעינה.
 - מצב שבו לא נמצאו הזמנות.
-- מבנה כותרות הטבלה.
-- הצגת שורת ReservationRow עבור כל הזמנה.
+- כותרות הטבלה.
+- הצגת ReservationRow עבור כל הזמנה.
+
+הקומפוננטה אינה מבצעת חיפוש,
+סינון או קריאות לשרת.
 =========================================================
 */
 
 import ReservationRow from "./ReservationRow";
 
-/*
----------------------------------------------------------
-ReservationsTable
-
-תפקיד:
-מקבלת רשימת הזמנות ומציגה אותה בטבלה.
-
-הקומפוננטה אינה מבצעת חיפוש, סינון או קריאות לשרת.
-היא מקבלת רשימה שכבר סוננה מהעמוד הראשי.
----------------------------------------------------------
-*/
 export default function ReservationsTable({
   reservations,
   isLoading,
   onCancel,
   onSendMessage,
 }) {
+  /*
+    מצב טעינה
+  */
   if (isLoading) {
     return (
       <div className="managementEmptyState">
         <span aria-hidden="true">⌛</span>
+
         <p>Loading reservations...</p>
       </div>
     );
   }
 
+  /*
+    מצב שבו אין תוצאות להצגה
+  */
   if (reservations.length === 0) {
     return (
       <div className="managementEmptyState">

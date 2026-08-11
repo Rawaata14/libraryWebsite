@@ -3,16 +3,20 @@
 reservationUtils.js
 
 תיאור הקובץ:
-פונקציות עזר עבור תצוגת הזמנות המקומות.
+פונקציות עזר עבור ניהול ותצוגת הזמנות המקומות.
 
 הקובץ כולל:
 - עיצוב תאריך ושעה.
-- המרת מיקום לטקסט קריא.
-- המרת סטטוס לטקסט ולמחלקת CSS.
-- בדיקה האם הזמנה בוטלה.
+- עיצוב שם אזור.
+- המרת סטטוס לטקסט ידידותי.
+- התאמת סטטוס למחלקת CSS.
+- בדיקה אם הזמנה בוטלה.
+- סינון רשימת הזמנות.
+- חישוב מספר הזמנות פעילות.
+- חישוב מספר הזמנות שבוטלו.
 
 הפונקציות בקובץ הן פונקציות טהורות:
-הן אינן משנות נתונים ואינן תלויות ב-React.
+הן אינן פונות לשרת ואינן תלויות ב-React.
 =========================================================
 */
 
@@ -21,7 +25,8 @@ reservationUtils.js
 formatReservationDate
 
 תפקיד:
-ממירה תאריך שמתקבל מהשרת לפורמט DD/MM/YYYY.
+ממירה תאריך שמתקבל מהשרת לפורמט:
+DD/MM/YYYY.
 ---------------------------------------------------------
 */
 export const formatReservationDate = (dateValue) => {
@@ -47,7 +52,8 @@ export const formatReservationDate = (dateValue) => {
 formatReservationTime
 
 תפקיד:
-מקצרת שעה שמתקבלת ממסד הנתונים לפורמט HH:MM.
+מקצרת שעה שמתקבלת מהמסד
+לפורמט HH:MM.
 ---------------------------------------------------------
 */
 export const formatReservationTime = (timeValue) => {
@@ -63,7 +69,8 @@ export const formatReservationTime = (timeValue) => {
 formatLocation
 
 תפקיד:
-ממירה ערך מיקום ממסד הנתונים לטקסט קריא.
+ממירה ערך מיקום ממסד הנתונים
+לטקסט ידידותי לתצוגה.
 
 דוגמה:
 reading-area -> Reading Area
@@ -86,7 +93,8 @@ export const formatLocation = (location) => {
 getStatusLabel
 
 תפקיד:
-מחזירה טקסט ידידותי להצגת סטטוס ההזמנה.
+מחזירה את הטקסט שיוצג למשתמש
+עבור סטטוס ההזמנה.
 ---------------------------------------------------------
 */
 export const getStatusLabel = (status) => {
@@ -112,7 +120,8 @@ export const getStatusLabel = (status) => {
 getStatusClass
 
 תפקיד:
-מחזירה מחלקת CSS המתאימה לסטטוס ההזמנה.
+מחזירה מחלקת CSS המתאימה
+לסטטוס ההזמנה.
 ---------------------------------------------------------
 */
 export const getStatusClass = (status) => {
@@ -138,8 +147,96 @@ export const getStatusClass = (status) => {
 isCancelledStatus
 
 תפקיד:
-בודקת אם סטטוס ההזמנה מייצג הזמנה שבוטלה.
+בודקת אם סטטוס ההזמנה מייצג
+הזמנה שבוטלה.
 ---------------------------------------------------------
 */
 export const isCancelledStatus = (status) =>
   ["cancelled", "canceled"].includes(status?.toLowerCase());
+
+/*
+---------------------------------------------------------
+filterReservations
+
+תפקיד:
+מסננת רשימת הזמנות לפי:
+- טקסט חיפוש.
+- סטטוס.
+
+החיפוש כולל:
+- שם משתמש.
+- אימייל.
+- טלפון.
+- מספר כיסא.
+- אזור.
+- סוג המקום.
+- מזהה הזמנה.
+
+הפונקציה אינה משנה את הרשימה המקורית.
+---------------------------------------------------------
+*/
+export const filterReservations = (reservations, searchText, statusFilter) => {
+  const normalizedSearch = String(searchText || "")
+    .trim()
+    .toLowerCase();
+
+  return reservations.filter((reservation) => {
+    const normalizedStatus = reservation.status?.toLowerCase();
+
+    /*
+      occupied ו-confirmed מייצגים בממשק
+      את אותו סטטוס: Confirmed.
+    */
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "occupied" &&
+        ["occupied", "confirmed"].includes(normalizedStatus)) ||
+      normalizedStatus === statusFilter;
+
+    const searchableValues = [
+      reservation.fullName,
+      reservation.email,
+      reservation.phone,
+      reservation.seatId,
+      reservation.location,
+      reservation.seatType,
+      reservation.reservationId,
+    ]
+      .filter((value) => value !== null && value !== undefined)
+      .join(" ")
+      .toLowerCase();
+
+    const matchesSearch =
+      !normalizedSearch || searchableValues.includes(normalizedSearch);
+
+    return matchesStatus && matchesSearch;
+  });
+};
+
+/*
+---------------------------------------------------------
+countActiveReservations
+
+תפקיד:
+מחזירה את מספר ההזמנות הפעילות.
+
+occupied ו-confirmed נחשבים
+לסטטוס פעיל.
+---------------------------------------------------------
+*/
+export const countActiveReservations = (reservations) =>
+  reservations.filter((reservation) =>
+    ["occupied", "confirmed"].includes(reservation.status?.toLowerCase()),
+  ).length;
+
+/*
+---------------------------------------------------------
+countCancelledReservations
+
+תפקיד:
+מחזירה את מספר ההזמנות שבוטלו.
+---------------------------------------------------------
+*/
+export const countCancelledReservations = (reservations) =>
+  reservations.filter((reservation) => isCancelledStatus(reservation.status))
+    .length;

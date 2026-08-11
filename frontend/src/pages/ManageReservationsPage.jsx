@@ -12,7 +12,6 @@ ManageReservationsPage.jsx
 - שליחת הודעה למשתמש מתוך ההזמנה.
 - העברת הנתונים לקומפוננטות התצוגה.
 
-הערה:
 רכיבי התצוגה נמצאים בתיקייה:
 components/reservations
 =========================================================
@@ -30,7 +29,11 @@ import ReservationsTable from "../components/reservations/ReservationsTable";
 import CancellationModal from "../components/reservations/CancellationModal";
 import ReservationMessageModal from "../components/reservations/ReservationMessageModal";
 
-import { isCancelledStatus } from "../components/reservations/reservationUtils";
+import {
+  filterReservations,
+  countActiveReservations,
+  countCancelledReservations,
+} from "../components/reservations/reservationUtils";
 
 import "../styles/manage-reservations.css";
 
@@ -39,8 +42,8 @@ import "../styles/manage-reservations.css";
 ManageReservationsPage
 
 תפקיד:
-מנהלת את נתוני עמוד ההזמנות של הספרן ומחברת
-בין השרת לבין קומפוננטות התצוגה.
+מנהלת את נתוני עמוד ההזמנות של הספרן
+ומחברת בין השרת לבין קומפוננטות התצוגה.
 ---------------------------------------------------------
 */
 export default function ManageReservationsPage() {
@@ -57,11 +60,12 @@ export default function ManageReservationsPage() {
 
   /*
   =========================================================
-  מצבי טעינה ומשוב למשתמש
+  מצבי טעינה ומשוב
   =========================================================
   */
 
   const [isLoading, setIsLoading] = useState(true);
+
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -86,6 +90,7 @@ export default function ManageReservationsPage() {
   const [messageReservation, setMessageReservation] = useState(null);
 
   const [messageSubject, setMessageSubject] = useState("");
+
   const [messageContent, setMessageContent] = useState("");
 
   const [isSendingMessage, setIsSendingMessage] = useState(false);
@@ -218,7 +223,7 @@ export default function ManageReservationsPage() {
       );
 
       /*
-        עדכון ה-state המקומי מונע צורך
+        עדכון מקומי של הרשימה מונע צורך
         בשליפה מחדש של כל ההזמנות.
       */
       setReservations((previousReservations) =>
@@ -270,12 +275,13 @@ export default function ManageReservationsPage() {
   openMessageDialog
 
   תפקיד:
-  פותחת חלון לשליחת הודעה למשתמש שביצע
-  את ההזמנה שנבחרה.
+  פותחת חלון לשליחת הודעה למשתמש
+  שביצע את ההזמנה שנבחרה.
   ---------------------------------------------------------
   */
   const openMessageDialog = (reservation) => {
     setMessageReservation(reservation);
+
     setMessageSubject("");
     setMessageContent("");
 
@@ -287,8 +293,8 @@ export default function ManageReservationsPage() {
   closeMessageDialog
 
   תפקיד:
-  סוגרת את חלון שליחת ההודעה ומנקה
-  את הנתונים הזמניים.
+  סוגרת את חלון שליחת ההודעה
+  ומנקה את הנתונים הזמניים.
   ---------------------------------------------------------
   */
   const closeMessageDialog = () => {
@@ -319,15 +325,18 @@ export default function ManageReservationsPage() {
     }
 
     const trimmedSubject = messageSubject.trim();
+
     const trimmedMessage = messageContent.trim();
 
     if (!trimmedSubject) {
       setErrorMessage("Message subject is required.");
+
       return;
     }
 
     if (!trimmedMessage) {
       setErrorMessage("Message content is required.");
+
       return;
     }
 
@@ -375,10 +384,9 @@ export default function ManageReservationsPage() {
 
   /*
   ---------------------------------------------------------
-  useEffect
+  טעינת נתוני ההזמנות
 
-  תפקיד:
-  טוען את ההזמנות פעם אחת בעת פתיחת העמוד.
+  מתבצעת פעם אחת כאשר העמוד נטען.
   ---------------------------------------------------------
   */
   useEffect(() => {
@@ -389,64 +397,24 @@ export default function ManageReservationsPage() {
   ---------------------------------------------------------
   filteredReservations
 
-  תפקיד:
-  מסנן את רשימת ההזמנות לפי:
-  - טקסט החיפוש.
-  - הסטטוס שנבחר.
-
-  useMemo מונע חישוב מחדש כאשר הנתונים
-  הרלוונטיים לא השתנו.
+  סינון הרשימה מתבצע דרך reservationUtils
+  כדי להשאיר את העמוד הראשי נקי מלוגיקת תצוגה.
   ---------------------------------------------------------
   */
-  const filteredReservations = useMemo(() => {
-    const normalizedSearch = searchText.trim().toLowerCase();
-
-    return reservations.filter((reservation) => {
-      const normalizedStatus = reservation.status?.toLowerCase();
-
-      /*
-        occupied ו-confirmed מוצגים בממשק
-        כסטטוס Confirmed.
-      */
-      const matchesStatus =
-        statusFilter === "all" ||
-        (statusFilter === "occupied" &&
-          ["occupied", "confirmed"].includes(normalizedStatus)) ||
-        normalizedStatus === statusFilter;
-
-      const searchableValues = [
-        reservation.fullName,
-        reservation.email,
-        reservation.phone,
-        reservation.seatId,
-        reservation.location,
-        reservation.seatType,
-        reservation.reservationId,
-      ]
-        .filter((value) => value !== null && value !== undefined)
-        .join(" ")
-        .toLowerCase();
-
-      const matchesSearch =
-        !normalizedSearch || searchableValues.includes(normalizedSearch);
-
-      return matchesStatus && matchesSearch;
-    });
-  }, [reservations, searchText, statusFilter]);
+  const filteredReservations = useMemo(
+    () => filterReservations(reservations, searchText, statusFilter),
+    [reservations, searchText, statusFilter],
+  );
 
   /*
   =========================================================
-  חישובי נתוני סיכום
+  חישובי סיכום
   =========================================================
   */
 
-  const activeReservationsCount = reservations.filter((reservation) =>
-    ["occupied", "confirmed"].includes(reservation.status?.toLowerCase()),
-  ).length;
+  const activeReservationsCount = countActiveReservations(reservations);
 
-  const cancelledReservationsCount = reservations.filter((reservation) =>
-    isCancelledStatus(reservation.status),
-  ).length;
+  const cancelledReservationsCount = countCancelledReservations(reservations);
 
   return (
     <PageShell>
@@ -454,6 +422,12 @@ export default function ManageReservationsPage() {
 
       <main className="manageReservationsPage">
         <section className="manageReservationsCard">
+          {/*
+          =================================================
+          כותרת הדף
+          =================================================
+          */}
+
           <div className="manageReservationsHeader">
             <div>
               <h2>Seat Reservations Management</h2>
@@ -473,6 +447,12 @@ export default function ManageReservationsPage() {
               {isLoading ? "Loading..." : "Refresh"}
             </button>
           </div>
+
+          {/*
+          =================================================
+          הודעות הצלחה ושגיאה
+          =================================================
+          */}
 
           {successMessage && (
             <div className="managementFeedback successFeedback">
@@ -506,11 +486,23 @@ export default function ManageReservationsPage() {
             </div>
           )}
 
+          {/*
+          =================================================
+          נתוני סיכום
+          =================================================
+          */}
+
           <ReservationSummary
             totalReservations={reservations.length}
             activeReservations={activeReservationsCount}
             cancelledReservations={cancelledReservationsCount}
           />
+
+          {/*
+          =================================================
+          חיפוש וסינון
+          =================================================
+          */}
 
           <ReservationFilters
             searchText={searchText}
@@ -518,6 +510,12 @@ export default function ManageReservationsPage() {
             onSearchChange={setSearchText}
             onStatusChange={setStatusFilter}
           />
+
+          {/*
+          =================================================
+          טבלת הזמנות
+          =================================================
+          */}
 
           <ReservationsTable
             reservations={filteredReservations}
@@ -528,6 +526,12 @@ export default function ManageReservationsPage() {
         </section>
       </main>
 
+      {/*
+      =====================================================
+      חלון ביטול הזמנה
+      =====================================================
+      */}
+
       <CancellationModal
         reservation={selectedReservation}
         cancellationReason={cancellationReason}
@@ -536,6 +540,12 @@ export default function ManageReservationsPage() {
         onClose={closeCancellationDialog}
         onConfirm={handleLibrarianCancellation}
       />
+
+      {/*
+      =====================================================
+      חלון שליחת הודעה
+      =====================================================
+      */}
 
       <ReservationMessageModal
         reservation={messageReservation}
