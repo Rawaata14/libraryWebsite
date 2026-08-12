@@ -9,6 +9,8 @@
   - לאפשר גישה רק לתפקידים מורשים
 */
 
+import PropTypes from "prop-types";
+
 import { useContext } from "react";
 import { Navigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
@@ -31,3 +33,8 @@ export default function RoleRoute({ children, allowedRoles = [] }) {
 
   return children;
 }
+
+RoleRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+  allowedRoles: PropTypes.arrayOf(PropTypes.string),
+};

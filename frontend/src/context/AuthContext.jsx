@@ -1,122 +1,199 @@
 /*
-  AuthContext.jsx
-  ---------------
-  קונטקסט גלובלי לניהול מצב ההתחברות של המשתמש.
+=========================================================
+AuthContext.jsx
 
-  אחריות:
-  - לשמור את נתוני המשתמש המחובר
-  - לספק פעולות התחברות, הרשמה, עדכון משתמש והתנתקות
-  - לאפשר גישה לנתוני המשתמש מכל מקום במערכת
+תיאור הקובץ:
+Context גלובלי לניהול מצב ההתחברות במערכת.
+
+הקובץ אחראי על:
+- בדיקת ה-Session בעת טעינת האתר.
+- שמירת המשתמש המחובר בזיכרון של React.
+- עדכון המשתמש לאחר התחברות, הרשמה או עריכת פרופיל.
+- ביצוע התנתקות מול ה-Backend.
+- אספקת מצב ההתחברות והרשאות המשתמש לכל המערכת.
+=========================================================
 */
 
-import { createContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import PropTypes from "prop-types";
+
+import { buildApiUrl } from "../config/api";
 
 export const AuthContext = createContext(null);
 
+/*
+---------------------------------------------------------
+AuthProvider
+
+תפקיד:
+עוטפת את המערכת ומספקת לכל הקומפוננטות
+את מצב המשתמש ואת פעולות ההתחברות וההתנתקות.
+---------------------------------------------------------
+*/
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  
   const [isAuthReady, setIsAuthReady] = useState(false);
 
+  /*
+  ---------------------------------------------------------
+  בדיקת Session בעת טעינת האתר
+
+  תפקיד:
+  פונה ל-Backend כדי לבדוק אם קיים Session פעיל.
+
+  ה-Session הוא מקור האמת היחיד:
+  נתוני המשתמש אינם נשמרים ב-localStorage.
+  ---------------------------------------------------------
+  */
   useEffect(() => {
-    const checkAuth = async () => {
+    let isComponentActive = true;
+
+    async function checkAuthentication() {
       try {
-        const response = await fetch("http://localhost:8000/user/check-auth", {
+        const response = await fetch(buildApiUrl("/user/check-auth"), {
           credentials: "include",
         });
-        if (response.ok) {
-          const userData = await response.json();
 
-          // 💡 בדיקה קריטית: תפתחי את ה-Console בדפדפן (F12) ותראי מה מודפס כאן!
-          console.log("This is the exact data from check-auth:", userData);
+        if (!isComponentActive) return;
 
-          // בדיקה אם המשתמש מגיע ישירות או עטוף בתוך שדה user
-          if (userData.user) {
-            setUser(userData.user);
-          } else if (userData.data) {
-            setUser(userData.data);
-          } else {
-            setUser(userData);
-          }
-        } else {
+        if (!response.ok) {
           setUser(null);
-          localStorage.removeItem("libraryUser");
+          return;
         }
+
+        const authenticatedUser = await response.json();
+
+        setUser(authenticatedUser);
       } catch (error) {
         console.error("Error checking authentication:", error);
-        setUser(null);
-        localStorage.removeItem("libraryUser");
+
+        if (isComponentActive) {
+          setUser(null);
+        }
+      } finally {
+        if (isComponentActive) {
+          setIsAuthReady(true);
+        }
       }
-      setIsAuthReady(true);
-    };
-    checkAuth();
-  }, []);
-  // const storedUser = localStorage.getItem("libraryUser");
-
-  // if (storedUser) {
-  //   try {
-  //     setUser(JSON.parse(storedUser));
-  //   } catch (error) {
-  //     console.error("שגיאה בקריאת נתוני המשתמש:", error);
-  //     localStorage.removeItem("libraryUser");
-  //   }
-  // }
-
-  // setIsAuthReady(true);
-
-  const login = (userData) => {
-    setUser(userData);
-    localStorage.setItem("libraryUser", JSON.stringify(userData));
-  };
-
-  const register = (userData) => {
-    setUser(userData);
-    localStorage.setItem("libraryUser", JSON.stringify(userData));
-  };
-
-  const updateUser = (updatedData) => {
-    setUser((prevUser) => {
-      const nextUser = { ...prevUser, ...updatedData };
-      localStorage.setItem("libraryUser", JSON.stringify(nextUser));
-      return nextUser;
-    });
-  };
-
-  const logout = async () => {
-    try {
-      // 💡 פונים לשרת ומבקשים ממנו להרוס את הסשן ולמחוק את העוגייה
-      await fetch("http://localhost:8000/user/logout", {
-        method: "POST",
-        credentials: "include", // 💡 קריטי! גורם לדפדפן להעביר את העוגייה לשרת כדי שידע מי מתנתק
-      });
-    } catch (error) {
-      console.error("Error during server logout:", error);
-    } finally {
-      // 💡 בין אם השרת הצליח ובין אם לא, מנקים את הדפדפן ומחזירים לדף הבית
-      setUser(null);
-      localStorage.removeItem("libraryUser");
-      window.location.href = "/";
     }
-  };
 
-  const isAuthenticated = !!user;
+    checkAuthentication();
+
+    return () => {
+      isComponentActive = false;
+    };
+  }, []);
+
+  /*
+  ---------------------------------------------------------
+  setAuthenticatedUser
+
+  תפקיד:
+  שומרת את המשתמש שהתקבל מהשרת לאחר התחברות
+  או הרשמה מוצלחת.
+
+  למה נוצרה:
+  פעולות ההתחברות וההרשמה מבצעות אותה פעולה בדיוק,
+  ולכן אין צורך ליצור שתי פונקציות זהות.
+  ---------------------------------------------------------
+  */
+  const setAuthenticatedUser = useCallback((userData) => {
+    setUser(userData);
+  }, []);
+
+  /*
+  ---------------------------------------------------------
+  updateUser
+
+  תפקיד:
+  מעדכנת את נתוני המשתמש לאחר שינוי פרופיל
+  או העלאת תמונת פרופיל.
+  ---------------------------------------------------------
+  */
+  const updateUser = useCallback((updatedData) => {
+    setUser((currentUser) => ({
+      ...currentUser,
+      ...updatedData,
+    }));
+  }, []);
+
+  /*
+  ---------------------------------------------------------
+  logout
+
+  תפקיד:
+  מבקשת מה-Backend למחוק את ה-Session,
+  ולאחר מכן מנקה את המשתמש ממצב ה-React.
+  ---------------------------------------------------------
+  */
+  const logout = useCallback(async () => {
+    try {
+      const response = await fetch(buildApiUrl("/user/logout"), {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok && response.status !== 401) {
+        const result = await response.json().catch(() => null);
+
+        throw new Error(result?.message || "Logout failed");
+      }
+    } catch (error) {
+      console.error("Error during logout:", error);
+    } finally {
+      setUser(null);
+    }
+  }, []);
+
+  const isAuthenticated = Boolean(user);
   const isLibrarian = user?.role === "librarian";
-  const isGuest = !user;
+  const isGuest = !isAuthenticated;
 
-  const value = useMemo(() => {
-    return {
+  /*
+  ---------------------------------------------------------
+  contextValue
+
+  תפקיד:
+  מרכזת את כל הנתונים והפעולות שהקומפוננטות
+  במערכת יכולות לקבל מתוך AuthContext.
+  ---------------------------------------------------------
+  */
+  const contextValue = useMemo(
+    () => ({
       user,
       setUser,
-      login,
-      register,
+      login: setAuthenticatedUser,
+      register: setAuthenticatedUser,
       updateUser,
       logout,
       isAuthenticated,
       isLibrarian,
       isGuest,
       isAuthReady,
-    };
-  }, [user, isAuthenticated, isLibrarian, isGuest, isAuthReady]);
+    }),
+    [
+      user,
+      setAuthenticatedUser,
+      updateUser,
+      logout,
+      isAuthenticated,
+      isLibrarian,
+      isGuest,
+      isAuthReady,
+    ],
+  );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
+  );
 }
+
+AuthProvider.propTypes = {
+  children: PropTypes.node.isRequired,
+};

@@ -10,7 +10,7 @@ import RoomMap from "../components/dashboard/RoomMap"; // 💡 יבוא העטי
 
 export default function AdminMapPage() {
   return (
-    <PageShell userType="librarian">
+    <PageShell>
       <PageBanner title="Design & Manage Library Map" />
 
       <div className="adminMapPageContainer" style={{ padding: "20px" }}>

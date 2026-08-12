@@ -13,7 +13,6 @@ dbSingleton.js
 =========================================================
 */
 
-
 const mysql = require("mysql2/promise");
 
 let connectionPool = null;

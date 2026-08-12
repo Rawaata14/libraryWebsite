@@ -11,6 +11,8 @@
 import { useContext } from "react";
 import Button from "./Button";
 import { AuthContext } from "../../context/AuthContext";
+import PropTypes from "prop-types";
+import { bookPropType } from "../../propTypes/bookPropTypes";
 
 export default function BookCard({ book, onReserve, onEdit, onDelete }) {
   const { isLibrarian } = useContext(AuthContext);
@@ -60,3 +62,18 @@ export default function BookCard({ book, onReserve, onEdit, onDelete }) {
     </article>
   );
 }
+
+/*
+---------------------------------------------------------
+BookCard.propTypes
+
+תפקיד:
+מגדיר את נתוני הספר ואת פעולות הכרטיס.
+---------------------------------------------------------
+*/
+BookCard.propTypes = {
+  book: bookPropType.isRequired,
+  onReserve: PropTypes.func,
+  onEdit: PropTypes.func,
+  onDelete: PropTypes.func,
+};

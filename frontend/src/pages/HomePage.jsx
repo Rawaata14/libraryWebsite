@@ -1,15 +1,16 @@
 /*
-  HomePage.jsx
-  ------------
-  דף הבית של המערכת.
+=========================================================
+HomePage.jsx
 
-  אחריות:
-  - להציג את המסך הראשי למשתמש
-  - לשלב אזורי תוכן מרכזיים:
-    1. אזור פתיחה
-    2. מידע כללי (שעות + אירועים)
-    3. מפת מקומות
-    4. ספרים מומלצים
+תיאור הקובץ:
+דף הבית הראשי של מערכת הספרייה.
+
+הדף משלב:
+- אזור פתיחה.
+- מידע כללי ושעות פעילות.
+- אזור מפת מקומות הלימוד.
+- ספרים מומלצים.
+=========================================================
 */
 
 import PageShell from "../components/layout/PageShell";
@@ -17,19 +18,26 @@ import HeroSection from "../components/home/HeroSection";
 import RoomMapSection from "../components/home/RoomMapSection";
 import InfoSection from "../components/home/InfoSection";
 import RecommendedBooks from "../components/home/RecommendedBooks";
-import LibraryMap from "../components/map/LibraryMap";
 
+/*
+---------------------------------------------------------
+HomePage
+
+תפקיד:
+מרכיבה את אזורי התוכן המרכזיים של דף הבית.
+---------------------------------------------------------
+*/
 export default function HomePage() {
   return (
-    <PageShell userType="guest">
+    <PageShell>
       <div className="homeContainer">
         <div className="homeCard">
           <HeroSection />
 
-          {/* שעות עבודה + אירועים */}
+          {/* שעות עבודה ואירועים */}
           <InfoSection />
 
-          {/* מפת המקומות */}
+          {/* מפת מקומות הלימוד */}
           <RoomMapSection />
 
           {/* ספרים מומלצים */}

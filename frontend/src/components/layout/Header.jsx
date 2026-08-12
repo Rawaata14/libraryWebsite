@@ -17,18 +17,8 @@ Header.jsx
 import { Link, NavLink } from "react-router-dom";
 import { useContext } from "react";
 import { AuthContext } from "../../context/AuthContext";
+import { getProfileImageSrc } from "../../utils/profileImage";
 
-function getProfileImage(user) {
-  if (user?.profile_image_name) {
-    return `http://localhost:8000/uploads/profile-images/${user.profile_image_name}`;
-  }
-
-  if (user?.profileImage) {
-    return user.profileImage;
-  }
-
-  return "https://cdn-icons-png.flaticon.com/512/847/847969.png";
-}
 
 export default function Header() {
  const { user, isAuthenticated, isLibrarian, logout } = useContext(AuthContext);
@@ -94,7 +84,7 @@ export default function Header() {
 
               <Link to="/profile" className="profileImageLink">
                 <img
-                  src={getProfileImage(user)}
+                  src={getProfileImageSrc(user)}
                   alt="Profile"
                   className="headerProfileImage"
                 />

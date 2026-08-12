@@ -125,7 +125,7 @@ export default function MapPage() {
   };
 
   return (
-    <PageShell userType="guest" userName={user?.name}>
+    <PageShell>
       <PageBanner title="Reserve Study Room" />
 
       <div className="mapPageContainer">

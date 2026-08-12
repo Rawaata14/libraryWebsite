@@ -1,21 +1,38 @@
 /*
-  RegisterForm.jsx
-  ----------------
-  טופס הרשמה למשתמש חדש.
+=========================================================
+RegisterForm.jsx
 
-  אחריות:
-  - קליטת פרטי משתמש חדש
-  - שימוש ב-AuthContext לצורך יצירת משתמש מחובר
-  - ניתוב לדף הבית לאחר הרשמה מוצלחת
+תיאור הקובץ:
+טופס הרשמה למשתמש חדש.
+
+הקובץ אחראי על:
+- קליטת פרטי המשתמש.
+- בדיקה בסיסית של הסיסמה.
+- שליחת בקשת הרשמה ל-Backend.
+- שמירת המשתמש ב-AuthContext.
+- מעבר לדף הבית לאחר הרשמה מוצלחת.
+=========================================================
 */
 
-import { useState, useContext } from "react";
+import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+
 import InputField from "../common/InputField";
 import Button from "../common/Button";
 import { AuthContext } from "../../context/AuthContext";
-import axios from "axios";
+import { buildApiUrl } from "../../config/api";
 
+const PASSWORD_PATTERN = /^(?=.*[a-zA-Z])(?=.*\d).{6,20}$/;
+
+/*
+---------------------------------------------------------
+RegisterForm
+
+תפקיד:
+מציגה את טופס ההרשמה ומנהלת יצירת חשבון חדש.
+---------------------------------------------------------
+*/
 export default function RegisterForm() {
   const navigate = useNavigate();
   const { register } = useContext(AuthContext);
@@ -23,58 +40,80 @@ export default function RegisterForm() {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
-    passwordHash: "",
+    password: "",
     phone: "",
     address: "",
   });
 
-  const handleChange = (event) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  /*
+  ---------------------------------------------------------
+  handleChange
+
+  תפקיד:
+  מעדכנת את שדה הטופס שהמשתמש שינה.
+  ---------------------------------------------------------
+  */
+  function handleChange(event) {
     const { name, value } = event.target;
 
-    setFormData((prev) => ({
-      ...prev,
+    setFormData((currentFormData) => ({
+      ...currentFormData,
       [name]: value,
     }));
-  };
+  }
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const handleSubmit = async (event) => {
+  /*
+  ---------------------------------------------------------
+  handleSubmit
+
+  תפקיד:
+  מאמתת את הסיסמה, שולחת את נתוני ההרשמה,
+  ושומרת את המשתמש המחובר ב-AuthContext.
+  ---------------------------------------------------------
+  */
+  async function handleSubmit(event) {
     event.preventDefault();
 
-    const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{6,20}$/;
+    if (isSubmitting) return;
 
-    if (!passwordRegex.test(formData.passwordHash)) {
+    if (!PASSWORD_PATTERN.test(formData.password)) {
       alert(
         "Password must be 6-20 characters long and include at least one letter and one number.",
       );
+
       return;
     }
+
     setIsSubmitting(true);
+
     try {
       const response = await axios.post(
-        "http://localhost:8000/user/register",
-        formData,
-        { withCredentials: true },
+        buildApiUrl("/user/register"),
+        {
+          fullName: formData.fullName.trim(),
+          email: formData.email.trim(),
+          password: formData.password,
+          phone: formData.phone.trim(),
+          address: formData.address.trim(),
+        },
+        {
+          withCredentials: true,
+        },
       );
-      if (response.data.success) {
-        const newUser = {
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone || null, // Optional field, set to null if not provided
-          role: "reader", // ברירת מחדל לתפקיד "קורא"
-        };
-        //register(newUser);
-        navigate("/login");
-      } else {
-        alert(response.data.message || "Registration failed");
-      }
+
+      register(response.data.user);
+      navigate("/");
     } catch (error) {
-      console.error("Error during registration:", error);
-      alert("Server error. Please try again later.");
+      const message =
+        error.response?.data?.message || "Could not connect to the server";
+
+      alert(message);
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }
 
   return (
     <div className="authPage">
@@ -93,6 +132,7 @@ export default function RegisterForm() {
             value={formData.fullName}
             onChange={handleChange}
             placeholder="Enter your full name"
+            autoComplete="name"
             required
           />
 
@@ -103,25 +143,29 @@ export default function RegisterForm() {
             value={formData.email}
             onChange={handleChange}
             placeholder="Enter your email"
+            autoComplete="email"
             required
           />
 
           <InputField
             label="Password"
             type="password"
-            name="passwordHash"
-            value={formData.passwordHash}
+            name="password"
+            value={formData.password}
             onChange={handleChange}
             placeholder="Enter your password"
+            autoComplete="new-password"
             required
           />
 
           <InputField
             label="Phone Number"
+            type="tel"
             name="phone"
             value={formData.phone}
             onChange={handleChange}
             placeholder="Enter your phone number"
+            autoComplete="tel"
           />
 
           <InputField
@@ -130,10 +174,11 @@ export default function RegisterForm() {
             value={formData.address}
             onChange={handleChange}
             placeholder="Enter your address"
+            autoComplete="street-address"
           />
 
-          <Button type="submit" variant="primary">
-            {isSubmitting ? "Signing Up..." : "Sign Up"}
+          <Button type="submit" variant="primary" disabled={isSubmitting}>
+            {isSubmitting ? "Signing up..." : "Sign Up"}
           </Button>
         </div>
 

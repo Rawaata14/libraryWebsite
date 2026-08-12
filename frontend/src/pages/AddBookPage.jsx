@@ -97,7 +97,7 @@ export default function AddBookPage() {
   };
 
   return (
-    <PageShell userType="librarian">
+    <PageShell>
       <PageBanner title="Add New Book" />
 
       <div

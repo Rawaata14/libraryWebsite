@@ -1,7 +1,27 @@
+/*
+=========================================================
+LibraryMap.jsx
+
+תיאור הקובץ:
+המפה האינטראקטיבית של הספרייה.
+
+הקומפוננטה אחראית על:
+- הצגת פריטי המפה.
+- בחירת מושבים.
+- הוספה, מחיקה, חסימה וסיבוב פריטים עבור ספרן.
+- גרירת פריטים בתוך האזורים המותרים.
+- שמירת מבנה המפה ב-Backend.
+=========================================================
+*/
+
 import { useRef, useState } from "react";
+import PropTypes from "prop-types";
+import axios from "axios";
+
 import MapItem from "./MapItem";
 import MapToolbar from "./MapToolbar";
-import axios from "axios";
+import { buildApiUrl } from "../../config/api";
+import { seatPropType } from "../../propTypes/seatPropTypes";
 
 const mapZones = [
   {
@@ -125,7 +145,9 @@ export default function LibraryMap({
       rotation: 0,
       status: "available",
       reservable:
-        newItemType === "seat-to-add" || newItemType === "single-seat" || newItemType === "computer-seat",
+        newItemType === "seat-to-add" ||
+        newItemType === "single-seat" ||
+        newItemType === "computer-seat",
       location: zone.id,
     };
 
@@ -156,7 +178,7 @@ export default function LibraryMap({
     ) {
       try {
         const response = await axios.delete(
-          `http://localhost:8000/seats/delete-seat/${selectedSeatId}`,
+          buildApiUrl(`/seats/delete-seat/${selectedSeatId}`),
           {
             withCredentials: true,
           },
@@ -294,7 +316,7 @@ export default function LibraryMap({
 
     try {
       const response = await axios.post(
-        "http://localhost:8000/seats/save-map",
+        buildApiUrl("/seats/save-map"),
         itemsToSave,
         {
           headers: { "Content-Type": "application/json" },
@@ -411,3 +433,21 @@ export default function LibraryMap({
     </div>
   );
 }
+
+/*
+---------------------------------------------------------
+LibraryMap.propTypes
+
+תפקיד:
+מגדיר את פריטי המפה והפעולות שמתקבלות
+מקומפוננטת RoomMap.
+---------------------------------------------------------
+*/
+LibraryMap.propTypes = {
+  isLibrarian: PropTypes.bool,
+  items: PropTypes.arrayOf(seatPropType),
+  setItems: PropTypes.func.isRequired,
+  onSeatSelect: PropTypes.func.isRequired,
+  fetchLatestSeats: PropTypes.func,
+  selectedSeatId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+};

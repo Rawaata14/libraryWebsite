@@ -65,7 +65,7 @@ export default function BooksPage() {
   };
 
   return (
-    <PageShell userType="guest">
+    <PageShell>
       <PageBanner title="Browse Books" />
 
       <div className="booksPageContainer">

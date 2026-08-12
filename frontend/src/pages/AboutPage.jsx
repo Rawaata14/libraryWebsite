@@ -55,7 +55,7 @@ export default function AboutPage() {
   };
 
   return (
-    <PageShell userType="guest">
+    <PageShell>
       <PageBanner title="About Us" />
 
       <div className="aboutPageContainer">
