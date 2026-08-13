@@ -18,7 +18,9 @@ ReservationMessageModal.jsx
 =========================================================
 */
 
-import { formatReservationDate } from "./reservationUtils";
+import { formatReservationDate } from "../../utils/reservationUtils";
+import PropTypes from "prop-types";
+import { reservationPropType } from "../../propTypes/reservationPropTypes";
 
 export default function ReservationMessageModal({
   reservation,
@@ -157,3 +159,23 @@ export default function ReservationMessageModal({
     </div>
   );
 }
+
+/*
+---------------------------------------------------------
+ReservationMessageModal.propTypes
+
+תפקיד:
+מגדיר את פרטי ההזמנה, תוכן ההודעה והפעולות
+של חלון שליחת ההודעה.
+---------------------------------------------------------
+*/
+ReservationMessageModal.propTypes = {
+  reservation: reservationPropType.isRequired,
+  subject: PropTypes.string.isRequired,
+  message: PropTypes.string.isRequired,
+  isSending: PropTypes.bool.isRequired,
+  onSubjectChange: PropTypes.func.isRequired,
+  onMessageChange: PropTypes.func.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSend: PropTypes.func.isRequired,
+};

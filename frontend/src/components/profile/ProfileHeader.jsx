@@ -14,11 +14,10 @@ ProfileHeader.jsx
 =========================================================
 */
 
-import ProfileForm from "./ProfileForm";
-import { getProfileImageSrc } from "../../utils/profileImage";
-
 import PropTypes from "prop-types";
 
+import ProfileForm from "./ProfileForm";
+import { getProfileImageSrc } from "../../utils/profileImage";
 import {
   profileFormPropType,
   userPropType,

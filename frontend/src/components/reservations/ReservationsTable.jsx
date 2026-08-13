@@ -17,6 +17,8 @@ ReservationsTable.jsx
 */
 
 import ReservationRow from "./ReservationRow";
+import PropTypes from "prop-types";
+import { reservationPropType } from "../../propTypes/reservationPropTypes";
 
 export default function ReservationsTable({
   reservations,
@@ -81,3 +83,18 @@ export default function ReservationsTable({
     </div>
   );
 }
+
+/*
+---------------------------------------------------------
+ReservationsTable.propTypes
+
+תפקיד:
+מגדיר את רשימת ההזמנות ואת הפעולות הזמינות בטבלה.
+---------------------------------------------------------
+*/
+ReservationsTable.propTypes = {
+  reservations: PropTypes.arrayOf(reservationPropType).isRequired,
+  isLoading: PropTypes.bool.isRequired,
+  onCancel: PropTypes.func.isRequired,
+  onSendMessage: PropTypes.func.isRequired,
+};

@@ -33,7 +33,7 @@ import {
   filterReservations,
   countActiveReservations,
   countCancelledReservations,
-} from "../components/reservations/reservationUtils";
+} from "../utils/reservationUtils";
 
 import "../styles/manage-reservations.css";
 

@@ -13,6 +13,8 @@
   ✔ שמירת המפה לשרת
   =========================================================
 */
+import PropTypes from "prop-types";
+import { mapZonePropType } from "../../propTypes/seatPropTypes";
 
 export default function MapToolbar({
   newItemType,
@@ -97,3 +99,25 @@ export default function MapToolbar({
     </div>
   );
 }
+
+/*
+---------------------------------------------------------
+MapToolbar.propTypes
+
+תפקיד:
+מגדיר את נתוני סרגל ניהול המפה ואת פעולות הספרן.
+---------------------------------------------------------
+*/
+MapToolbar.propTypes = {
+  newItemType: PropTypes.string.isRequired,
+  onChangeType: PropTypes.func.isRequired,
+  newItemPlacement: PropTypes.string.isRequired,
+  onChangePlacement: PropTypes.func.isRequired,
+  mapZones: PropTypes.arrayOf(mapZonePropType).isRequired,
+  onAdd: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+  onToggleBlock: PropTypes.func.isRequired,
+  onRotate: PropTypes.func.isRequired,
+  hasSelectedItem: PropTypes.bool.isRequired,
+  saveMap: PropTypes.func.isRequired,
+};

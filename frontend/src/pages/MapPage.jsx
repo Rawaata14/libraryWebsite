@@ -4,12 +4,16 @@
   דף מפת המקומות הראשי של המערכת (תצוגת סטודנט/אורח).
 */
 
-import { useState, useEffect } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
 import Button from "../components/common/Button";
 import RoomMap from "../components/dashboard/RoomMap";
 import axios from "axios";
+
+import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../context/AuthContext";
+import { buildApiUrl } from "../config/api";
 
 const getAreaLabel = (location) => {
   if (location === "quiet-room") return "Quiet Room";
@@ -30,6 +34,9 @@ const getSuggestedUse = (location) => {
 };
 
 export default function MapPage() {
+  const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0],
   ); // תאריך ברירת מחדל: היום
@@ -37,45 +44,69 @@ export default function MapPage() {
   const [selectedTime, setSelectedTime] = useState(""); // זמן נבחר
   const [selectedSeat, setSelectedSeat] = useState(null);
 
-  const storedUser = localStorage.getItem("libraryUser");
-  const user = storedUser ? JSON.parse(storedUser) : null;
+  /*
+---------------------------------------------------------
+fetchAvailableSlots
 
-  // פונקציה לשליפת השעות הפנויות מהשרת לפי התאריך הנבחר
-  const fetchAvailableSlots = async (date) => {
+תפקיד:
+טוענת מהשרת את שעות ההזמנה הפנויות לתאריך שנבחר.
+
+הפונקציה משתמשת בעדכון State פונקציונלי,
+ולכן אינה תלויה בערך selectedTime ואינה גורמת
+לקריאות חוזרות מיותרות.
+---------------------------------------------------------
+*/
+  const fetchAvailableSlots = useCallback(async (date) => {
     try {
       const response = await axios.get(
-        "http://localhost:8000/reservations/available-slots",
+        buildApiUrl("/reservations/available-slots"),
         {
-          params: { date },
+          params: {
+            date,
+          },
           withCredentials: true,
         },
       );
-      console.log("Response from server:", response.data);
+
       const slots = response.data.slots || [];
+
       setAvailableSlots(slots);
 
-      // אם השעה הנוכחית הנבחרת לא קיימת ברשימה החדשה, נבחר אוטומטית את הראשונה שפנויה
-      if (slots.length > 0) {
-        if (!slots.includes(selectedTime)) {
-          setSelectedTime(slots[0]);
+      setSelectedTime((currentSelectedTime) => {
+        if (slots.length === 0) {
+          return "";
         }
-      } else {
-        setSelectedTime(""); // אין שעות פנויות בכלל היום
-      }
+
+        if (slots.includes(currentSelectedTime)) {
+          return currentSelectedTime;
+        }
+
+        return slots[0];
+      });
     } catch (error) {
       console.error("Error fetching available slots:", error);
-    }
-  };
 
-  // שליפת שעות פנויות בעליית הדף ובכל פעם שהתאריך משתנה
+      setAvailableSlots([]);
+      setSelectedTime("");
+    }
+  }, []);
+
+  /*
+---------------------------------------------------------
+טעינת שעות פנויות
+
+תפקיד:
+מרעננת את רשימת השעות בכל פעם שהתאריך משתנה.
+---------------------------------------------------------
+*/
   useEffect(() => {
     fetchAvailableSlots(selectedDate);
-  }, [selectedDate]);
+  }, [fetchAvailableSlots, selectedDate]);
 
   const handleConfirmReservation = async () => {
     if (!user) {
       alert("User not logged in. Please log in to reserve a seat.");
-      window.location.href = "/login";
+      navigate("/login");
       return;
     }
     console.log("Confirming reservation for seat:", selectedSeat);
@@ -96,9 +127,8 @@ export default function MapPage() {
 
     try {
       const response = await axios.post(
-        "http://localhost:8000/reservations/reserve-seat",
+        buildApiUrl("/reservations/reserve-seat"),
         {
-          userId: user.userId || user.id,
           seatId: selectedSeat.id,
           date: selectedDate,
           startTime: selectedTime.split(" - ")[0],

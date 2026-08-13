@@ -15,6 +15,8 @@ ReservationSummary.jsx
 =========================================================
 */
 
+import PropTypes from "prop-types";
+
 export default function ReservationSummary({
   totalReservations,
   activeReservations,
@@ -52,3 +54,16 @@ export default function ReservationSummary({
   );
 }
 
+/*
+---------------------------------------------------------
+ReservationSummary.propTypes
+
+תפקיד:
+מגדיר את נתוני סיכום ההזמנות המוצגים למשתמש.
+---------------------------------------------------------
+*/
+ReservationSummary.propTypes = {
+  totalReservations: PropTypes.number.isRequired,
+  activeReservations: PropTypes.number.isRequired,
+  cancelledReservations: PropTypes.number.isRequired,
+};

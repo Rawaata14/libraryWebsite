@@ -21,7 +21,9 @@ CancellationModal.jsx
 import {
   formatReservationDate,
   formatReservationTime,
-} from "./reservationUtils";
+} from "../../utils/reservationUtils";
+import PropTypes from "prop-types";
+import { reservationPropType } from "../../propTypes/reservationPropTypes";
 
 export default function CancellationModal({
   reservation,
@@ -148,3 +150,21 @@ export default function CancellationModal({
     </div>
   );
 }
+
+/*
+---------------------------------------------------------
+CancellationModal.propTypes
+
+תפקיד:
+מגדיר את ההזמנה, סיבת הביטול והפעולות של חלון
+אישור ביטול ההזמנה.
+---------------------------------------------------------
+*/
+CancellationModal.propTypes = {
+  reservation: reservationPropType.isRequired,
+  cancellationReason: PropTypes.string.isRequired,
+  isCancelling: PropTypes.bool.isRequired,
+  onReasonChange: PropTypes.func.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onConfirm: PropTypes.func.isRequired,
+};

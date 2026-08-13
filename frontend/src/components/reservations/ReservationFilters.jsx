@@ -14,6 +14,8 @@ ReservationFilters.jsx
 =========================================================
 */
 
+import PropTypes from "prop-types";
+
 export default function ReservationFilters({
   searchText,
   statusFilter,
@@ -46,3 +48,18 @@ export default function ReservationFilters({
     </div>
   );
 }
+
+/*
+---------------------------------------------------------
+ReservationFilters.propTypes
+
+תפקיד:
+מגדיר את ערכי הסינון ואת פעולות שינוי החיפוש והסטטוס.
+---------------------------------------------------------
+*/
+ReservationFilters.propTypes = {
+  searchText: PropTypes.string.isRequired,
+  statusFilter: PropTypes.string.isRequired,
+  onSearchChange: PropTypes.func.isRequired,
+  onStatusChange: PropTypes.func.isRequired,
+};

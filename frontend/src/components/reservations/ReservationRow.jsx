@@ -25,7 +25,9 @@ import {
   getStatusLabel,
   getStatusClass,
   isCancelledStatus,
-} from "./reservationUtils";
+} from "../../utils/reservationUtils";
+import PropTypes from "prop-types";
+import { reservationPropType } from "../../propTypes/reservationPropTypes";
 
 export default function ReservationRow({
   reservation,
@@ -98,3 +100,18 @@ export default function ReservationRow({
     </tr>
   );
 }
+
+/*
+---------------------------------------------------------
+ReservationRow.propTypes
+
+תפקיד:
+מגדיר את פרטי ההזמנה ואת פעולות הביטול
+ושליחת ההודעה הזמינות בכל שורת טבלה.
+---------------------------------------------------------
+*/
+ReservationRow.propTypes = {
+  reservation: reservationPropType.isRequired,
+  onCancel: PropTypes.func.isRequired,
+  onSendMessage: PropTypes.func.isRequired,
+};
