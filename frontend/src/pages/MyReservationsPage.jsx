@@ -3,173 +3,43 @@
 MyReservationsPage.jsx
 
 תיאור הקובץ:
-דף הצגת וניהול הזמנות המקומות של המשתמש המחובר.
+דף הצגת הזמנות המקומות של המשתמש המחובר.
 
-הקובץ כולל:
-- שליפת הזמנות המשתמש מהשרת.
-- הפרדת הזמנות עתידיות מהיסטוריית ההזמנות.
-- ביטול הזמנה עתידית.
-- הצגת מצבי טעינה, שגיאה והצלחה.
+העמוד אחראי על:
+- הצגת סיכום ההזמנות.
+- מעבר בין הזמנות עתידיות, היסטוריה וכל ההזמנות.
+- הצגת רשימת ההזמנות.
+- חיבור התצוגה ל-useMyReservations.
 =========================================================
 */
 
-import { useEffect, useState } from "react";
-import axios from "axios";
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
+import MyReservationItem from "../components/reservations/MyReservationItem";
+
+import useMyReservations from "../hooks/useMyReservations";
+
 import "../styles/my-reservations.css";
 
 /*
 ---------------------------------------------------------
-formatReservationDate
+getEmptyReservationsMessage
 
 תפקיד:
-ממיר את התאריך שמתקבל ממסד הנתונים
-לפורמט קריא של יום, חודש ושנה.
+מחזירה הודעה מתאימה כאשר אין הזמנות
+בסינון שנבחר.
 ---------------------------------------------------------
 */
-const formatReservationDate = (dateValue) => {
-  if (!dateValue) {
-    return "-";
+const getEmptyReservationsMessage = (selectedFilter) => {
+  if (selectedFilter === "upcoming") {
+    return "You do not have any upcoming reservations.";
   }
 
-  const date = new Date(dateValue);
-
-  if (Number.isNaN(date.getTime())) {
-    return dateValue;
+  if (selectedFilter === "past") {
+    return "You do not have previous reservations.";
   }
 
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-};
-
-/*
----------------------------------------------------------
-formatReservationTime
-
-תפקיד:
-מקצר את ערך השעה לפורמט HH:MM.
----------------------------------------------------------
-*/
-const formatReservationTime = (timeValue) => {
-  if (!timeValue) {
-    return "-";
-  }
-
-  return String(timeValue).substring(0, 5);
-};
-
-/*
----------------------------------------------------------
-getReservationStatusLabel
-
-תפקיד:
-מחזיר טקסט ידידותי להצגת סטטוס ההזמנה.
----------------------------------------------------------
-*/
-const getReservationStatusLabel = (status) => {
-  switch (status?.toLowerCase()) {
-    case "occupied":
-    case "confirmed":
-      return "Confirmed";
-
-    case "pending":
-      return "Pending";
-
-    case "cancelled":
-    case "canceled":
-      return "Cancelled";
-
-    case "completed":
-      return "Completed";
-
-    default:
-      return status || "Unknown";
-  }
-};
-
-/*
----------------------------------------------------------
-getReservationStatusClass
-
-תפקיד:
-מחזיר מחלקת CSS לפי סטטוס ההזמנה.
----------------------------------------------------------
-*/
-const getReservationStatusClass = (status) => {
-  switch (status?.toLowerCase()) {
-    case "occupied":
-    case "confirmed":
-      return "confirmed";
-
-    case "pending":
-      return "pending";
-
-    case "cancelled":
-    case "canceled":
-      return "cancelled";
-
-    case "completed":
-      return "completed";
-
-    default:
-      return "default";
-  }
-};
-
-/*
----------------------------------------------------------
-getReservationEndDateTime
-
-תפקיד:
-יוצר תאריך ושעת סיום מלאים של ההזמנה.
-
-הערך משמש לקביעה אם ההזמנה עתידית
-או שייכת להיסטוריה.
----------------------------------------------------------
-*/
-const getReservationEndDateTime = (reservation) => {
-  if (!reservation.reservationDate || !reservation.endTime) {
-    return null;
-  }
-
-  const reservationDate = new Date(reservation.reservationDate);
-
-  if (Number.isNaN(reservationDate.getTime())) {
-    return null;
-  }
-
-  const year = reservationDate.getFullYear();
-  const month = String(reservationDate.getMonth() + 1).padStart(2, "0");
-  const day = String(reservationDate.getDate()).padStart(2, "0");
-  const formattedTime = String(reservation.endTime).substring(0, 8);
-
-  const reservationEndDateTime = new Date(
-    `${year}-${month}-${day}T${formattedTime}`,
-  );
-
-  if (Number.isNaN(reservationEndDateTime.getTime())) {
-    return null;
-  }
-
-  return reservationEndDateTime;
-};
-
-/*
----------------------------------------------------------
-isReservationCancelled
-
-תפקיד:
-בודקת אם ההזמנה כבר בוטלה.
----------------------------------------------------------
-*/
-const isReservationCancelled = (reservation) => {
-  const normalizedStatus = reservation.status?.toLowerCase();
-
-  return ["cancelled", "canceled"].includes(normalizedStatus);
+  return "You have not created any reservations yet.";
 };
 
 /*
@@ -177,197 +47,28 @@ const isReservationCancelled = (reservation) => {
 MyReservationsPage
 
 תפקיד:
-מציג למשתמש המחובר את הזמנות המקומות שלו
-ומאפשר לבטל הזמנה עתידית.
+מחברת בין לוגיקת הזמנות המשתמש שב-Hook
+לבין רכיבי התצוגה של העמוד.
 ---------------------------------------------------------
 */
 export default function MyReservationsPage() {
-  const [reservations, setReservations] = useState([]);
-  const [selectedFilter, setSelectedFilter] = useState("upcoming");
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [cancellingReservationId, setCancellingReservationId] = useState(null);
-
-  const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-
-  /*
-  ---------------------------------------------------------
-  fetchReservations
-
-  תפקיד:
-  שולפת מהשרת את ההזמנות של המשתמש המחובר.
-
-  השרת מזהה את המשתמש דרך ה-session,
-  ולכן ה-Frontend אינו שולח userId.
-  ---------------------------------------------------------
-  */
-  const fetchReservations = async () => {
-    try {
-      setIsLoading(true);
-      setErrorMessage("");
-
-      const response = await axios.get(
-        "http://localhost:8000/reservations/get-reservations",
-        {
-          withCredentials: true,
-        },
-      );
-
-      setReservations(response.data.reservations || []);
-    } catch (error) {
-      console.error("Error fetching reservations:", error);
-
-      if (error.response?.status === 401) {
-        setErrorMessage("You must be logged in to view your reservations.");
-      } else {
-        setErrorMessage(
-          error.response?.data?.message ||
-            "An error occurred while loading your reservations.",
-        );
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-
-/*
-  ---------------------------------------------------------
-  handleCancelReservation
-
-  תפקיד:
-  שולחת בקשה לשרת לביטול ההזמנה שנבחרה.
-
-  לאחר הצלחה:
-  - סטטוס ההזמנה מתעדכן מקומית.
-  - ההזמנה עוברת אוטומטית להיסטוריה.
-  - מוצגת הודעת הצלחה.
-  ---------------------------------------------------------
-*/
-  const handleCancelReservation = async (reservationId) => {
-    const userConfirmed = window.confirm(
-      "Are you sure you want to cancel this reservation?",
-    );
-
-    if (!userConfirmed) {
-      return;
-    }
-
-    try {
-      setCancellingReservationId(reservationId);
-      setErrorMessage("");
-      setSuccessMessage("");
-
-      const response = await axios.patch(
-        `http://localhost:8000/reservations/${reservationId}/cancel`,
-        {},
-        {
-          withCredentials: true,
-        },
-      );
-
-      /*
-      עדכון ה-state המקומי מונע צורך
-      בטעינה מחדש של כל הדף.
-    */
-      setReservations((previousReservations) =>
-        previousReservations.map((reservation) =>
-          reservation.reservationId === reservationId
-            ? {
-                ...reservation,
-                status: "cancelled",
-              }
-            : reservation,
-        ),
-      );
-
-      setSuccessMessage(
-        response.data?.message || "Reservation cancelled successfully.",
-      );
-    } catch (error) {
-      console.error("Error cancelling reservation:", error);
-      console.error("Cancellation status:", error.response?.status);
-      console.error("Cancellation response:", error.response?.data);
-
-      if (error.response?.status === 401) {
-        setErrorMessage("You must be logged in to cancel a reservation.");
-      } else if (error.response?.status === 404) {
-        setErrorMessage("The reservation or cancellation route was not found.");
-      } else {
-        setErrorMessage(
-          error.response?.data?.message ||
-            "An error occurred while cancelling the reservation.",
-        );
-      }
-    } finally {
-      setCancellingReservationId(null);
-    }
-  };
-
-  /*
-  ---------------------------------------------------------
-  useEffect
-
-  תפקיד:
-  שולף את ההזמנות פעם אחת בעת טעינת העמוד.
-  ---------------------------------------------------------
-  */
-  useEffect(() => {
-    fetchReservations();
-  }, []);
-
-  const now = new Date();
-
-  /*
-    הזמנות עתידיות:
-    זמן הסיום שלהן עדיין לא עבר
-    והן אינן מבוטלות.
-  */
-  const upcomingReservations = reservations
-    .filter((reservation) => {
-      const reservationEnd = getReservationEndDateTime(reservation);
-
-      return (
-        reservationEnd &&
-        reservationEnd >= now &&
-        !isReservationCancelled(reservation)
-      );
-    })
-    .sort((firstReservation, secondReservation) => {
-      const firstDate = getReservationEndDateTime(firstReservation);
-      const secondDate = getReservationEndDateTime(secondReservation);
-
-      return firstDate - secondDate;
-    });
-
-  /*
-    היסטוריית הזמנות:
-    הזמנות שכבר הסתיימו או בוטלו.
-  */
-  const pastReservations = reservations
-    .filter((reservation) => {
-      const reservationEnd = getReservationEndDateTime(reservation);
-
-      return (
-        !reservationEnd ||
-        reservationEnd < now ||
-        isReservationCancelled(reservation)
-      );
-    })
-    .sort((firstReservation, secondReservation) => {
-      const firstDate = getReservationEndDateTime(firstReservation);
-      const secondDate = getReservationEndDateTime(secondReservation);
-
-      return (secondDate?.getTime() || 0) - (firstDate?.getTime() || 0);
-    });
-
-  const displayedReservations =
-    selectedFilter === "upcoming"
-      ? upcomingReservations
-      : selectedFilter === "past"
-        ? pastReservations
-        : reservations;
+  const {
+    reservations,
+    upcomingReservations,
+    pastReservations,
+    displayedReservations,
+    selectedFilter,
+    setSelectedFilter,
+    isLoading,
+    cancellingReservationId,
+    errorMessage,
+    clearErrorMessage,
+    successMessage,
+    clearSuccessMessage,
+    fetchReservations,
+    handleCancelReservation,
+    canCancelReservation,
+  } = useMyReservations();
 
   return (
     <PageShell>
@@ -375,6 +76,12 @@ export default function MyReservationsPage() {
 
       <main className="myReservationsPage">
         <section className="myReservationsCard">
+          {/*
+          =================================================
+          כותרת ורענון
+          =================================================
+          */}
+
           <div className="myReservationsHeader">
             <div>
               <h2>My Seat Reservations</h2>
@@ -395,16 +102,22 @@ export default function MyReservationsPage() {
             </button>
           </div>
 
+          {/*
+          =================================================
+          הודעות הצלחה ושגיאה
+          =================================================
+          */}
+
           {successMessage && (
             <div className="reservationFeedback successFeedback">
-              <span>✓</span>
+              <span aria-hidden="true">✓</span>
 
               <p>{successMessage}</p>
 
               <button
                 type="button"
                 aria-label="Close success message"
-                onClick={() => setSuccessMessage("")}
+                onClick={clearSuccessMessage}
               >
                 ×
               </button>
@@ -413,23 +126,29 @@ export default function MyReservationsPage() {
 
           {errorMessage && !isLoading && (
             <div className="reservationFeedback errorFeedback">
-              <span>!</span>
+              <span aria-hidden="true">!</span>
 
               <p>{errorMessage}</p>
 
               <button
                 type="button"
                 aria-label="Close error message"
-                onClick={() => setErrorMessage("")}
+                onClick={clearErrorMessage}
               >
                 ×
               </button>
             </div>
           )}
 
+          {/*
+          =================================================
+          סיכום ההזמנות
+          =================================================
+          */}
+
           <div className="reservationSummaryGrid">
             <div className="reservationSummaryCard">
-              <span>📅</span>
+              <span aria-hidden="true">📅</span>
 
               <div>
                 <strong>{upcomingReservations.length}</strong>
@@ -438,7 +157,7 @@ export default function MyReservationsPage() {
             </div>
 
             <div className="reservationSummaryCard">
-              <span>🕘</span>
+              <span aria-hidden="true">🕘</span>
 
               <div>
                 <strong>{pastReservations.length}</strong>
@@ -447,7 +166,7 @@ export default function MyReservationsPage() {
             </div>
 
             <div className="reservationSummaryCard">
-              <span>🪑</span>
+              <span aria-hidden="true">🪑</span>
 
               <div>
                 <strong>{reservations.length}</strong>
@@ -455,6 +174,12 @@ export default function MyReservationsPage() {
               </div>
             </div>
           </div>
+
+          {/*
+          =================================================
+          סינון לפי תקופה
+          =================================================
+          */}
 
           <div className="reservationFilters">
             <button
@@ -494,101 +219,41 @@ export default function MyReservationsPage() {
             </button>
           </div>
 
+          {/*
+          =================================================
+          רשימת ההזמנות
+          =================================================
+          */}
+
           {isLoading ? (
             <div className="reservationsMessage">
-              <span className="reservationsLoadingIcon">⌛</span>
+              <span className="reservationsLoadingIcon" aria-hidden="true">
+                ⌛
+              </span>
+
               <p>Loading reservations...</p>
             </div>
           ) : displayedReservations.length === 0 ? (
             <div className="reservationsMessage">
-              <span>📭</span>
+              <span aria-hidden="true">📭</span>
 
               <h3>No reservations found</h3>
 
-              <p>
-                {selectedFilter === "upcoming"
-                  ? "You do not have any upcoming reservations."
-                  : selectedFilter === "past"
-                    ? "You do not have previous reservations."
-                    : "You have not created any reservations yet."}
-              </p>
+              <p>{getEmptyReservationsMessage(selectedFilter)}</p>
             </div>
           ) : (
             <div className="myReservationsList">
-              {displayedReservations.map((reservation) => {
-                const reservationEnd = getReservationEndDateTime(reservation);
-
-                const canCancel =
-                  reservationEnd &&
-                  reservationEnd >= now &&
-                  !isReservationCancelled(reservation);
-
-                const isCancelling =
-                  cancellingReservationId === reservation.reservationId;
-
-                return (
-                  <article
-                    key={reservation.reservationId}
-                    className="myReservationItem"
-                  >
-                    <div className="reservationSeatIcon">🪑</div>
-
-                    <div className="reservationMainDetails">
-                      <h3>Seat {reservation.seatId}</h3>
-
-                      <div className="reservationDetailsGrid">
-                        <p>
-                          <span>Date</span>
-
-                          <strong>
-                            {formatReservationDate(reservation.reservationDate)}
-                          </strong>
-                        </p>
-
-                        <p>
-                          <span>Time</span>
-
-                          <strong>
-                            {formatReservationTime(reservation.startTime)} -{" "}
-                            {formatReservationTime(reservation.endTime)}
-                          </strong>
-                        </p>
-
-                        <p>
-                          <span>Reservation ID</span>
-
-                          <strong>#{reservation.reservationId}</strong>
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="reservationActionsColumn">
-                      <span
-                        className={`myReservationStatus ${getReservationStatusClass(
-                          reservation.status,
-                        )}`}
-                      >
-                        {getReservationStatusLabel(reservation.status)}
-                      </span>
-
-                      {canCancel && (
-                        <button
-                          type="button"
-                          className="cancelReservationButton"
-                          disabled={isCancelling}
-                          onClick={() =>
-                            handleCancelReservation(reservation.reservationId)
-                          }
-                        >
-                          {isCancelling
-                            ? "Cancelling..."
-                            : "Cancel Reservation"}
-                        </button>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
+              {displayedReservations.map((reservation) => (
+                <MyReservationItem
+                  key={reservation.reservationId}
+                  reservation={reservation}
+                  canCancel={canCancelReservation(reservation)}
+                  isCancelling={
+                    cancellingReservationId === reservation.reservationId
+                  }
+                  onCancel={handleCancelReservation}
+                />
+              ))}
             </div>
           )}
         </section>

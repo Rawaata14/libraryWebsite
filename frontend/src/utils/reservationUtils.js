@@ -107,6 +107,9 @@ export const getStatusLabel = (status) => {
     case "canceled":
       return "Cancelled";
 
+    case "pending":
+      return "Pending";
+
     case "completed":
       return "Completed";
 
@@ -129,6 +132,9 @@ export const getStatusClass = (status) => {
     case "occupied":
     case "confirmed":
       return "confirmed";
+
+    case "pending":
+      return "pending";
 
     case "cancelled":
     case "canceled":
@@ -240,3 +246,119 @@ countCancelledReservations
 export const countCancelledReservations = (reservations) =>
   reservations.filter((reservation) => isCancelledStatus(reservation.status))
     .length;
+
+
+/*
+---------------------------------------------------------
+getReservationEndDateTime
+
+תפקיד:
+יוצרת אובייקט תאריך מלא המייצג את מועד
+סיום ההזמנה.
+
+הערך משמש לקביעה אם ההזמנה עתידית
+או שייכת להיסטוריה.
+---------------------------------------------------------
+*/
+export const getReservationEndDateTime = (reservation) => {
+  if (
+    !reservation.reservationDate ||
+    !reservation.endTime
+  ) {
+    return null;
+  }
+
+  const reservationDate = new Date(
+    reservation.reservationDate,
+  );
+
+  if (Number.isNaN(reservationDate.getTime())) {
+    return null;
+  }
+
+  const year = reservationDate.getFullYear();
+  const month = String(
+    reservationDate.getMonth() + 1,
+  ).padStart(2, "0");
+  const day = String(
+    reservationDate.getDate(),
+  ).padStart(2, "0");
+  const formattedTime = String(
+    reservation.endTime,
+  ).substring(0, 8);
+
+  const endDateTime = new Date(
+    `${year}-${month}-${day}T${formattedTime}`,
+  );
+
+  if (Number.isNaN(endDateTime.getTime())) {
+    return null;
+  }
+
+  return endDateTime;
+};
+
+/*
+---------------------------------------------------------
+splitReservationsByTime
+
+תפקיד:
+מחלקת את ההזמנות לשתי רשימות:
+- הזמנות עתידיות ופעילות.
+- הזמנות שהסתיימו או בוטלו.
+
+כל רשימה ממוינת לפי הזמן המתאים לתצוגה.
+---------------------------------------------------------
+*/
+export const splitReservationsByTime = (
+  reservations,
+  currentDate = new Date(),
+) => {
+  const upcomingReservations = reservations
+    .filter((reservation) => {
+      const reservationEnd =
+        getReservationEndDateTime(reservation);
+
+      return (
+        reservationEnd &&
+        reservationEnd >= currentDate &&
+        !isCancelledStatus(reservation.status)
+      );
+    })
+    .sort((firstReservation, secondReservation) => {
+      const firstDate =
+        getReservationEndDateTime(firstReservation);
+      const secondDate =
+        getReservationEndDateTime(secondReservation);
+
+      return firstDate - secondDate;
+    });
+
+  const pastReservations = reservations
+    .filter((reservation) => {
+      const reservationEnd =
+        getReservationEndDateTime(reservation);
+
+      return (
+        !reservationEnd ||
+        reservationEnd < currentDate ||
+        isCancelledStatus(reservation.status)
+      );
+    })
+    .sort((firstReservation, secondReservation) => {
+      const firstDate =
+        getReservationEndDateTime(firstReservation);
+      const secondDate =
+        getReservationEndDateTime(secondReservation);
+
+      return (
+        (secondDate?.getTime() || 0) -
+        (firstDate?.getTime() || 0)
+      );
+    });
+
+  return {
+    upcomingReservations,
+    pastReservations,
+  };
+};   

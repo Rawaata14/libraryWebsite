@@ -9,6 +9,7 @@ reservationService.js
 - שליפת כל ההזמנות עבור הספרן.
 - ביטול הזמנה על ידי הספרן.
 - שליחת הודעה לבעל ההזמנה.
+- ביטול הזמנה על ידי המשתמש.
 
 ריכוז הבקשות מונע כתובות API כפולות בתוך רכיבי React
 ומפריד בין תקשורת השרת לבין לוגיקת התצוגה.
@@ -75,6 +76,27 @@ export const sendReservationMessage = async (
       subject,
       message,
     },
+    {
+      withCredentials: true,
+    },
+  );
+};
+
+/*
+---------------------------------------------------------
+cancelReservationByUser
+
+תפקיד:
+שולחת בקשה לביטול הזמנה השייכת למשתמש המחובר.
+
+ה-Backend בודק דרך ה-session שההזמנה אכן
+שייכת למשתמש המבצע את הפעולה.
+---------------------------------------------------------
+*/
+export const cancelReservationByUser = async (reservationId) => {
+  return axios.patch(
+    buildApiUrl(`/reservations/${reservationId}/cancel`),
+    {},
     {
       withCredentials: true,
     },
