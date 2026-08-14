@@ -8,6 +8,8 @@ userService.js
 השירות אחראי על:
 - שליפת רשימת המשתמשים.
 - שינוי סטטוס משתמש.
+- העלאת תמונת פרופיל.
+- עדכון פרטי המשתמש המחובר.
 
 ריכוז הבקשות מפריד בין תקשורת השרת
 לבין רכיבי התצוגה של React.
@@ -52,6 +54,54 @@ export const updateUserStatus = async (email, status) => {
       email,
       status,
     },
+    {
+      withCredentials: true,
+    },
+  );
+};
+
+/*
+---------------------------------------------------------
+updateProfileImage
+
+תפקיד:
+שולחת תמונת פרופיל חדשה לשרת באמצעות FormData.
+---------------------------------------------------------
+*/
+export const updateProfileImage = async (
+  imageFile,
+) => {
+  const imageFormData = new FormData();
+
+  imageFormData.append(
+    "profileImage",
+    imageFile,
+  );
+
+  return axios.put(
+    buildApiUrl("/user/profile-image"),
+    imageFormData,
+    {
+      withCredentials: true,
+    },
+  );
+};
+
+/*
+---------------------------------------------------------
+updateProfileDetails
+
+תפקיד:
+שולחת לשרת את פרטי הפרופיל המעודכנים
+של המשתמש המחובר.
+---------------------------------------------------------
+*/
+export const updateProfileDetails = async (
+  profileDetails,
+) => {
+  return axios.put(
+    buildApiUrl("/user/profile"),
+    profileDetails,
     {
       withCredentials: true,
     },
