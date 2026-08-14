@@ -10,6 +10,8 @@ reservationService.js
 - ביטול הזמנה על ידי הספרן.
 - שליחת הודעה לבעל ההזמנה.
 - ביטול הזמנה על ידי המשתמש.
+- שליפת שעות הזמנה פנויות.
+- יצירת הזמנת מקום חדשה.
 
 ריכוז הבקשות מונע כתובות API כפולות בתוך רכיבי React
 ומפריד בין תקשורת השרת לבין לוגיקת התצוגה.
@@ -97,6 +99,60 @@ export const cancelReservationByUser = async (reservationId) => {
   return axios.patch(
     buildApiUrl(`/reservations/${reservationId}/cancel`),
     {},
+    {
+      withCredentials: true,
+    },
+  );
+};
+
+/*
+---------------------------------------------------------
+getAvailableReservationSlots
+
+תפקיד:
+שולפת מהשרת את שעות ההזמנה הפנויות
+עבור התאריך שנבחר.
+---------------------------------------------------------
+*/
+export const getAvailableReservationSlots = async (
+  date,
+) => {
+  return axios.get(
+    buildApiUrl("/reservations/available-slots"),
+    {
+      params: {
+        date,
+      },
+      withCredentials: true,
+    },
+  );
+};
+
+/*
+---------------------------------------------------------
+createSeatReservation
+
+תפקיד:
+שולחת לשרת בקשה ליצירת הזמנת מקום חדשה.
+
+המשתמש מזוהה באמצעות ה-session,
+ולכן אין צורך לשלוח userId מה-Frontend.
+---------------------------------------------------------
+*/
+export const createSeatReservation = async ({
+  seatId,
+  date,
+  startTime,
+  endTime,
+}) => {
+  return axios.post(
+    buildApiUrl("/reservations/reserve-seat"),
+    {
+      seatId,
+      date,
+      startTime,
+      endTime,
+    },
     {
       withCredentials: true,
     },

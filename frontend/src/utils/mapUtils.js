@@ -150,3 +150,75 @@ export const clampPositionToZone = (x, y, zone) => {
     y: Math.max(zone.minY, Math.min(zone.maxY, y)),
   };
 };
+
+/*
+---------------------------------------------------------
+getMapAreaLabel
+
+תפקיד:
+מחזירה שם ידידותי לתצוגה עבור אזור במפה.
+---------------------------------------------------------
+*/
+export const getMapAreaLabel = (location) => {
+  if (location === "quiet-room") {
+    return "Quiet Room";
+  }
+
+  if (location === "computer-area") {
+    return "Computer Area";
+  }
+
+  if (location === "group-room") {
+    return "Group Study Rooms";
+  }
+
+  if (
+    location === "reading-book" ||
+    location === "reading-nook"
+  ) {
+    return "Reading Area";
+  }
+
+  if (location?.startsWith("study-room")) {
+    return "Private Study Room";
+  }
+
+  return "-";
+};
+
+/*
+---------------------------------------------------------
+getSuggestedMapAreaUse
+
+תפקיד:
+מחזירה תיאור קצר של השימוש המומלץ
+עבור האזור שנבחר במפה.
+---------------------------------------------------------
+*/
+export const getSuggestedMapAreaUse = (
+  location,
+) => {
+  if (location === "quiet-room") {
+    return "Quiet individual study";
+  }
+
+  if (location === "computer-area") {
+    return "Computer-based work";
+  }
+
+  if (
+    location === "group-room" ||
+    location?.startsWith("study-room")
+  ) {
+    return "Group / study room use";
+  }
+
+  if (
+    location === "reading-book" ||
+    location === "reading-nook"
+  ) {
+    return "Leisure reading & study";
+  }
+
+  return "-";
+};
