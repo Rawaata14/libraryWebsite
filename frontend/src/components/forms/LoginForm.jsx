@@ -19,6 +19,7 @@ import axios from "axios";
 
 import InputField from "../common/InputField";
 import Button from "../common/Button";
+import BackButton from "../common/BackButton";
 import { AuthContext } from "../../context/AuthContext";
 import { buildApiUrl } from "../../config/api";
 
@@ -100,9 +101,7 @@ export default function LoginForm() {
 
   return (
     <div className="authPage">
-      <button type="button" className="backButton" onClick={() => navigate(-1)}>
-        ←
-      </button>
+      <BackButton />
 
       <form className="authCard" onSubmit={handleSubmit}>
         <h1>Welcome Back</h1>

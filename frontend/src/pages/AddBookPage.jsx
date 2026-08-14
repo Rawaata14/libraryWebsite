@@ -1,100 +1,46 @@
 /*
-  AddBookPage.jsx
-  ---------------
-  דף המאפשר לספרנית להוסיף ספר חדש למערכת.
+=========================================================
+AddBookPage.jsx
+
+תיאור הקובץ:
+דף המאפשר לספרנית להוסיף ספר חדש למערכת.
+
+העמוד אחראי על:
+- הצגת שדות פרטי הספר.
+- הצגת בחירת תמונת הכריכה.
+- חיבור הטופס ל-useAddBookForm.
+
+מצב הטופס והשליחה מנוהלים באמצעות:
+useAddBookForm
+=========================================================
 */
 
-import { useState } from "react";
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
 import InputField from "../components/common/InputField";
 import Button from "../components/common/Button";
-import axios from "axios";
+import BackButton from "../components/common/BackButton";
 
+import useAddBookForm from "../hooks/useAddBookForm";
+
+/*
+---------------------------------------------------------
+AddBookPage
+
+תפקיד:
+מציגה את טופס הוספת הספר ומחברת אותו
+ללוגיקה שב-useAddBookForm.
+---------------------------------------------------------
+*/
 export default function AddBookPage() {
-  const [formData, setFormData] = useState({
-    isbn: "",
-    title: "",
-    author: "",
-    publishYear: "",
-    status: "available",
-    category: "",
-    quantity: 1,
-    image: "",
-  });
-
-  const [selectedFile, setSelectedFile] = useState(null);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    if (name === "quantity") {
-      const numericValue = parseInt(value);
-      if (numericValue < 1) {
-        setFormData((prev) => ({ ...prev, [name]: 1 }));
-        return;
-      }
-    }
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleFileChange = (e) => {
-    setSelectedFile(e.target.files[0]);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (formData.quantity < 1) {
-      alert("Quantity must be at least 1");
-      return;
-    }
-
-    const bookData = new FormData();
-    bookData.append("isbn", formData.isbn);
-    bookData.append("title", formData.title);
-    bookData.append("author", formData.author);
-    bookData.append("category", formData.category);
-    bookData.append("publishYear", parseInt(formData.publishYear));
-    bookData.append("status", formData.status);
-    bookData.append("quantity", formData.quantity);
-
-    if (selectedFile) {
-      bookData.append("image", selectedFile);
-    }
-
-    try {
-      const response = await axios.post(
-        "http://localhost:8000/books/add-book",
-        bookData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-          withCredentials: true,
-        },
-      );
-      alert(response.data.message || "Book added successfully!");
-      if (response.status === 201 || response.status === 200) {
-        setFormData({
-          isbn: "",
-          title: "",
-          author: "",
-          publishYear: "",
-          status: "available",
-          category: "",
-          quantity: 1,
-          image: "",
-        });
-        setSelectedFile(null);
-      }
-    } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        "An error occurred while adding the book.";
-      alert(message);
-      console.error("Error details:", error);
-    }
-  };
+  const {
+    formData,
+    selectedFile,
+    isSubmitting,
+    handleChange,
+    handleFileChange,
+    handleSubmit,
+  } = useAddBookForm();
 
   return (
     <PageShell>
@@ -102,14 +48,20 @@ export default function AddBookPage() {
 
       <div
         className="authPage"
-        style={{ minHeight: "auto", padding: "40px 0" }}
+        style={{
+          minHeight: "auto",
+          padding: "40px 0",
+        }}
       >
         <form
           className="authCard"
           style={{ maxWidth: "600px" }}
           onSubmit={handleSubmit}
         >
+          <BackButton />
+          
           <h2>Book Details</h2>
+
           <p>Fill in the information to add a book to the library collection</p>
 
           <div className="stackCol">
@@ -143,6 +95,8 @@ export default function AddBookPage() {
             <InputField
               label="Publish Year"
               name="publishYear"
+              type="number"
+              min="1"
               value={formData.publishYear}
               onChange={handleChange}
               placeholder="e.g. 1925"
@@ -158,18 +112,28 @@ export default function AddBookPage() {
               required
             />
 
+            {/*
+            ===============================================
+            בחירת תמונת כריכה
+            ===============================================
+            */}
+
             <div className="formGroup">
-              <label className="label">Book Cover Image</label>
+              <label className="label" htmlFor="book-cover-upload">
+                Book Cover Image
+              </label>
+
               <input
                 type="file"
-                id="file-upload"
+                id="book-cover-upload"
                 onChange={handleFileChange}
                 accept="image/*"
                 required
-                style={{ display: "none" }} // מחביא את הכפתור המקורי
+                style={{ display: "none" }}
               />
+
               <label
-                htmlFor="file-upload"
+                htmlFor="book-cover-upload"
                 className="input"
                 style={{
                   display: "block",
@@ -198,8 +162,8 @@ export default function AddBookPage() {
               required
             />
 
-            <Button type="submit" variant="primary">
-              Add Book to Catalog
+            <Button type="submit" variant="primary" disabled={isSubmitting}>
+              {isSubmitting ? "Adding Book..." : "Add Book to Catalog"}
             </Button>
           </div>
         </form>
