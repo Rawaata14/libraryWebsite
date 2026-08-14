@@ -28,6 +28,10 @@ export const userPropType = PropTypes.shape({
   address: PropTypes.string,
   role: PropTypes.string,
   profileImage: PropTypes.string,
+  profile_image_name: PropTypes.string,
+  status: PropTypes.string,
+  createdAt: PropTypes.string,
+  lastLoginAt: PropTypes.string,
 });
 
 /*

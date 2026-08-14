@@ -10,6 +10,8 @@ profileImage.js
 =========================================================
 */
 
+import { buildApiUrl } from "../config/api";
+
 /*
 ---------------------------------------------------------
 getProfileImageSrc
@@ -26,7 +28,7 @@ getProfileImageSrc
 */
 export function getProfileImageSrc(user) {
   if (user?.profile_image_name) {
-    return `http://localhost:8000/uploads/profile-images/${user.profile_image_name}`;
+    return buildApiUrl(`/uploads/profile-images/${user.profile_image_name}`);
   }
 
   if (user?.profileImage) {
