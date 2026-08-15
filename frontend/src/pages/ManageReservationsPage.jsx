@@ -17,6 +17,7 @@ useManageReservations
 */
 
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 import PageShell from "../components/layout/PageShell";
@@ -62,6 +63,7 @@ export default function ManageReservationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const navigate = useNavigate();
 
   /*
   =========================================================
@@ -445,6 +447,38 @@ export default function ManageReservationsPage() {
   const cancelledReservationsCount = reservations.filter((reservation) =>
     isCancelledStatus(reservation.status),
   ).length;
+  const {
+    reservations,
+    filteredReservations,
+    searchText,
+    setSearchText,
+    statusFilter,
+    setStatusFilter,
+    isLoading,
+    errorMessage,
+    clearErrorMessage,
+    successMessage,
+    clearSuccessMessage,
+    selectedReservation,
+    cancellationReason,
+    setCancellationReason,
+    isCancelling,
+    openCancellationDialog,
+    closeCancellationDialog,
+    handleLibrarianCancellation,
+    messageReservation,
+    messageSubject,
+    setMessageSubject,
+    messageContent,
+    setMessageContent,
+    isSendingMessage,
+    openMessageDialog,
+    closeMessageDialog,
+    handleSendReservationMessage,
+    fetchReservations,
+    activeReservationsCount,
+    cancelledReservationsCount,
+  } = useManageReservations();
 
   return (
     <PageShell>
