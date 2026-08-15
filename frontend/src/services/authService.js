@@ -8,6 +8,10 @@ authService.js
 השירות אחראי בשלב זה על:
 - בדיקת Session פעיל.
 - ביצוע התנתקות מהמערכת.
+- התחברות משתמש.
+- הרשמת משתמש חדש.
+- בדיקת Session פעיל.
+- ביצוע התנתקות מהמערכת.
 =========================================================
 */
 
@@ -42,6 +46,62 @@ export const logoutUser = async () => {
   return axios.post(
     buildApiUrl("/user/logout"),
     {},
+    {
+      withCredentials: true,
+    },
+  );
+};
+
+/*
+---------------------------------------------------------
+loginUser
+
+תפקיד:
+שולחת לשרת את פרטי ההתחברות
+ומחזירה את המשתמש המחובר.
+---------------------------------------------------------
+*/
+export const loginUser = async ({
+  email,
+  password,
+}) => {
+  return axios.post(
+    buildApiUrl("/user/login"),
+    {
+      email,
+      password,
+    },
+    {
+      withCredentials: true,
+    },
+  );
+};
+
+/*
+---------------------------------------------------------
+registerUser
+
+תפקיד:
+שולחת לשרת את פרטי המשתמש החדש
+ומחזירה את המשתמש שנוצר והתחבר.
+---------------------------------------------------------
+*/
+export const registerUser = async ({
+  fullName,
+  email,
+  password,
+  phone,
+  address,
+}) => {
+  return axios.post(
+    buildApiUrl("/user/register"),
+    {
+      fullName,
+      email,
+      password,
+      phone,
+      address,
+    },
     {
       withCredentials: true,
     },

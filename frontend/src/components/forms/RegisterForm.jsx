@@ -16,13 +16,13 @@ RegisterForm.jsx
 
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
 
 import InputField from "../common/InputField";
 import Button from "../common/Button";
 import BackButton from "../common/BackButton";
 import { AuthContext } from "../../context/AuthContext";
-import { buildApiUrl } from "../../config/api";
+
+import { registerUser } from "../../services/authService";
 
 const PASSWORD_PATTERN = /^(?=.*[a-zA-Z])(?=.*\d).{6,20}$/;
 
@@ -90,19 +90,13 @@ export default function RegisterForm() {
     setIsSubmitting(true);
 
     try {
-      const response = await axios.post(
-        buildApiUrl("/user/register"),
-        {
-          fullName: formData.fullName.trim(),
-          email: formData.email.trim(),
-          password: formData.password,
-          phone: formData.phone.trim(),
-          address: formData.address.trim(),
-        },
-        {
-          withCredentials: true,
-        },
-      );
+      const response = await registerUser({
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
+        phone: formData.phone.trim(),
+        address: formData.address.trim(),
+      });
 
       register(response.data.user);
       navigate("/");
