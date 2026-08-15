@@ -36,27 +36,14 @@ import PageShell from "../components/layout/PageShell";
 
 /*
 ---------------------------------------------------------
-LibrarianDashboardPage
+LIBRARIAN_ROLES
 
 תפקיד:
-דף זמני שמוגן ומאפשר כניסה לספרנים בלבד.
+מרכז את רשימת התפקידים המורשים
+לגשת לדפי ניהול הספרייה.
 ---------------------------------------------------------
 */
-function LibrarianDashboardPage() {
-  return (
-    <div
-      style={{
-        padding: "40px",
-        color: "white",
-        textAlign: "center",
-      }}
-    >
-      <h1>Librarian Dashboard</h1>
-
-      <p>גישה מותרת רק למשתמש עם role = librarian</p>
-    </div>
-  );
-}
+const LIBRARIAN_ROLES = ["librarian"];
 
 /*
 ---------------------------------------------------------
@@ -138,8 +125,8 @@ export default function AppRoutes() {
         <Route
           path="/librarian"
           element={
-            <RoleRoute allowedRoles={["librarian"]}>
-              <LibrarianDashboardPage />
+            <RoleRoute allowedRoles={LIBRARIAN_ROLES}>
+              <Navigate to="/profile" replace />
             </RoleRoute>
           }
         />
@@ -147,7 +134,7 @@ export default function AppRoutes() {
         <Route
           path="/admin/books"
           element={
-            <RoleRoute allowedRoles={["librarian"]}>
+            <RoleRoute allowedRoles={LIBRARIAN_ROLES}>
               <BooksPage />
             </RoleRoute>
           }
@@ -156,7 +143,7 @@ export default function AppRoutes() {
         <Route
           path="/admin/add-book"
           element={
-            <RoleRoute allowedRoles={["librarian"]}>
+            <RoleRoute allowedRoles={LIBRARIAN_ROLES}>
               <AddBookPage />
             </RoleRoute>
           }
@@ -165,7 +152,7 @@ export default function AppRoutes() {
         <Route
           path="/admin/map"
           element={
-            <RoleRoute allowedRoles={["librarian"]}>
+            <RoleRoute allowedRoles={LIBRARIAN_ROLES}>
               <AdminMapPage />
             </RoleRoute>
           }
@@ -174,7 +161,7 @@ export default function AppRoutes() {
         <Route
           path="/messages"
           element={
-            <RoleRoute allowedRoles={["librarian"]}>
+            <RoleRoute allowedRoles={LIBRARIAN_ROLES}>
               <MessagesPage />
             </RoleRoute>
           }
@@ -183,7 +170,7 @@ export default function AppRoutes() {
         <Route
           path="/admin/users"
           element={
-            <RoleRoute allowedRoles={["librarian"]}>
+            <RoleRoute allowedRoles={LIBRARIAN_ROLES}>
               <UsersManagementPage />
             </RoleRoute>
           }
@@ -192,7 +179,7 @@ export default function AppRoutes() {
         <Route
           path="/reports"
           element={
-            <RoleRoute allowedRoles={["librarian"]}>
+            <RoleRoute allowedRoles={LIBRARIAN_ROLES}>
               <ReportsPage />
             </RoleRoute>
           }
@@ -201,7 +188,7 @@ export default function AppRoutes() {
         <Route
           path="/admin/reservations"
           element={
-            <RoleRoute allowedRoles={["librarian"]}>
+            <RoleRoute allowedRoles={LIBRARIAN_ROLES}>
               <ManageReservationsPage />
             </RoleRoute>
           }
