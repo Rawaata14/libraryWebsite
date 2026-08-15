@@ -6,12 +6,15 @@ ReservationRow.jsx
 מציג שורה אחת בטבלת ניהול ההזמנות של הספרן.
 
 הקומפוננטה מציגה:
-- מזהה הזמנה.
+- מזהה ההזמנה.
 - פרטי המשתמש.
 - פרטי המקום.
-- תאריך ושעות.
-- סטטוס.
-- פעולות שליחת הודעה וביטול הזמנה.
+- תאריך ושעות ההזמנה.
+- סטטוס ההזמנה.
+- פעולות שליחת הודעה וביטול.
+
+הקומפוננטה אינה פונה לשרת.
+הפעולות מתקבלות דרך props.
 =========================================================
 */
 
@@ -22,19 +25,10 @@ import {
   getStatusLabel,
   getStatusClass,
   isCancelledStatus,
-} from "./reservationUtils";
+} from "../../utils/reservationUtils";
+import PropTypes from "prop-types";
+import { reservationPropType } from "../../propTypes/reservationPropTypes";
 
-/*
----------------------------------------------------------
-ReservationRow
-
-תפקיד:
-מקבלת אובייקט הזמנה אחד ומציגה אותו כשורה בטבלה.
-
-הקומפוננטה אינה משנה נתונים ואינה פונה לשרת.
-היא רק מפעילה את פונקציות הפעולה שמתקבלות דרך props.
----------------------------------------------------------
-*/
 export default function ReservationRow({
   reservation,
   onCancel,
@@ -106,3 +100,18 @@ export default function ReservationRow({
     </tr>
   );
 }
+
+/*
+---------------------------------------------------------
+ReservationRow.propTypes
+
+תפקיד:
+מגדיר את פרטי ההזמנה ואת פעולות הביטול
+ושליחת ההודעה הזמינות בכל שורת טבלה.
+---------------------------------------------------------
+*/
+ReservationRow.propTypes = {
+  reservation: reservationPropType.isRequired,
+  onCancel: PropTypes.func.isRequired,
+  onSendMessage: PropTypes.func.isRequired,
+};

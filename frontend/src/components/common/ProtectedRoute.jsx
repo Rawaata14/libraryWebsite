@@ -9,6 +9,8 @@
   - אם כן, לאפשר גישה לתוכן
 */
 
+import PropTypes from "prop-types";
+
 import { useContext } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
@@ -29,3 +31,7 @@ export default function ProtectedRoute({ children }) {
 
   return children;
 }
+
+ProtectedRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};

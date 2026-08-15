@@ -1,54 +1,108 @@
 const doQuery = require("../query");
 const bcrypt = require("bcrypt");
 
-async function registerUser(detailsToInsert) {
-  const { fullName, email, phone, passwordHash, role, status } =
-    detailsToInsert;
 
-  //check data
-  if (!fullName || !email || !passwordHash) {
-    return { success: false, message: "Missing required fields" };
+/*
+---------------------------------------------------------
+createSafeUser
+
+תפקיד:
+יוצרת אובייקט משתמש בטוח לשליחה ל-Frontend
+ולשמירה בתוך ה-Session.
+
+למה נוצרה:
+הרשומה שמגיעה ממסד הנתונים מכילה passwordHash.
+אסור לשלוח את הסיסמה המוצפנת לדפדפן או לשמור אותה
+בתוך ה-Session, גם אם היא אינה הסיסמה המקורית.
+---------------------------------------------------------
+*/
+function createSafeUser(user) {
+  return {
+    userId: user.userId,
+    fullName: user.fullName,
+    email: user.email,
+    phone: user.phone,
+    address: user.address,
+    role: user.role,
+    status: user.status,
+    createdAt: user.createdAt,
+    lastLoginAt: user.lastLoginAt,
+    profile_image_name: user.profile_image_name,
+  };
+}
+
+
+/*
+---------------------------------------------------------
+registerUser
+
+תפקיד:
+יוצרת חשבון קורא חדש במערכת.
+
+שלבי הפעולה:
+1. מנקה ומאמתת את הנתונים שהתקבלו.
+2. בודקת שלא קיים משתמש עם אותו אימייל.
+3. מצפינה את הסיסמה.
+4. יוצרת משתמש חדש עם role של reader.
+5. מחזירה אובייקט משתמש בטוח ללא passwordHash.
+---------------------------------------------------------
+*/
+async function registerUser(detailsToInsert) {
+  const fullName = detailsToInsert.fullName?.trim();
+  const email = detailsToInsert.email?.trim().toLowerCase();
+  const phone = detailsToInsert.phone?.trim() || null;
+  const address = detailsToInsert.address?.trim() || null;
+  const password = detailsToInsert.password;
+
+  if (!fullName || !email || !password) {
+    return {
+      success: false,
+      message: "Full name, email and password are required",
+    };
   }
-  if (passwordHash.length < 6 || passwordHash.length > 20) {
+
+  if (password.length < 6 || password.length > 20) {
     return {
       success: false,
       message: "Password must be between 6 and 20 characters long",
     };
   }
 
-  const normalizedPhone = detailsToInsert.phone || null; // Optional field, set to null if not provided
-  const normalizedRole = detailsToInsert.role || "reader"; // Default role is "reader"
-  const normalizedStatus = detailsToInsert.status || "active"; // Default status is "active"
   try {
-    //check if reader already exists according to email
-    const existingUserSQL = "SELECT * FROM user WHERE email = ?";
-    const existingUser = await doQuery(existingUserSQL, [email]);
+    const existingUsers = await doQuery(
+      "SELECT userId FROM `user` WHERE email = ?",
+      [email],
+    );
 
-    if (existingUser.length > 0) {
-      return { success: false, message: "User with this email already exists" };
-    } else {
-      const hashedPassword = await bcrypt.hash(passwordHash, 10);
-
-      let paramsToInsert = [
-        fullName,
-        email,
-        normalizedPhone,
-        hashedPassword,
-        normalizedRole,
-        normalizedStatus,
-      ];
-
-      const insertUserSQL =
-        "INSERT INTO user (fullName, email, phone, passwordHash, role, status) VALUES (?, ?, ?, ?, ?, ?)";
-      const result = await doQuery(insertUserSQL, paramsToInsert);
-
-      if (result.affectedRows > 0) {
-        return { success: true, message: "User registered successfully" };
-      }
-      return { success: false, message: "Could not create user account" };
+    if (existingUsers.length > 0) {
+      return {
+        success: false,
+        message: "User with this email already exists",
+      };
     }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const insertResult = await doQuery(
+      `INSERT INTO \`user\`
+        (fullName, email, phone, address, passwordHash, role, status)
+       VALUES (?, ?, ?, ?, ?, 'reader', 'active')`,
+      [fullName, email, phone, address, hashedPassword],
+    );
+
+    const createdUsers = await doQuery(
+      "SELECT * FROM `user` WHERE userId = ?",
+      [insertResult.insertId],
+    );
+
+    return {
+      success: true,
+      message: "User registered successfully",
+      user: createSafeUser(createdUsers[0]),
+    };
   } catch (error) {
     console.error("Error during registration:", error);
+
     return {
       success: false,
       message: "An error occurred while registering the user",
@@ -61,77 +115,75 @@ async function registerUser(detailsToInsert) {
 loginUser
 
 תפקיד:
-מבצע התחברות למערכת.
+מבצעת התחברות מאובטחת למערכת.
 
 שלבי הפעולה:
-1. מחפש את המשתמש לפי אימייל.
-2. בודק התאמה בין הסיסמה שהוזנה לסיסמה השמורה במסד הנתונים.
-3. מעדכן את זמן ההתחברות האחרון.
-4. מחזיר את נתוני המשתמש המעודכנים.
+1. מנקה ומאמתת את האימייל והסיסמה.
+2. מחפשת את המשתמש לפי אימייל.
+3. בודקת שהמשתמש אינו חסום.
+4. משווה את הסיסמה לסיסמה המוצפנת.
+5. מעדכנת את זמן ההתחברות האחרון.
+6. מחזירה משתמש בטוח ללא passwordHash.
 ---------------------------------------------------------
 */
 async function loginUser(email, password) {
+  const normalizedEmail = email?.trim().toLowerCase();
+
+  if (!normalizedEmail || !password) {
+    return {
+      success: false,
+      message: "Email and password are required",
+    };
+  }
+
   try {
-    console.log("Attempting to log in user with email:", email);
-
-    const getUserSQL = "SELECT * FROM user WHERE email = ?";
-
-    const users = await doQuery(getUserSQL, [email]);
+    const users = await doQuery(
+      "SELECT * FROM `user` WHERE email = ?",
+      [normalizedEmail],
+    );
 
     if (users.length === 0) {
       return {
         success: false,
-        message: "User not found",
+        message: "Invalid email or password",
       };
     }
 
     const user = users[0];
 
-    const isMatch = await bcrypt.compare(
-      password,
-      user.passwordHash
-    );
-
-    if (!isMatch) {
+    if (user.status !== "active") {
       return {
         success: false,
-        message: "Invalid password",
+        message: "This account is blocked",
       };
     }
 
-    /*
-    ---------------------------------------------------------
-    עדכון זמן התחברות אחרון
-
-    תפקיד:
-    שמירת זמן ההתחברות האחרון של המשתמש.
-    ---------------------------------------------------------
-    */
-    const updateLastLoginSQL =
-      "UPDATE user SET lastLoginAt = NOW() WHERE email = ?";
-
-    await doQuery(updateLastLoginSQL, [email]);
-
-    /*
-    ---------------------------------------------------------
-    שליפת המשתמש לאחר עדכון זמן התחברות
-
-    תפקיד:
-    מחזירה את הנתונים המעודכנים של המשתמש
-    כולל lastLoginAt החדש.
-    ---------------------------------------------------------
-    */
-    const updatedUsers = await doQuery(
-      getUserSQL,
-      [email]
+    const isPasswordCorrect = await bcrypt.compare(
+      password,
+      user.passwordHash,
     );
 
-    const updatedUser = updatedUsers[0];
+    if (!isPasswordCorrect) {
+      return {
+        success: false,
+        message: "Invalid email or password",
+      };
+    }
+
+    await doQuery(
+      "UPDATE `user` SET lastLoginAt = NOW() WHERE userId = ?",
+      [user.userId],
+    );
+
+    const updatedUsers = await doQuery(
+      "SELECT * FROM `user` WHERE userId = ?",
+      [user.userId],
+    );
 
     return {
       success: true,
       message: "Login successful",
-      user: updatedUser,
+      user: createSafeUser(updatedUsers[0]),
     };
   } catch (error) {
     console.error("Error during login:", error);
@@ -143,45 +195,52 @@ async function loginUser(email, password) {
   }
 }
 
+
 /*
-  updateProfileImage
-  ------------------
-  תפקיד:
-  עדכון שם קובץ תמונת הפרופיל של המשתמש במסד הנתונים.
+---------------------------------------------------------
+updateProfileImage
 
-  למה נוצרה:
-  כאשר משתמש או ספרן מעלים תמונת פרופיל חדשה,
-  התמונה עצמה נשמרת בתיקיית uploads,
-  ובמסד הנתונים נשמר רק שם הקובץ.
+תפקיד:
+מעדכנת במסד הנתונים את שם קובץ תמונת הפרופיל
+ומחזירה אובייקט משתמש בטוח.
 
-  פרמטרים:
-  - email: האימייל של המשתמש המחובר.
-  - profileImageName: שם קובץ התמונה שנשמר בשרת.
+פרמטרים:
+- email: האימייל של המשתמש המחובר.
+- profileImageName: שם הקובץ שנשמר בשרת.
+---------------------------------------------------------
 */
 async function updateProfileImage(email, profileImageName) {
+  if (!email || !profileImageName) {
+    return {
+      success: false,
+      message: "User email and profile image are required",
+    };
+  }
+
   try {
-    const updateImageSQL =
-      "UPDATE `user` SET profile_image_name = ? WHERE email = ?";
+    await doQuery(
+      `UPDATE \`user\`
+       SET profile_image_name = ?
+       WHERE email = ?`,
+      [profileImageName, email],
+    );
 
-    const result = await doQuery(updateImageSQL, [
-      profileImageName,
-      email,
-    ]);
+    const users = await doQuery(
+      "SELECT * FROM `user` WHERE email = ?",
+      [email],
+    );
 
-    if (result.affectedRows > 0) {
-      const getUserSQL = "SELECT * FROM `user` WHERE email = ?";
-      const users = await doQuery(getUserSQL, [email]);
-
+    if (users.length === 0) {
       return {
-        success: true,
-        message: "Profile image updated successfully",
-        user: users[0],
+        success: false,
+        message: "User not found",
       };
     }
 
     return {
-      success: false,
-      message: "User not found",
+      success: true,
+      message: "Profile image updated successfully",
+      user: createSafeUser(users[0]),
     };
   } catch (error) {
     console.error("Error updating profile image:", error);
@@ -198,36 +257,49 @@ async function updateProfileImage(email, profileImageName) {
 updateUserProfile
 
 תפקיד:
-עדכון פרטי המשתמש במסד הנתונים.
+מעדכנת את הפרטים האישיים של המשתמש המחובר.
 
-למה נוצרה:
-מאפשרת למשתמש או לספרן לעדכן:
+ניתן לעדכן:
 - שם מלא
 - אימייל
 - טלפון
+- כתובת
 - סיסמה
 
-במידה ולא הוכנסה סיסמה חדשה,
+אם לא הוזנה סיסמה חדשה:
 הסיסמה הקיימת נשארת ללא שינוי.
+
+לאחר העדכון:
+מוחזר אובייקט משתמש בטוח ללא passwordHash.
 ---------------------------------------------------------
 */
 async function updateUserProfile(currentEmail, updatedData) {
+  const fullName = updatedData.fullName?.trim();
+  const email = updatedData.email?.trim().toLowerCase();
+  const phone = updatedData.phone?.trim() || null;
+  const address = updatedData.address?.trim() || null;
+  const password = updatedData.password?.trim() || "";
+
+  if (!fullName || !email) {
+    return {
+      success: false,
+      message: "Full name and email are required",
+    };
+  }
+
+  if (password && (password.length < 6 || password.length > 20)) {
+    return {
+      success: false,
+      message: "Password must be between 6 and 20 characters long",
+    };
+  }
+
   try {
-    const { fullName, email, phone, password } = updatedData;
-
-    if (!fullName || !email) {
-      return {
-        success: false,
-        message: "Full name and email are required",
-      };
-    }
-
     if (email !== currentEmail) {
-      const existingUserSQL =
-        "SELECT * FROM `user` WHERE email = ?";
-
-      const existingUsers =
-        await doQuery(existingUserSQL, [email]);
+      const existingUsers = await doQuery(
+        "SELECT userId FROM `user` WHERE email = ?",
+        [email],
+      );
 
       if (existingUsers.length > 0) {
         return {
@@ -237,53 +309,47 @@ async function updateUserProfile(currentEmail, updatedData) {
       }
     }
 
-    let updateSQL =
-      "UPDATE `user` SET fullName = ?, email = ?, phone = ?";
+    let updateSQL = `
+      UPDATE \`user\`
+      SET fullName = ?,
+          email = ?,
+          phone = ?,
+          address = ?
+    `;
 
-    const params = [
-      fullName,
-      email,
-      phone || null,
-    ];
+    const params = [fullName, email, phone, address];
 
-    if (password && password.trim() !== "") {
-      const hashedPassword =
-        await bcrypt.hash(password, 10);
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10);
 
       updateSQL += ", passwordHash = ?";
-
       params.push(hashedPassword);
     }
 
     updateSQL += " WHERE email = ?";
-
     params.push(currentEmail);
 
-    const result = await doQuery(updateSQL, params);
+    await doQuery(updateSQL, params);
 
-    if (result.affectedRows > 0) {
-      const getUserSQL =
-        "SELECT * FROM `user` WHERE email = ?";
+    const updatedUsers = await doQuery(
+      "SELECT * FROM `user` WHERE email = ?",
+      [email],
+    );
 
-      const users =
-        await doQuery(getUserSQL, [email]);
-
+    if (updatedUsers.length === 0) {
       return {
-        success: true,
-        message: "Profile updated successfully",
-        user: users[0],
+        success: false,
+        message: "User not found",
       };
     }
 
     return {
-      success: false,
-      message: "User not found",
+      success: true,
+      message: "Profile updated successfully",
+      user: createSafeUser(updatedUsers[0]),
     };
   } catch (error) {
-    console.error(
-      "Error updating user profile:",
-      error
-    );
+    console.error("Error updating user profile:", error);
 
     return {
       success: false,
@@ -327,24 +393,76 @@ async function getAllUsers() {
 updateUserStatus
 
 תפקיד:
-עדכון סטטוס משתמש ל-active או blocked.
+מעדכנת את סטטוס המשתמש ל-active או blocked.
+
+הגנות:
+- נדרשים אימייל וסטטוס.
+- מתקבלים רק סטטוסים חוקיים.
+- הספרן המחובר אינו יכול לחסום את החשבון של עצמו.
+- נבדק שהמשתמש קיים לפני ביצוע העדכון.
 ---------------------------------------------------------
 */
-async function updateUserStatus(email, status) {
+async function updateUserStatus(
+  email,
+  status,
+  currentLibrarianEmail,
+) {
+  const normalizedEmail = email?.trim().toLowerCase();
+  const normalizedStatus = status?.trim().toLowerCase();
+  const normalizedLibrarianEmail = currentLibrarianEmail
+    ?.trim()
+    .toLowerCase();
+
+  const allowedStatuses = ["active", "blocked"];
+
+  if (!normalizedEmail || !normalizedStatus) {
+    return {
+      success: false,
+      message: "Email and status are required",
+    };
+  }
+
+  if (!allowedStatuses.includes(normalizedStatus)) {
+    return {
+      success: false,
+      message: "Status must be active or blocked",
+    };
+  }
+
+  if (
+    normalizedEmail === normalizedLibrarianEmail &&
+    normalizedStatus === "blocked"
+  ) {
+    return {
+      success: false,
+      message: "You cannot block your own account",
+    };
+  }
+
   try {
-    if (!email || !status) {
+    const users = await doQuery(
+      `SELECT userId
+       FROM \`user\`
+       WHERE email = ?`,
+      [normalizedEmail],
+    );
+
+    if (users.length === 0) {
       return {
         success: false,
-        message: "Email and status are required",
+        message: "User not found",
       };
     }
 
-    const sql = "UPDATE `user` SET status = ? WHERE email = ?";
-
-    const result = await doQuery(sql, [status, email]);
+    await doQuery(
+      `UPDATE \`user\`
+       SET status = ?
+       WHERE email = ?`,
+      [normalizedStatus, normalizedEmail],
+    );
 
     return {
-      success: result.affectedRows > 0,
+      success: true,
       message: "User status updated successfully",
     };
   } catch (error) {

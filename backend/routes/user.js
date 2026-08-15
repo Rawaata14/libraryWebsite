@@ -1,196 +1,271 @@
-const express = require("express");
-const session = require("express-session");
-const router = express.Router();
+/*
+=========================================================
+user.js
 
+תיאור הקובץ:
+Routes הקשורים למשתמשים ולניהול החשבון.
+
+הקובץ אחראי על:
+- הרשמה והתחברות.
+- בדיקת Session והתנתקות.
+- עדכון פרטי משתמש ותמונת פרופיל.
+- שליפת משתמשים ועדכון סטטוס על ידי ספרן.
+- שליפת נתוני הדשבורד של המשתמש.
+=========================================================
+*/
+
+const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
+const {
+  registerUser,
+  loginUser,
+  updateProfileImage,
+  updateUserProfile,
+  getAllUsers,
+  updateUserStatus,
+  getUserDashboardStats,
+} = require("../database/queries/authorization");
+
+const { requireAuth, requireLibrarian } = require("../middleware/auth");
+
+const router = express.Router();
+
 /*
-  יצירת תיקיית שמירת תמונות פרופיל
-  לוודא שקיימת תיקייה בשרת עבור תמונות פרופיל.
-
-  למה נוצר:
-  אם התיקייה לא קיימת, multer לא יוכל לשמור את הקבצים.
+=========================================================
+הגדרת העלאת תמונות פרופיל
+=========================================================
 */
-const profileImagesDir = path.join(__dirname, "../uploads/profile-images");
 
-if (!fs.existsSync(profileImagesDir)) {
-  fs.mkdirSync(profileImagesDir, { recursive: true });
+const profileImagesDirectory = path.join(
+  __dirname,
+  "../uploads/profile-images",
+);
+
+/*
+---------------------------------------------------------
+יצירת תיקיית תמונות הפרופיל
+
+תפקיד:
+מוודאת שתיקיית שמירת התמונות קיימת לפני ש-multer
+מנסה לשמור בה קבצים.
+---------------------------------------------------------
+*/
+if (!fs.existsSync(profileImagesDirectory)) {
+  fs.mkdirSync(profileImagesDirectory, { recursive: true });
 }
 
 /*
-  הגדרת multer לשמירת תמונות פרופיל
-  קביעת מיקום שמירת הקובץ ושם הקובץ.
+---------------------------------------------------------
+profileImageStorage
 
-  למה נוצר:
-  כדי לאפשר העלאת תמונה מהמחשב של המשתמש
-  ולשמור אותה בצורה מסודרת בשרת.
+תפקיד:
+מגדירה היכן תישמר תמונת הפרופיל ומה יהיה שם הקובץ.
+
+שם הקובץ מורכב מזמן ההעלאה ומספר אקראי,
+כדי למנוע דריסה של תמונות קיימות.
+---------------------------------------------------------
 */
-const storage = multer.diskStorage({
-  /*
-    destination
-    קובע באיזו תיקייה לשמור את תמונת הפרופיל.
-  */
-  destination: (req, file, cb) => {
-    cb(null, profileImagesDir);
+const profileImageStorage = multer.diskStorage({
+  destination: (req, file, callback) => {
+    callback(null, profileImagesDirectory);
   },
 
-  /*
-    filename
-    יוצר שם ייחודי לתמונה כדי למנוע דריסה של קבצים קיימים.
-  */
-  filename: (req, file, cb) => {
-    const uniqueName = `${Date.now()}-${file.originalname}`;
+  filename: (req, file, callback) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 
-    cb(null, uniqueName);
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+
+    callback(null, `${uniqueSuffix}${fileExtension}`);
   },
 });
 
 /*
-  fileFilter
-  מאפשר העלאת קבצי תמונה בלבד.
+---------------------------------------------------------
+profileImageFilter
 
-  למה נוצר:
-  כדי למנוע העלאה של קבצים לא מתאימים כמו PDF או EXE.
+תפקיד:
+מאפשרת העלאת קובצי תמונה בלבד.
+---------------------------------------------------------
 */
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith("image/")) {
-    cb(null, true);
-  } else {
-    cb(new Error("Only image files are allowed"), false);
+function profileImageFilter(req, file, callback) {
+  if (!file.mimetype.startsWith("image/")) {
+    return callback(new Error("Only image files are allowed"), false);
   }
-};
+
+  return callback(null, true);
+}
 
 /*
-  upload
-  middleware של multer שמטפל בהעלאת הקובץ.
+---------------------------------------------------------
+uploadProfileImage
+
+תפקיד:
+מטפלת בהעלאת תמונת פרופיל אחת בגודל של עד 5MB.
+---------------------------------------------------------
 */
-const upload = multer({
-  storage,
-  fileFilter,
+const uploadProfileImage = multer({
+  storage: profileImageStorage,
+  fileFilter: profileImageFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
 });
 
-// const authQueries = require("../database/queries/authorization");
+/*
+=========================================================
+Routes ציבוריים
+=========================================================
+*/
 
-// Route for user registration
+/*
+---------------------------------------------------------
+POST /user/register
+
+תפקיד:
+יוצרת חשבון משתמש חדש ושומרת אותו ב-Session.
+---------------------------------------------------------
+*/
 router.post("/register", async (req, res) => {
   try {
-    const register = require("../database/queries/authorization").registerUser;
-    const detailsToInsert = req.body;
-    const result = await register(detailsToInsert);
-    if (result.success) {
-      req.session.user = result.user;
-      res.status(200).json(result);
-    } else {
-      res.status(400).json(result);
+    const result = await registerUser(req.body);
+
+    if (!result.success) {
+      return res.status(400).json(result);
     }
+
+    req.session.user = result.user;
+
+    return res.status(201).json(result);
   } catch (error) {
     console.error("Error in registration:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
 
-// Route for user login
-router.post("/login", async (req, res) => {
-  try {
-    const login = require("../database/queries/authorization").loginUser;
-    const { email, password } = req.body;
-    const result = await login(email, password);
-    if (result.success) {
-      req.session.user = result.user; // שמירת פרטי המשתמש בסשן
-      res.status(200).json(result);
-    } else {
-      res.status(400).json(result);
-    }
-  } catch (error) {
-    console.error("Error in login:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
-// Route for checking authentication status
-router.get("/check-auth", async (req, res) => {
-  try {
-    if (req.session && req.session.user) {
-      req.session.user = req.session.user; // שמירת פרטי המשתמש בסשן
-      res.status(200).json(req.session.user);
-    } else {
-      res.status(401).json({ message: "Not authenticated" });
-    }
-  } catch (error) {
-    console.error("Error in checking authentication:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
-});
-
-// Route for user logout
-router.post("/logout", (req, res) => {
-  try {
-    if (req.session) {
-      req.session.destroy((err) => {
-        if (err) {
-          console.error("Error in logout:", err);
-          return res.status(500).json({ message: "Internal server error" });
-        }
-        res.clearCookie("connect.sid");
-        res.status(200).json({ message: "Logged out successfully" });
-      });
-    } else {
-      res.status(400).json({ message: "No active session" });
-    }
-  } catch (error) {
-    console.error("Error in logout:", error);
-    res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 });
 
 /*
-  Route: PUT /user/profile-image
-  העלאת תמונת פרופיל חדשה למשתמש המחובר.
+---------------------------------------------------------
+POST /user/login
 
-  איך זה עובד:
-  - בודק שיש משתמש מחובר בסשן.
-  - מקבל קובץ בשם profileImage.
-  - שומר את הקובץ בתיקיית uploads/profile-images.
-  - מעדכן במסד הנתונים את שם התמונה.
-  - מעדכן גם את פרטי המשתמש בסשן.
+תפקיד:
+מבצעת התחברות ושומרת את המשתמש הבטוח ב-Session.
+---------------------------------------------------------
+*/
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const result = await loginUser(email, password);
+
+    if (!result.success) {
+      return res.status(401).json(result);
+    }
+
+    req.session.user = result.user;
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error in login:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
+/*
+=========================================================
+Routes למשתמש מחובר
+=========================================================
+*/
+
+/*
+---------------------------------------------------------
+GET /user/check-auth
+
+תפקיד:
+מחזירה את המשתמש המחובר מתוך ה-Session.
+---------------------------------------------------------
+*/
+router.get("/check-auth", requireAuth, (req, res) => {
+  return res.status(200).json(req.session.user);
+});
+
+/*
+---------------------------------------------------------
+POST /user/logout
+
+תפקיד:
+מוחקת את ה-Session ואת עוגיית ההתחברות.
+---------------------------------------------------------
+*/
+router.post("/logout", requireAuth, (req, res) => {
+  req.session.destroy((error) => {
+    if (error) {
+      console.error("Error in logout:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Could not log out",
+      });
+    }
+
+    res.clearCookie("connect.sid", {
+      path: "/",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  });
+});
+
+/*
+---------------------------------------------------------
+PUT /user/profile-image
+
+תפקיד:
+מעלה תמונת פרופיל ומעדכנת את שם הקובץ במסד.
+
+הגנות:
+- המשתמש חייב להיות מחובר.
+- ניתן להעלות תמונה אחת בלבד.
+- גודל התמונה מוגבל ל-5MB.
+---------------------------------------------------------
 */
 router.put(
   "/profile-image",
-  upload.single("profileImage"),
+  requireAuth,
+  uploadProfileImage.single("profileImage"),
   async (req, res) => {
     try {
-      if (!req.session || !req.session.user) {
-        return res.status(401).json({
-          success: false,
-          message: "User is not authenticated",
-        });
-      }
-
       if (!req.file) {
         return res.status(400).json({
           success: false,
-          message: "No image file uploaded",
+          message: "No image file was uploaded",
         });
       }
 
-      const updateProfileImage =
-        require("../database/queries/authorization").updateProfileImage;
+      const result = await updateProfileImage(
+        req.session.user.email,
+        req.file.filename,
+      );
 
-      const userEmail = req.session.user.email;
-
-      const profileImageName = req.file.filename;
-
-      const result = await updateProfileImage(userEmail, profileImageName);
-
-      if (result.success) {
-        req.session.user = result.user;
-
-        return res.status(200).json(result);
+      if (!result.success) {
+        return res.status(400).json(result);
       }
 
-      return res.status(400).json(result);
+      req.session.user = result.user;
+
+      return res.status(200).json(result);
     } catch (error) {
       console.error("Error uploading profile image:", error);
 
@@ -204,46 +279,24 @@ router.put(
 
 /*
 ---------------------------------------------------------
-Route: PUT /user/profile
+PUT /user/profile
 
 תפקיד:
-עדכון פרטים אישיים של המשתמש המחובר.
-
-הנתונים שניתן לעדכן:
-- fullName
-- email
-- phone
-- password
-
-לאחר עדכון מוצלח:
-מתבצע עדכון גם של session המשתמש.
+מעדכנת את הפרטים האישיים של המשתמש המחובר
+ומעדכנת גם את המשתמש השמור ב-Session.
 ---------------------------------------------------------
 */
-router.put("/profile", async (req, res) => {
+router.put("/profile", requireAuth, async (req, res) => {
   try {
-    if (!req.session || !req.session.user) {
-      return res.status(401).json({
-        success: false,
-        message: "User is not authenticated",
-      });
+    const result = await updateUserProfile(req.session.user.email, req.body);
+
+    if (!result.success) {
+      return res.status(400).json(result);
     }
 
-    const updateUserProfile =
-      require("../database/queries/authorization").updateUserProfile;
+    req.session.user = result.user;
 
-    const currentEmail = req.session.user.email;
-
-    const updatedData = req.body;
-
-    const result = await updateUserProfile(currentEmail, updatedData);
-
-    if (result.success) {
-      req.session.user = result.user;
-
-      return res.status(200).json(result);
-    }
-
-    return res.status(400).json(result);
+    return res.status(200).json(result);
   } catch (error) {
     console.error("Error updating profile:", error);
 
@@ -256,141 +309,82 @@ router.put("/profile", async (req, res) => {
 
 /*
 ---------------------------------------------------------
-Route: GET /user/all
+GET /user/dashboard-stats
 
 תפקיד:
-שליפת כל המשתמשים עבור הספרן.
+מחזירה את נתוני הדשבורד עבור המשתמש המחובר.
 ---------------------------------------------------------
 */
-router.get("/all", async (req, res) => {
+router.get("/dashboard-stats", requireAuth, async (req, res) => {
   try {
-    if (!req.session.user || req.session.user.role !== "librarian") {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied",
-      });
-    }
-
-    const getAllUsers =
-      require("../database/queries/authorization").getAllUsers;
-
-    const result = await getAllUsers();
-
-    return res.status(result.success ? 200 : 500).json(result);
-  } catch (error) {
-    console.error("Error getting users:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-});
-
-/*
----------------------------------------------------------
-Route: PUT /user/status
-
-תפקיד:
-עדכון סטטוס משתמש על ידי הספרן.
----------------------------------------------------------
-*/
-router.put("/status", async (req, res) => {
-  try {
-    if (!req.session.user || req.session.user.role !== "librarian") {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied",
-      });
-    }
-
-    const updateUserStatus =
-      require("../database/queries/authorization").updateUserStatus;
-
-    const { email, status } = req.body;
-
-    const result = await updateUserStatus(email, status);
-
-    return res.status(result.success ? 200 : 400).json(result);
-  } catch (error) {
-    console.error("Error updating user status:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-});
-
-/*
----------------------------------------------------------
-Route: GET /user/all
-
-תפקיד:
-שליפת כל המשתמשים במערכת עבור דף ניהול המשתמשים של הספרן.
-
-הרשאה:
-רק משתמש עם role = librarian יכול לגשת לנתיב הזה.
----------------------------------------------------------
-*/
-router.get("/all", async (req, res) => {
-  try {
-    if (!req.session || !req.session.user) {
-      return res.status(401).json({
-        success: false,
-        message: "User is not authenticated",
-      });
-    }
-
-    if (req.session.user.role !== "librarian") {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied. Librarian privileges required.",
-      });
-    }
-
-    const getAllUsers =
-      require("../database/queries/authorization").getAllUsers;
-
-    const result = await getAllUsers();
-
-    return res.status(result.success ? 200 : 500).json(result);
-  } catch (error) {
-    console.error("Error getting users:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error",
-    });
-  }
-});
-
-/*
----------------------------------------------------------
-Route: GET /user/dashboard-stats
-
-תפקיד:
-מחזיר נתוני דשבורד אמיתיים עבור המשתמש המחובר.
----------------------------------------------------------
-*/
-router.get("/dashboard-stats", async (req, res) => {
-  try {
-    if (!req.session || !req.session.user) {
-      return res.status(401).json({
-        success: false,
-        message: "User is not authenticated",
-      });
-    }
-
-    const getUserDashboardStats =
-      require("../database/queries/authorization")
-        .getUserDashboardStats;
-
     const result = await getUserDashboardStats(req.session.user.userId);
 
     return res.status(result.success ? 200 : 500).json(result);
   } catch (error) {
     console.error("Error loading user dashboard:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
+/*
+=========================================================
+Routes לספרן בלבד
+=========================================================
+*/
+
+/*
+---------------------------------------------------------
+GET /user/all
+
+תפקיד:
+מחזירה את כל המשתמשים עבור דף ניהול המשתמשים.
+---------------------------------------------------------
+*/
+router.get("/all", requireLibrarian, async (req, res) => {
+  try {
+    const result = await getAllUsers();
+
+    return res.status(result.success ? 200 : 500).json(result);
+  } catch (error) {
+    console.error("Error getting users:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+});
+
+/*
+---------------------------------------------------------
+PUT /user/status
+
+תפקיד:
+מאפשרת לספרן לעדכן את סטטוס המשתמש.
+
+הגנות:
+- requireLibrarian מוודאת שהמשתמש מחובר.
+- requireLibrarian מוודאת שהמשתמש הוא ספרן.
+- האימייל של הספרן נשלח ל-Query כדי למנוע חסימה עצמית.
+---------------------------------------------------------
+*/
+router.put("/status", requireLibrarian, async (req, res) => {
+  try {
+    const { email, status } = req.body;
+
+    const result = await updateUserStatus(
+      email,
+      status,
+      req.session.user.email,
+    );
+
+    return res.status(result.success ? 200 : 400).json(result);
+  } catch (error) {
+    console.error("Error updating user status:", error);
 
     return res.status(500).json({
       success: false,

@@ -11,6 +11,7 @@ ProfileForm.jsx
 - עריכת טלפון.
 - עדכון סיסמה חדשה.
 - אישור סיסמה.
+- עריכת כתובת.
 =========================================================
 */
 
@@ -23,6 +24,10 @@ ProfileForm
 ומפעיל שמירה כאשר המשתמש לוחץ על Save Details.
 ---------------------------------------------------------
 */
+
+import PropTypes from "prop-types";
+import { profileFormPropType } from "../../propTypes/profilePropTypes";
+
 export default function ProfileForm({
   profileForm,
   handleProfileFormChange,
@@ -66,6 +71,19 @@ export default function ProfileForm({
           />
         </div>
 
+        <div className="profileField">
+          <label htmlFor="profile-address">Address</label>
+
+          <input
+            id="profile-address"
+            type="text"
+            name="address"
+            value={profileForm.address}
+            onChange={handleProfileFormChange}
+            placeholder="Enter your address"
+            autoComplete="street-address"
+          />
+        </div>
 
         <div className="profileField">
           <label>New Password</label>
@@ -100,3 +118,9 @@ export default function ProfileForm({
     </div>
   );
 }
+
+ProfileForm.propTypes = {
+  profileForm: profileFormPropType.isRequired,
+  handleProfileFormChange: PropTypes.func.isRequired,
+  handleSaveProfileDetails: PropTypes.func.isRequired,
+};

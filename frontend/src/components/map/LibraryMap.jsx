@@ -1,106 +1,73 @@
-import { useRef, useState } from "react";
+/*
+=========================================================
+LibraryMap.jsx
+
+תיאור הקובץ:
+רכיב התצוגה של מפת הספרייה האינטראקטיבית.
+
+הקומפוננטה אחראית על:
+- הצגת סרגל כלי הניהול לספרן.
+- הצגת רקע המפה ואזורי הספרייה.
+- הצגת פריטי המפה.
+- הצגת פרטי הפריט הנבחר.
+
+מצב העריכה והפעולות מנוהלים באמצעות:
+useLibraryMap
+=========================================================
+*/
+
+import PropTypes from "prop-types";
+
 import MapItem from "./MapItem";
 import MapToolbar from "./MapToolbar";
-import axios from "axios";
 
-const mapZones = [
-  {
-    id: "quiet-room",
-    label: "Quiet Room",
-    minX: 3,
-    maxX: 34,
-    minY: 16,
-    maxY: 47,
-    labelX: 18,
-    labelY: 8,
-  },
-  {
-    id: "computer-area",
-    label: "Computer Area",
-    minX: 38,
-    maxX: 61,
-    minY: 16,
-    maxY: 42,
-    labelX: 49,
-    labelY: 8,
-  },
-  {
-    id: "group-room",
-    label: "Group Study Rooms",
-    minX: 65,
-    maxX: 97,
-    minY: 16,
-    maxY: 50,
-    labelX: 81,
-    labelY: 8,
-  },
-  {
-    id: "reading-book",
-    label: "Reading Book",
-    minX: 2,
-    maxX: 18,
-    minY: 51,
-    maxY: 80,
-    labelX: 18,
-    labelY: 57,
-  },
-  {
-    id: "study-room-1",
-    label: "Study Room 1",
-    minX: 49,
-    maxX: 63.5,
-    minY: 54,
-    maxY: 80,
-    labelX: 57,
-    labelY: 57,
-  },
-  {
-    id: "study-room-2",
-    label: "Study Room 2",
-    minX: 65,
-    maxX: 79.5,
-    minY: 54,
-    maxY: 80,
-    labelX: 72,
-    labelY: 57,
-  },
-  {
-    id: "study-room-3",
-    label: "Study Room 3",
-    minX: 81.5,
-    maxX: 98,
-    minY: 54,
-    maxY: 80,
-    labelX: 89,
-    labelY: 57,
-  },
-];
+import useLibraryMap from "../../hooks/useLibraryMap";
+import { mapZones } from "../../utils/mapUtils";
+import { seatPropType } from "../../propTypes/seatPropTypes";
 
-const isInsideAllowedZone = (x, y) => {
-  return mapZones.some(
-    (location) =>
-      x >= location.minX &&
-      x <= location.maxX &&
-      y >= location.minY &&
-      y <= location.maxY,
-  );
-};
+/*
+---------------------------------------------------------
+LibraryMap
 
-const getZoneByPosition = (x, y) => {
-  return mapZones.find(
-    (location) =>
-      x >= location.minX &&
-      x <= location.maxX &&
-      y >= location.minY &&
-      y <= location.maxY,
-  );
-};
-
+תפקיד:
+מחברת בין לוגיקת המפה שב-Hook
+לבין רכיבי התצוגה של המפה.
+---------------------------------------------------------
+*/
 export default function LibraryMap({
   isLibrarian = true,
   items = [],
   setItems,
   onSeatSelect,
+  fetchLatestSeats,
+  selectedSeatId,
+}) {
+  const {
+    mapRef,
+    selectedItem,
+    newItemType,
+    setNewItemType,
+    newItemPlacement,
+    setNewItemPlacement,
+    hoveredZoneId,
+    setDraggingItemId,
+    addItem,
+    deleteItem,
+    toggleBlockItem,
+    rotateSelectedItem,
+    handleItemSelect,
+    handleMapPointerMove,
+    stopDragging,
+    handleMapPointerLeave,
+    updateItemPosition,
+    saveMap,
+  } = useLibraryMap({
+    items,
+    setItems,
+    selectedSeatId,
+    onSeatSelect,
+    fetchLatestSeats,
+  });
   fetchLatestSeats, // 💡 נקבל את פונקציית הרענון של השרת ישירות מקומפוננטת העטיפה האבא
   selectedSeatId, // 💡 מזהה הכיסא הנבחר שמגיע מהקומפוננטה האב
 }) {
@@ -322,6 +289,12 @@ export default function LibraryMap({
 
   return (
     <div className="dynamicMapWrapper">
+      {/*
+      =====================================================
+      סרגל ניהול המפה
+      =====================================================
+      */}
+
       {isLibrarian && (
         <MapToolbar
           newItemType={newItemType}
@@ -338,15 +311,18 @@ export default function LibraryMap({
         />
       )}
 
+      {/*
+      =====================================================
+      משטח המפה
+      =====================================================
+      */}
+
       <div
         className="dynamicMapCanvas"
         ref={mapRef}
-        onPointerMove={handleMapMouseMove}
-        onPointerUp={handleMapMouseUp}
-        onPointerLeave={() => {
-          setHoveredZoneId(null);
-          handleMapMouseUp();
-        }}
+        onPointerMove={handleMapPointerMove}
+        onPointerUp={stopDragging}
+        onPointerLeave={handleMapPointerLeave}
       >
         <img
           src="/images/library-map.png"
@@ -354,20 +330,36 @@ export default function LibraryMap({
           className="dynamicMapBackground"
         />
 
+        {/*
+        ===================================================
+        כותרות אזורי המפה
+        ===================================================
+        */}
+
         {mapZones.map((zone) => (
           <div
             key={zone.id}
-            className={`mapZoneLabel ${hoveredZoneId === zone.id ? "hiddenZoneLabel" : ""}`}
-            style={{ left: `${zone.labelX}%`, top: `${zone.labelY}%` }}
+            className={`mapZoneLabel ${
+              hoveredZoneId === zone.id ? "hiddenZoneLabel" : ""
+            }`}
+            style={{
+              left: `${zone.labelX}%`,
+              top: `${zone.labelY}%`,
+            }}
           >
             {zone.label}
           </div>
         ))}
 
-        {/* לולאת הרינדור של הרהיטים - נקייה מכפילויות של אלמנטים מיותרים */}
+        {/*
+        ===================================================
+        פריטי המפה
+        ===================================================
+        */}
+
         {items.map((item) => {
           const isTable = item.type === "table-4" || item.type === "table-8";
-          const zIndexStyle = isTable ? 2 : 1;
+
           const isSeatClickable = isLibrarian || !isTable;
 
           return (
@@ -375,7 +367,7 @@ export default function LibraryMap({
               key={item.seatId}
               style={{
                 position: "absolute",
-                zIndex: zIndexStyle,
+                zIndex: isTable ? 2 : 1,
                 left: 0,
                 top: 0,
                 width: "100%",
@@ -383,7 +375,6 @@ export default function LibraryMap({
                 pointerEvents: "none",
               }}
             >
-              {/* 💡 ה-pointerEvents מועבר ישירות כפרופ ל-MapItem, שמחיל אותו על ה-div הראשי שלו */}
               <MapItem
                 item={item}
                 isSelected={selectedSeatId === item.seatId}
@@ -391,12 +382,18 @@ export default function LibraryMap({
                 onMove={updateItemPosition}
                 isLibrarian={isLibrarian}
                 setDraggingItemId={setDraggingItemId}
-                isClickable={isSeatClickable} // 💡 שולח את היכולת ללחוץ על הכיסא בהתאם למנהל או סוג הרהיט
+                isClickable={isSeatClickable}
               />
             </div>
           );
         })}
       </div>
+
+      {/*
+      =====================================================
+      פרטי הפריט הנבחר
+      =====================================================
+      */}
 
       {isLibrarian && selectedItem && (
         <div className="mapEditPanel">
@@ -413,3 +410,21 @@ export default function LibraryMap({
     </div>
   );
 }
+
+/*
+---------------------------------------------------------
+LibraryMap.propTypes
+
+תפקיד:
+מגדיר את פריטי המפה והפעולות שמתקבלות
+מקומפוננטת RoomMap.
+---------------------------------------------------------
+*/
+LibraryMap.propTypes = {
+  isLibrarian: PropTypes.bool,
+  items: PropTypes.arrayOf(seatPropType),
+  setItems: PropTypes.func.isRequired,
+  onSeatSelect: PropTypes.func.isRequired,
+  fetchLatestSeats: PropTypes.func,
+  selectedSeatId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+};

@@ -1,56 +1,212 @@
+/*
+=========================================================
+app.js
+
+תיאור הקובץ:
+נקודת הכניסה הראשית של שרת ה-Backend.
+
+הקובץ אחראי על:
+- טעינת משתני הסביבה.
+- יצירת שרת Express.
+- הגדרת CORS, JSON ו-Session.
+- חיבור כל קובצי ה-Routes.
+- טיפול בנתיבים לא קיימים ובשגיאות.
+- בדיקת החיבור למסד לפני הפעלת השרת.
+=========================================================
+*/
+
+require("dotenv").config({ quiet: true });
+
 const express = require("express");
 const session = require("express-session");
 const cors = require("cors");
-const dbSingleton = require("./database/dbSingleton");
 const path = require("path");
+
+const dbSingleton = require("./database/dbSingleton");
+
+const userRoutes = require("./routes/user");
+const bookRoutes = require("./routes/book");
+const seatRoutes = require("./routes/seat");
+const reservationRoutes = require("./routes/reservation");
+const messageRoutes = require("./routes/message");
+const reportRoutes = require("./routes/report");
+const notificationRoutes = require("./routes/notification");
 const librarianRoutes = require("./routes/librarian");
+
 const app = express();
 
+const PORT = Number(process.env.PORT) || 8000;
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5000";
+const SESSION_SECRET = process.env.SESSION_SECRET;
+
+/*
+---------------------------------------------------------
+בדיקת SESSION_SECRET
+
+תפקיד:
+מונעת הפעלת שרת ללא Secret שמגן על ה-Session.
+---------------------------------------------------------
+*/
+if (!SESSION_SECRET) {
+  throw new Error("SESSION_SECRET is missing. Add it to backend/.env");
+}
+
+/*
+=========================================================
+הגדרות כלליות ואבטחה בסיסית
+=========================================================
+*/
+
+app.disable("x-powered-by");
+
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
+
+/*
+---------------------------------------------------------
+CORS
+
+תפקיד:
+מאפשר ל-Frontend לשלוח בקשות ל-Backend
+יחד עם עוגיית ה-Session.
+---------------------------------------------------------
+*/
 app.use(
   cors({
-    origin: "http://localhost:5000",
+    origin: FRONTEND_URL,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
   }),
 );
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
+/*
+---------------------------------------------------------
+Session
+
+תפקיד:
+שומר את זהות המשתמש המחובר בין בקשות שונות.
+---------------------------------------------------------
+*/
 app.use(
   session({
-    secret: "your-secret-key",
+    secret: SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+
     cookie: {
-      secure: false, // Set to true if using HTTPS
       httpOnly: true,
-      sameSite: "lax", // Adjust based on your needs (e.g., "strict" or "none")
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 60 * 8,
     },
   }),
 );
 
+/*
+---------------------------------------------------------
+Static uploads
+
+תפקיד:
+מאפשר ל-Frontend לגשת לתמונות ספרים ותמונות פרופיל.
+---------------------------------------------------------
+*/
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-const db = dbSingleton.getConnection();
 
-const userRoutes = require("./routes/user");
+/*
+=========================================================
+Routes
+=========================================================
+*/
+
 app.use("/user", userRoutes);
-app.use("/books", require("./routes/book"));
-app.use("/seats", require("./routes/seat"));
-app.use("/reservations", require("./routes/reservation"));
-
-// חיבור הנתיבים של מערכת ההודעות לשרת
-app.use("/messages", require("./routes/message"));
-
-// חיבור הנתיבים של מערכת הדוחות לשרת
-app.use("/reports", require("./routes/report"));
-
+app.use("/books", bookRoutes);
+app.use("/seats", seatRoutes);
+app.use("/reservations", reservationRoutes);
+app.use("/messages", messageRoutes);
+app.use("/reports", reportRoutes);
+app.use("/notifications", notificationRoutes);
 app.use("/api/librarian", librarianRoutes);
-console.log("Database connection established successfully.");
-app.listen(8000, () => {
-  console.log("Server running on http://localhost:8000");
+
+/*
+---------------------------------------------------------
+GET /health
+
+תפקיד:
+מאפשר לבדוק במהירות שהשרת פועל.
+---------------------------------------------------------
+*/
+app.get("/health", (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: "Server is running",
+  });
 });
 
-// חיבור נתיבי ההתראות של המשתמשים
-app.use("/notifications",
-  require("./routes/notification"),
-);
+/*
+---------------------------------------------------------
+טיפול בנתיב לא קיים
+
+תפקיד:
+מחזיר תשובת 404 מסודרת לכל Route שאינו קיים.
+---------------------------------------------------------
+*/
+app.use((req, res) => {
+  return res.status(404).json({
+    success: false,
+    message: "Route not found",
+  });
+});
+
+/*
+---------------------------------------------------------
+טיפול מרכזי בשגיאות
+
+תפקיד:
+מחזיר תשובה אחידה במקרה של שגיאה שלא טופלה
+בתוך אחד מקובצי ה-Routes.
+---------------------------------------------------------
+*/
+app.use((error, req, res, next) => {
+  console.error("Unhandled server error:", error.message);
+
+  return res.status(500).json({
+    success: false,
+    message: "Internal server error",
+  });
+});
+
+/*
+---------------------------------------------------------
+startServer
+
+תפקיד:
+בודקת את החיבור למסד הנתונים ורק לאחר הצלחה
+מפעילה את שרת Express.
+
+למה נוצרה:
+אין טעם להפעיל שרת שאינו מסוגל לגשת למסד הנתונים.
+---------------------------------------------------------
+*/
+async function startServer() {
+  try {
+    await dbSingleton.getConnection();
+
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error(
+      "Server could not start because the database connection failed.",
+    );
+
+    process.exit(1);
+  }
+}
+
+startServer();
+
+module.exports = app;

@@ -18,7 +18,7 @@ export default function ReserveBookPage() {
   const { state: book } = useLocation();
 
   return (
-    <PageShell userType="guest">
+    <PageShell>
       <PageBanner title="Reserve a Book" />
 
       <div className="reservePage">

@@ -8,6 +8,8 @@
   - אם המשתמש כבר מחובר, להפנות לדף הבית
 */
 
+import PropTypes from "prop-types";
+
 import { useContext } from "react";
 import { Navigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
@@ -25,3 +27,7 @@ export default function GuestRoute({ children }) {
 
   return children;
 }
+
+GuestRoute.propTypes = {
+  children: PropTypes.node.isRequired,
+};

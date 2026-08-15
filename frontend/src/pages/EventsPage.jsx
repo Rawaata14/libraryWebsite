@@ -54,7 +54,7 @@ const events = [
 
 export default function EventsPage() {
   return (
-    <PageShell userType="guest">
+    <PageShell>
       <PageBanner title="Events" />
 
       <div className="eventsPageContainer">

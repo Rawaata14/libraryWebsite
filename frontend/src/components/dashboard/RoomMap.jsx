@@ -1,81 +1,152 @@
 /*
-  RoomMap.jsx
-  -----------
-  עטיפה חכמה למפת הספרייה.
+=========================================================
+RoomMap.jsx
+
+תיאור הקובץ:
+קומפוננטת עטיפה למפת הספרייה.
+
+הקומפוננטה אחראית על:
+- טעינת פריטי המפה מה-Backend.
+- רענון זמינות המושבים לפי תאריך ושעה.
+- שמירת פריטי המפה במקור State מרכזי.
+- העברת פעולות ונתונים ל-LibraryMap.
+=========================================================
 */
 
-import { useContext, useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
-import { AuthContext } from "../../context/AuthContext";
-import LibraryMap from "../map/LibraryMap";
+import { useCallback, useContext, useEffect, useState } from "react";
+import PropTypes from "prop-types";
 import axios from "axios";
+import { useLocation } from "react-router-dom";
 
+import { AuthContext } from "../../context/AuthContext";
+import { buildApiUrl } from "../../config/api";
+import LibraryMap from "../map/LibraryMap";
+
+/*
+---------------------------------------------------------
+RoomMap
+
+תפקיד:
+טוענת את מפת הספרייה ומחברת אותה למצב המשתמש,
+לתאריך ולשעת ההזמנה שנבחרו.
+---------------------------------------------------------
+*/
 export default function RoomMap({
   selectedSeatId = null,
   onSeatSelect,
-  showSelectionInfo = true,
-  selectedDate, // 💡 פרופ חדש שנוסף כדי להאזין לשינויי תאריך מהדף הראשי
-  selectedTime, // 💡 פרופ חדש שנוסף כדי להאזין לשינויי שעה מהדף הראשי
+  selectedDate = "",
+  selectedTime = "",
 }) {
   const { isLibrarian } = useContext(AuthContext);
   const location = useLocation();
 
-  // הסטייט הראשי של הרהיטים באפליקציה (Single Source of Truth)
   const [items, setItems] = useState([]);
-
   const [internalSelectedSeatId, setInternalSelectedSeatId] =
     useState(selectedSeatId);
 
-  const handleSeatSelect = (seatData) => {
-    const newId = seatData ? seatData.seatId || seatData.id : null;
-    setInternalSelectedSeatId(newId);
-    if (onSeatSelect) {
-      onSeatSelect(seatData);
-    }
-  };
+  /*
+  ---------------------------------------------------------
+  סנכרון המושב הנבחר
 
-  // 💡 פונקציית הטעינה שולחת כעת את התאריך והשעה כפרמטרים לשרת כדי לקבל סטטוס עדכני
-  const fetchSeats = async () => {
+  תפקיד:
+  מעדכן את הבחירה הפנימית כאשר הקומפוננטה האב
+  משנה את selectedSeatId.
+  ---------------------------------------------------------
+  */
+  useEffect(() => {
+    setInternalSelectedSeatId(selectedSeatId);
+  }, [selectedSeatId]);
+
+  /*
+  ---------------------------------------------------------
+  handleSeatSelect
+
+  תפקיד:
+  שומרת את מזהה המושב שנבחר ומעבירה את פרטי
+  המושב לקומפוננטה האב.
+  ---------------------------------------------------------
+  */
+  const handleSeatSelect = useCallback(
+    (seatData) => {
+      const newSeatId = seatData ? (seatData.seatId ?? seatData.id) : null;
+
+      setInternalSelectedSeatId(newSeatId);
+
+      if (onSeatSelect) {
+        onSeatSelect(seatData);
+      }
+    },
+    [onSeatSelect],
+  );
+
+  /*
+  ---------------------------------------------------------
+  fetchSeats
+
+  תפקיד:
+  טוענת מהשרת את פריטי המפה ואת מצב זמינות המושבים
+  לפי התאריך והשעה שנבחרו.
+
+  useCallback:
+  שומרת על אותה הפניה לפונקציה כל עוד התאריך
+  והשעה לא השתנו.
+  ---------------------------------------------------------
+  */
+  const fetchSeats = useCallback(async () => {
     try {
-      const response = await axios.get("http://localhost:8000/seats/get-map", {
+      const response = await axios.get(buildApiUrl("/seats/get-map"), {
         params: {
-          date: selectedDate,
-          time: selectedTime,
+          date: selectedDate || undefined,
+          time: selectedTime || undefined,
         },
         withCredentials: true,
       });
-      if (response.status === 200) {
-        const mapData =
-          response.data.map ||
-          (Array.isArray(response.data) ? response.data : []);
-        setItems(mapData);
-      }
-    } catch (error) {
-      console.error("Error fetching seats inside RoomMap wrapper:", error);
-    }
-  };
 
-  // משיכת הרהיטים המעודכנים בכל פעם שהקומפוננטה נטענת או כשהתאריך/שעה משתנים
-  useEffect(() => {
-    fetchSeats();
+      const mapData =
+        response.data.map ||
+        (Array.isArray(response.data) ? response.data : []);
+
+      setItems(mapData);
+    } catch (error) {
+      console.error("Error fetching library map:", error);
+
+      setItems([]);
+    }
   }, [selectedDate, selectedTime]);
 
-  /* toolbar וניהול יוצגו רק בדף המפה הראשי או בדף המנהל */
-  const isMapPage =
+  /*
+  ---------------------------------------------------------
+  טעינת המפה
+
+  תפקיד:
+  טוענת מחדש את המפה בכל פעם שהתאריך או השעה
+  משתנים באמצעות fetchSeats המעודכנת.
+  ---------------------------------------------------------
+  */
+  useEffect(() => {
+    fetchSeats();
+  }, [fetchSeats]);
+
+  const isManagementMapPage =
     location.pathname === "/map" || location.pathname === "/admin/map";
+
+  const canManageMap = isLibrarian && isManagementMapPage;
 
   return (
     <LibraryMap
-      isLibrarian={isLibrarian && isMapPage}
+      isLibrarian={canManageMap}
       items={items}
       setItems={setItems}
       fetchLatestSeats={fetchSeats}
       selectedSeatId={internalSelectedSeatId}
       onSeatSelect={handleSeatSelect}
-      showSelectionInfo={showSelectionInfo}
-      enableDragAndDrop={isLibrarian && isMapPage}
-      enableAddPlaces={isLibrarian && isMapPage}
-      placeType="icon"
     />
   );
 }
+
+RoomMap.propTypes = {
+  selectedSeatId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  onSeatSelect: PropTypes.func,
+  selectedDate: PropTypes.string,
+  selectedTime: PropTypes.string,
+};

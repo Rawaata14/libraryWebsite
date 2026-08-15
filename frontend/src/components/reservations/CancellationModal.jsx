@@ -7,27 +7,24 @@ CancellationModal.jsx
 
 הקומפוננטה מציגה:
 - פרטי ההזמנה.
+- שם המשתמש.
+- מספר הכיסא.
+- תאריך ושעות.
 - שדה להזנת סיבת הביטול.
 - כפתורי אישור וסגירה.
+
+הקומפוננטה אינה מבצעת קריאת API.
+פעולת הביטול מתקבלת דרך onConfirm.
 =========================================================
 */
 
 import {
   formatReservationDate,
   formatReservationTime,
-} from "./reservationUtils";
+} from "../../utils/reservationUtils";
+import PropTypes from "prop-types";
+import { reservationPropType } from "../../propTypes/reservationPropTypes";
 
-/*
----------------------------------------------------------
-CancellationModal
-
-תפקיד:
-מציגה חלון לביטול הזמנה במקרה חריג.
-
-הקומפוננטה אינה מבצעת קריאת API.
-היא מפעילה את onConfirm שמתקבל מהעמוד הראשי.
----------------------------------------------------------
-*/
 export default function CancellationModal({
   reservation,
   cancellationReason,
@@ -36,6 +33,10 @@ export default function CancellationModal({
   onClose,
   onConfirm,
 }) {
+  /*
+    אם לא נבחרה הזמנה,
+    אין צורך להציג את החלון.
+  */
   if (!reservation) {
     return null;
   }
@@ -149,3 +150,21 @@ export default function CancellationModal({
     </div>
   );
 }
+
+/*
+---------------------------------------------------------
+CancellationModal.propTypes
+
+תפקיד:
+מגדיר את ההזמנה, סיבת הביטול והפעולות של חלון
+אישור ביטול ההזמנה.
+---------------------------------------------------------
+*/
+CancellationModal.propTypes = {
+  reservation: reservationPropType.isRequired,
+  cancellationReason: PropTypes.string.isRequired,
+  isCancelling: PropTypes.bool.isRequired,
+  onReasonChange: PropTypes.func.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onConfirm: PropTypes.func.isRequired,
+};

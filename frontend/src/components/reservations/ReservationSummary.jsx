@@ -9,20 +9,14 @@ ReservationSummary.jsx
 - מספר כל ההזמנות.
 - מספר ההזמנות הפעילות.
 - מספר ההזמנות שבוטלו.
+
+הקומפוננטה מקבלת את הנתונים דרך props
+ואינה מבצעת חישובים או קריאות לשרת.
 =========================================================
 */
 
-/*
----------------------------------------------------------
-ReservationSummary
+import PropTypes from "prop-types";
 
-תפקיד:
-מקבלת נתוני סיכום מהעמוד הראשי ומציגה אותם
-בשלושה כרטיסי מידע.
-
-הקומפוננטה אינה מבצעת חישובים או קריאות לשרת.
----------------------------------------------------------
-*/
 export default function ReservationSummary({
   totalReservations,
   activeReservations,
@@ -59,3 +53,17 @@ export default function ReservationSummary({
     </div>
   );
 }
+
+/*
+---------------------------------------------------------
+ReservationSummary.propTypes
+
+תפקיד:
+מגדיר את נתוני סיכום ההזמנות המוצגים למשתמש.
+---------------------------------------------------------
+*/
+ReservationSummary.propTypes = {
+  totalReservations: PropTypes.number.isRequired,
+  activeReservations: PropTypes.number.isRequired,
+  cancelledReservations: PropTypes.number.isRequired,
+};

@@ -11,6 +11,9 @@ import table8Icon from "../../assets/icons/table-8.png";
 import computerSeatIcon from "../../assets/icons/computer-seat.png";
 import receptionIcon from "../../assets/icons/reception.png";
 
+import PropTypes from "prop-types";
+import { seatPropType } from "../../propTypes/seatPropTypes";
+
 const icons = {
   seat: chairIcon,
   "single-seat": singleSeatIcon,
@@ -79,3 +82,23 @@ export default function MapItem({
     </button>
   );
 }
+
+/*
+---------------------------------------------------------
+MapItem.propTypes
+
+תפקיד:
+מגדיר את פריט המפה ואת פעולות הבחירה והגרירה
+שהקומפוננטה מקבלת.
+---------------------------------------------------------
+*/
+MapItem.propTypes = {
+  item: seatPropType.isRequired,
+  isSelected: PropTypes.bool.isRequired,
+  onSelect: PropTypes.func.isRequired,
+  onMove: PropTypes.func,
+  isLibrarian: PropTypes.bool.isRequired,
+  setDraggingItemId: PropTypes.func.isRequired,
+  style: PropTypes.object,
+  isClickable: PropTypes.bool,
+};

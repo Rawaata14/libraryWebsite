@@ -3,23 +3,20 @@
 ManageReservationsPage.jsx
 
 תיאור הקובץ:
-דף ניהול הזמנות המקומות עבור הספרן.
+דף התצוגה לניהול הזמנות המקומות עבור הספרן.
 
-הקובץ אחראי על:
-- שליפת כל ההזמנות מהשרת.
-- ניהול החיפוש והסינון.
-- ביטול הזמנה במקרה חריג.
-- שליחת הודעה למשתמש מתוך ההזמנה.
-- העברת הנתונים לקומפוננטות התצוגה.
+העמוד אחראי על:
+- הצגת סיכום ההזמנות.
+- הצגת חיפוש וסינון.
+- הצגת טבלת ההזמנות.
+- הצגת חלונות ביטול ושליחת הודעה.
 
-הערה:
-רכיבי התצוגה נמצאים בתיקייה:
-components/reservations
+מצב העמוד והלוגיקה מנוהלים באמצעות:
+useManageReservations
 =========================================================
 */
 
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 import PageShell from "../components/layout/PageShell";
@@ -31,7 +28,7 @@ import ReservationsTable from "../components/reservations/ReservationsTable";
 import CancellationModal from "../components/reservations/CancellationModal";
 import ReservationMessageModal from "../components/reservations/ReservationMessageModal";
 
-import { isCancelledStatus } from "../components/reservations/reservationUtils";
+import useManageReservations from "../hooks/useManageReservations";
 
 import "../styles/manage-reservations.css";
 
@@ -40,8 +37,8 @@ import "../styles/manage-reservations.css";
 ManageReservationsPage
 
 תפקיד:
-מנהלת את נתוני עמוד ההזמנות של הספרן ומחברת
-בין השרת לבין קומפוננטות התצוגה.
+מחברת בין לוגיקת ניהול ההזמנות שב-Hook
+לבין רכיבי התצוגה של העמוד.
 ---------------------------------------------------------
 */
 export default function ManageReservationsPage() {
@@ -65,7 +62,6 @@ export default function ManageReservationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const navigate = useNavigate();
 
   /*
   =========================================================
@@ -462,6 +458,12 @@ export default function ManageReservationsPage() {
           ←
         </button>
         <section className="manageReservationsCard">
+          {/*
+          =================================================
+          כותרת ופעולת רענון
+          =================================================
+          */}
+
           <div className="manageReservationsHeader">
             <div>
               <h2>Seat Reservations Management</h2>
@@ -482,6 +484,12 @@ export default function ManageReservationsPage() {
             </button>
           </div>
 
+          {/*
+          =================================================
+          הודעות הצלחה ושגיאה
+          =================================================
+          */}
+
           {successMessage && (
             <div className="managementFeedback successFeedback">
               <span aria-hidden="true">✓</span>
@@ -491,7 +499,7 @@ export default function ManageReservationsPage() {
               <button
                 type="button"
                 aria-label="Close success message"
-                onClick={() => setSuccessMessage("")}
+                onClick={clearSuccessMessage}
               >
                 ×
               </button>
@@ -507,12 +515,18 @@ export default function ManageReservationsPage() {
               <button
                 type="button"
                 aria-label="Close error message"
-                onClick={() => setErrorMessage("")}
+                onClick={clearErrorMessage}
               >
                 ×
               </button>
             </div>
           )}
+
+          {/*
+          =================================================
+          סיכום ההזמנות
+          =================================================
+          */}
 
           <ReservationSummary
             totalReservations={reservations.length}
@@ -520,12 +534,24 @@ export default function ManageReservationsPage() {
             cancelledReservations={cancelledReservationsCount}
           />
 
+          {/*
+          =================================================
+          חיפוש וסינון
+          =================================================
+          */}
+
           <ReservationFilters
             searchText={searchText}
             statusFilter={statusFilter}
             onSearchChange={setSearchText}
             onStatusChange={setStatusFilter}
           />
+
+          {/*
+          =================================================
+          טבלת ההזמנות
+          =================================================
+          */}
 
           <ReservationsTable
             reservations={filteredReservations}
@@ -536,6 +562,12 @@ export default function ManageReservationsPage() {
         </section>
       </main>
 
+      {/*
+      =====================================================
+      חלון ביטול הזמנה
+      =====================================================
+      */}
+
       <CancellationModal
         reservation={selectedReservation}
         cancellationReason={cancellationReason}
@@ -544,6 +576,12 @@ export default function ManageReservationsPage() {
         onClose={closeCancellationDialog}
         onConfirm={handleLibrarianCancellation}
       />
+
+      {/*
+      =====================================================
+      חלון שליחת הודעה
+      =====================================================
+      */}
 
       <ReservationMessageModal
         reservation={messageReservation}

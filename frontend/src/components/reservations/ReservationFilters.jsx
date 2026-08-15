@@ -6,22 +6,16 @@ ReservationFilters.jsx
 מציג את כלי החיפוש והסינון של רשימת ההזמנות.
 
 הקומפוננטה כוללת:
-- חיפוש לפי שם, אימייל, כיסא או מזהה הזמנה.
+- חיפוש לפי שם משתמש, אימייל, מספר כיסא
+  או מזהה הזמנה.
 - סינון לפי סטטוס ההזמנה.
+
+הקומפוננטה אינה שומרת state פנימי.
 =========================================================
 */
 
-/*
----------------------------------------------------------
-ReservationFilters
+import PropTypes from "prop-types";
 
-תפקיד:
-מקבלת את ערכי הסינון ואת פונקציות העדכון שלהם
-מהקומפוננטה הראשית.
-
-הקומפוננטה אינה שומרת state פנימי.
----------------------------------------------------------
-*/
 export default function ReservationFilters({
   searchText,
   statusFilter,
@@ -54,3 +48,18 @@ export default function ReservationFilters({
     </div>
   );
 }
+
+/*
+---------------------------------------------------------
+ReservationFilters.propTypes
+
+תפקיד:
+מגדיר את ערכי הסינון ואת פעולות שינוי החיפוש והסטטוס.
+---------------------------------------------------------
+*/
+ReservationFilters.propTypes = {
+  searchText: PropTypes.string.isRequired,
+  statusFilter: PropTypes.string.isRequired,
+  onSearchChange: PropTypes.func.isRequired,
+  onStatusChange: PropTypes.func.isRequired,
+};

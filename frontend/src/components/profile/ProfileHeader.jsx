@@ -14,30 +14,14 @@ ProfileHeader.jsx
 =========================================================
 */
 
+import PropTypes from "prop-types";
+
 import ProfileForm from "./ProfileForm";
-
-/*
----------------------------------------------------------
-getProfileImageSrc
-
-תפקיד:
-מחזירה את כתובת תמונת הפרופיל.
-אם קיימת תמונה בשרת, היא מוצגת.
-אם לא קיימת תמונה, מוצגת תמונת ברירת מחדל.
----------------------------------------------------------
-*/
-function getProfileImageSrc(user) {
-  console.log("getProfileImageSrc user:", user);
-  if (user?.profile_image_name) {
-    return `http://localhost:8000/uploads/profile-images/${user.profile_image_name}`;
-  }
-
-  if (user?.profileImage) {
-    return user.profileImage;
-  }
-
-  //return "https://cdn-icons-png.flaticon.com/512/847/847969.png";
-}
+import { getProfileImageSrc } from "../../utils/profileImage";
+import {
+  profileFormPropType,
+  userPropType,
+} from "../../propTypes/profilePropTypes";
 
 /*
 ---------------------------------------------------------
@@ -65,7 +49,7 @@ export default function ProfileHeader({
     <>
       <div className="profileHeader">
         <img
-          src={getProfileImageSrc(user) || profileImagePreview}
+          src={profileImagePreview || getProfileImageSrc(user)}
           alt="Profile"
           className="profileImage"
         />
@@ -131,3 +115,17 @@ export default function ProfileHeader({
     </>
   );
 }
+
+ProfileHeader.propTypes = {
+  user: userPropType.isRequired,
+  isLibrarian: PropTypes.bool.isRequired,
+  isEditingProfile: PropTypes.bool.isRequired,
+  setIsEditingProfile: PropTypes.func.isRequired,
+  selectedProfileImage: PropTypes.instanceOf(File),
+  profileImagePreview: PropTypes.string,
+  handleProfileImageChange: PropTypes.func.isRequired,
+  handleSaveProfileImage: PropTypes.func.isRequired,
+  profileForm: profileFormPropType.isRequired,
+  handleProfileFormChange: PropTypes.func.isRequired,
+  handleSaveProfileDetails: PropTypes.func.isRequired,
+};
