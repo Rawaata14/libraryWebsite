@@ -39,6 +39,7 @@
   max-width: 1180px;
   margin: 20px auto 40px;
   padding: 20px;
+  position: relative;
 }
 
 .booksPageCard {

@@ -19,6 +19,7 @@ components/reservations
 */
 
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 import PageShell from "../components/layout/PageShell";
@@ -64,6 +65,7 @@ export default function ManageReservationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const navigate = useNavigate();
 
   /*
   =========================================================
@@ -451,8 +453,14 @@ export default function ManageReservationsPage() {
   return (
     <PageShell>
       <PageBanner title="Manage Reservations" />
-
       <main className="manageReservationsPage">
+        <button
+          type="button"
+          className="backButton1"
+          onClick={() => navigate(-1)}
+        >
+          ←
+        </button>
         <section className="manageReservationsCard">
           <div className="manageReservationsHeader">
             <div>

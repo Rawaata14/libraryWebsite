@@ -99,6 +99,22 @@ select {
   z-index: 5;
 }
 
+.backButton1 {
+  position: absolute;
+  top: 5px;
+  left: 63px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #ffffff40;
+  color: white;
+  font-size: 22px;
+  width: 45px;
+  height: 43px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.2s;
+  z-index: 5;
+}
+
 .backButton:hover {
   background: rgba(0, 0, 0, 0.7);
 }

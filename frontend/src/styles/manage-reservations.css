@@ -19,7 +19,8 @@ manage-reservations.css
 .manageReservationsPage {
   width: 100%;
   min-height: 75vh;
-  padding: 40px 5%;
+  padding: 55px 5%;
+  position: relative;
 }
 
 .manageReservationsCard {
@@ -692,7 +693,6 @@ manage-reservations.css
   opacity: 0.5;
   cursor: not-allowed;
 }
-
 
 /*
 =========================================================

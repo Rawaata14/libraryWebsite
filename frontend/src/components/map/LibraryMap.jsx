@@ -125,7 +125,9 @@ export default function LibraryMap({
       rotation: 0,
       status: "available",
       reservable:
-        newItemType === "seat-to-add" || newItemType === "single-seat" || newItemType === "computer-seat",
+        newItemType === "seat-to-add" ||
+        newItemType === "single-seat" ||
+        newItemType === "computer-seat",
       location: zone.id,
     };
 
