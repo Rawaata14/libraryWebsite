@@ -15,13 +15,13 @@ LoginForm.jsx
 
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
 
 import InputField from "../common/InputField";
 import Button from "../common/Button";
 import BackButton from "../common/BackButton";
 import { AuthContext } from "../../context/AuthContext";
-import { buildApiUrl } from "../../config/api";
+
+import { loginUser } from "../../services/authService";
 
 /*
 ---------------------------------------------------------
@@ -76,16 +76,10 @@ export default function LoginForm() {
     setIsSubmitting(true);
 
     try {
-      const response = await axios.post(
-        buildApiUrl("/user/login"),
-        {
-          email: formData.email.trim(),
-          password: formData.password,
-        },
-        {
-          withCredentials: true,
-        },
-      );
+      const response = await loginUser({
+        email: formData.email.trim(),
+        password: formData.password,
+      });
 
       login(response.data.user);
       navigate("/");

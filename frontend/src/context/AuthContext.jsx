@@ -23,7 +23,7 @@ import {
 } from "react";
 import PropTypes from "prop-types";
 
-import { buildApiUrl } from "../config/api";
+import { checkAuthentication, logoutUser } from "../services/authService";
 
 export const AuthContext = createContext(null);
 
@@ -41,49 +41,49 @@ export function AuthProvider({ children }) {
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   /*
-  ---------------------------------------------------------
-  בדיקת Session בעת טעינת האתר
+---------------------------------------------------------
+בדיקת Session בעת טעינת האתר
 
-  תפקיד:
-  פונה ל-Backend כדי לבדוק אם קיים Session פעיל.
+תפקיד:
+בודקת אם קיים Session פעיל ושומרת
+את המשתמש המחובר ב-Context.
 
-  ה-Session הוא מקור האמת היחיד:
-  נתוני המשתמש אינם נשמרים ב-localStorage.
-  ---------------------------------------------------------
-  */
+משתנה isComponentActive מונע עדכון State
+לאחר שה-Provider ירד מהמסך.
+---------------------------------------------------------
+*/
   useEffect(() => {
     let isComponentActive = true;
 
-    async function checkAuthentication() {
+    const loadAuthenticatedUser = async () => {
       try {
-        const response = await fetch(buildApiUrl("/user/check-auth"), {
-          credentials: "include",
-        });
+        const response = await checkAuthentication();
 
-        if (!isComponentActive) return;
-
-        if (!response.ok) {
-          setUser(null);
+        if (isComponentActive) {
+          setUser(response.data);
+        }
+      } catch (error) {
+        if (!isComponentActive) {
           return;
         }
 
-        const authenticatedUser = await response.json();
+        setUser(null);
 
-        setUser(authenticatedUser);
-      } catch (error) {
-        console.error("Error checking authentication:", error);
-
-        if (isComponentActive) {
-          setUser(null);
+        /*
+        תשובת 401 היא מצב רגיל עבור אורח,
+        ולכן אין צורך להציג אותה כשגיאת מערכת.
+      */
+        if (error.response?.status !== 401) {
+          console.error("Error checking authentication:", error);
         }
       } finally {
         if (isComponentActive) {
           setIsAuthReady(true);
         }
       }
-    }
+    };
 
-    checkAuthentication();
+    loadAuthenticatedUser();
 
     return () => {
       isComponentActive = false;
@@ -124,28 +124,21 @@ export function AuthProvider({ children }) {
   }, []);
 
   /*
-  ---------------------------------------------------------
-  logout
+---------------------------------------------------------
+logout
 
-  תפקיד:
-  מבקשת מה-Backend למחוק את ה-Session,
-  ולאחר מכן מנקה את המשתמש ממצב ה-React.
-  ---------------------------------------------------------
-  */
+תפקיד:
+מבקשת מהשרת למחוק את ה-Session
+ומנקה תמיד את המשתמש מה-Context.
+---------------------------------------------------------
+*/
   const logout = useCallback(async () => {
     try {
-      const response = await fetch(buildApiUrl("/user/logout"), {
-        method: "POST",
-        credentials: "include",
-      });
-
-      if (!response.ok && response.status !== 401) {
-        const result = await response.json().catch(() => null);
-
-        throw new Error(result?.message || "Logout failed");
-      }
+      await logoutUser();
     } catch (error) {
-      console.error("Error during logout:", error);
+      if (error.response?.status !== 401) {
+        console.error("Error during logout:", error);
+      }
     } finally {
       setUser(null);
     }

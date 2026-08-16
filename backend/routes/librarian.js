@@ -15,6 +15,7 @@ Routes עבור דשבורד הספרן.
 const express = require("express");
 const router = express.Router();
 const doQuery = require("../database/query");
+const { requireLibrarian } = require("../middleware/auth");
 
 /*
 ---------------------------------------------------------
@@ -24,7 +25,7 @@ Route: GET /api/librarian/dashboard-stats
 מחזיר נתונים אמיתיים מה-DB לדשבורד הספרן.
 ---------------------------------------------------------
 */
-router.get("/dashboard-stats", async (req, res) => {
+router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
   try {
     /*
 ---------------------------------------------------------
