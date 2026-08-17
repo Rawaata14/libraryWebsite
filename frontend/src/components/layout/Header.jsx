@@ -23,14 +23,6 @@ import { getProfileImageSrc } from "../../utils/profileImage";
 export default function Header() {
  const { user, isAuthenticated, isLibrarian, logout } = useContext(AuthContext);
 
-  console.log(
-    "Header component - user:",
-    user,
-    "isAuthenticated:",
-    isAuthenticated,
-    "isLibrarian:",
-    isLibrarian,
-  );
 
   const navClassName = ({ isActive }) =>
     isActive ? "navItem activeNav" : "navItem";
@@ -46,6 +38,12 @@ export default function Header() {
         <NavLink to="/" className={navClassName}>
           Home
         </NavLink>
+
+        {isLibrarian && (
+          <NavLink to="/admin/librarian" className={navClassName}>
+            Dashboard
+          </NavLink>
+        )}
 
         <NavLink
           to={isLibrarian ? "/admin/map" : "/map"}

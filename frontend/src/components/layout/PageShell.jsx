@@ -7,34 +7,44 @@ PageShell.jsx
 
 הקומפוננטה אחראית על:
 - הצגת Header קבוע.
+- הצגת סרגל ספרנית למשתמשת מורשית.
 - הצגת תוכן הדף.
 - הצגת Footer קבוע.
-- שמירה על מבנה אחיד בכל המערכת.
 =========================================================
 */
 
+import { useContext } from "react";
 import PropTypes from "prop-types";
 
-import Header from "./Header";
+import { AuthContext } from "../../context/AuthContext";
+
 import Footer from "./Footer";
+import Header from "./Header";
+import LibrarianSidebar from "./LibrarianSidebar";
 
 /*
 ---------------------------------------------------------
 PageShell
 
 תפקיד:
-עוטפת את תוכן הדף בין ה-Header ל-Footer.
-
-נתוני המשתמש אינם מועברים כ-Props:
-Header מקבלת אותם ישירות מ-AuthContext.
+עוטפת את תוכן הדף בין ה-Header ל-Footer
+ומציגה סרגל ניהול אנכי עבור ספרנית.
 ---------------------------------------------------------
 */
 export default function PageShell({ children }) {
+  const { isLibrarian } = useContext(AuthContext);
+
   return (
     <div className="pageShell">
       <div className="frame libraryBg">
         <Header />
-        {children}
+
+        <div className="pageShellBody">
+          {isLibrarian && <LibrarianSidebar />}
+
+          <main className="pageShellContent">{children}</main>
+        </div>
+
         <Footer />
       </div>
     </div>

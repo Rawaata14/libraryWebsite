@@ -1,0 +1,146 @@
+/*
+=========================================================
+librarian-sidebar.css
+
+תיאור הקובץ:
+עיצוב הסרגל האנכי של הספרנית.
+=========================================================
+*/
+
+.librarianSidebar {
+  position: sticky;
+  top: 16px;
+  flex: 0 0 270px;
+  width: 270px;
+  max-height: calc(100vh - 32px);
+  padding: 20px;
+  overflow-y: auto;
+  border: 1px solid rgba(203, 128, 83, 0.65);
+  border-radius: 16px;
+  background: rgba(35, 20, 16, 0.96);
+  color: #ffffff;
+}
+
+.librarianSidebarDashboardLink {
+  display: block;
+  padding: 12px;
+  border-radius: 10px;
+  background: #9e4935;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+.librarianSidebarDivider {
+  height: 1px;
+  margin: 16px 0;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.librarianSidebarStats {
+  display: grid;
+  gap: 10px;
+}
+
+.librarianSidebarStat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.librarianSidebarStat strong {
+  color: #ffb347;
+  font-size: 18px;
+}
+
+.librarianSidebarMessage,
+.librarianSidebarError {
+  margin: 0;
+  padding: 10px;
+  text-align: center;
+}
+
+.librarianSidebarError {
+  color: #ff8c82;
+}
+
+.librarianSidebarRefresh {
+  width: 100%;
+  margin-top: 14px;
+  padding: 10px;
+  border: 1px solid #bd6a4e;
+  border-radius: 9px;
+  background: transparent;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.librarianSidebarRefresh:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.librarianSidebarNavigation {
+  display: grid;
+  gap: 8px;
+}
+
+.librarianSidebarLink {
+  display: block;
+  padding: 11px 12px;
+  border-radius: 9px;
+  color: #ffffff;
+  text-decoration: none;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.librarianSidebarLink:hover,
+.activeSidebarLink {
+  background: rgba(190, 91, 62, 0.35);
+  color: #ffbf72;
+}
+
+@media (max-width: 900px) {
+  .librarianSidebar {
+    position: static;
+    width: 100%;
+    max-height: none;
+  }
+}
+
+/*
+---------------------------------------------------------
+מבנה PageShell עם סרגל ספרנית
+---------------------------------------------------------
+*/
+
+.pageShellBody {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  width: 100%;
+}
+
+.pageShellContent {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .pageShellBody {
+    flex-direction: column;
+  }
+
+  .pageShellContent {
+    width: 100%;
+  }
+}
