@@ -1,15 +1,78 @@
-import React from "react";
+import { useMemo } from "react";
 import Header from "../components/layout/Header";
 import "../styles/librarianDashboard.css";
 import useManageReservations from "../hooks/useManageReservations";
 
+/*
+---------------------------------------------------------
+reservationTimeSlots
+
+תפקיד:
+מגדיר את חלונות ההזמנה היומיים של הספרייה.
+---------------------------------------------------------
+*/
+const reservationTimeSlots = [
+  { startTime: "08:00", endTime: "10:00" },
+  { startTime: "10:00", endTime: "12:00" },
+  { startTime: "12:00", endTime: "14:00" },
+  { startTime: "14:00", endTime: "16:00" },
+  { startTime: "16:00", endTime: "18:00" },
+  { startTime: "18:00", endTime: "20:00" },
+];
+
 const LibrarianDashboardPage = () => {
   const {
+    reservations,
     todayReservationsCount,
-    activeReservationsCount,
     isLoading,
     errorMessage,
   } = useManageReservations();
+
+  /*
+---------------------------------------------------------
+hourlyReservations
+
+תפקיד:
+מחשב כמה הזמנות פעילות קיימות היום
+בכל אחד מחלונות ההזמנה המוגדרים.
+---------------------------------------------------------
+*/
+  const hourlyReservations = useMemo(() => {
+    const today = new Date().toISOString().split("T")[0];
+
+    return reservationTimeSlots.map((slot) => {
+      const booked = reservations.filter((reservation) => {
+        const reservationDate = String(reservation.reservationDate || "").split(
+          "T",
+        )[0];
+
+        const reservationStartTime = String(reservation.startTime || "").slice(
+          0,
+          5,
+        );
+
+        const reservationEndTime = String(reservation.endTime || "").slice(
+          0,
+          5,
+        );
+
+        const status = String(reservation.status || "").toLowerCase();
+
+        return (
+          reservationDate === today &&
+          reservationStartTime === slot.startTime &&
+          reservationEndTime === slot.endTime &&
+          status !== "cancelled"
+        );
+      }).length;
+
+      return {
+        time: `${slot.startTime} - ${slot.endTime}`,
+        booked,
+        available: "-",
+      };
+    });
+  }, [reservations]);
 
   if (isLoading) {
     return <div>Loading dashboard data...</div>;
@@ -66,6 +129,10 @@ const LibrarianDashboardPage = () => {
                   </tbody>
                 </table>
               </div>
+
+              <p className="todayReservationsTotal">
+                Total reservations today: {todayReservationsCount}
+              </p>
             </div>
           </div>
 
@@ -73,7 +140,7 @@ const LibrarianDashboardPage = () => {
           <div className="dashboard-card">
             <h3>Active Loans</h3>
             <div className="card-content">
-              <p>{activeReservationsCount}</p>
+              <p>-</p>
             </div>
           </div>
 
@@ -103,7 +170,7 @@ const LibrarianDashboardPage = () => {
 
           {/* Today's Activity */}
           <div className="dashboard-card">
-            <h3>Today's Activity</h3>
+            <h3>Today&apos;s Activity</h3>
             <div className="card-content">
               <p>-</p>
             </div>
