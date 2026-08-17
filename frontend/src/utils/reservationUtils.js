@@ -362,3 +362,25 @@ export const splitReservationsByTime = (
     pastReservations,
   };
 };   
+
+/*
+---------------------------------------------------------
+countTodayReservations
+
+תפקיד:
+מחזירה את מספר ההזמנות הפעילות להיום בלבד.
+---------------------------------------------------------
+*/
+export const countTodayReservations = (reservations, todayStr) => {
+  return reservations.filter((reservation) => {
+    const isToday =
+      reservation.date?.startsWith(todayStr) ||
+      reservation.reservationDate?.startsWith(todayStr);
+
+    const isActive = ["occupied", "confirmed"].includes(
+      reservation.status?.toLowerCase(),
+    );
+
+    return isToday && isActive;
+  }).length;
+};

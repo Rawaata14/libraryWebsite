@@ -82,7 +82,14 @@ export default function LoginForm() {
       });
 
       login(response.data.user);
-      navigate("/");
+      // מתן זמן קצרצר ל-Context להתעדכן לפני הניווט
+      setTimeout(() => {
+        if (response.data.user.role === "librarian") {
+          navigate("/admin/librarian");
+        } else {
+          navigate("/");
+        }
+      }, 0);
     } catch (error) {
       const message =
         error.response?.data?.message || "Could not connect to the server";

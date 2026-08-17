@@ -26,6 +26,7 @@ import {
   countActiveReservations,
   countCancelledReservations,
   filterReservations,
+  countTodayReservations,
 } from "../utils/reservationUtils";
 
 /*
@@ -324,6 +325,11 @@ export default function useManageReservations() {
 
   const cancelledReservationsCount = countCancelledReservations(reservations);
 
+  const todayReservationsCount = useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    return countTodayReservations(reservations, todayStr);
+  }, [reservations]);
+
   return {
     reservations,
     filteredReservations,
@@ -355,5 +361,6 @@ export default function useManageReservations() {
     fetchReservations,
     activeReservationsCount,
     cancelledReservationsCount,
+    todayReservationsCount,
   };
 }

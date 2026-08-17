@@ -1,0 +1,128 @@
+/* librarianDashboard.css */
+
+/* --- Layout Settings --- */
+.dashboard-page-wrapper {
+  max-width: 1200px;
+  margin: 30px auto;
+  padding: 0 20px;
+  direction: ltr;
+  text-align: left;
+}
+
+.dashboard-header {
+  margin-bottom: 30px;
+  text-align: left;
+  color: #fff9f4;
+}
+
+.librarianDashboardContainer {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+/* --- Card Styles --- */
+.dashboard-card {
+  background: rgba(30, 20, 18, 0.85);
+  border: 1px solid rgba(159, 124, 87, 0.6);
+  border-radius: 16px;
+  padding: 24px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-card h3 {
+  color: #f3e5dc;
+  font-size: 1.25rem;
+  margin-bottom: 15px;
+  border-bottom: 1px solid rgba(159, 124, 87, 0.3);
+  padding-bottom: 8px;
+  text-align: left;
+}
+
+.card-content {
+  color: #d1c2b4;
+  font-size: 0.95rem;
+  flex-grow: 1;
+}
+
+/* --- Table Styles --- */
+.reservations-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  margin-top: 10px;
+}
+
+.reservations-mini-table th {
+  color: #f3e5dc;
+  font-size: 0.9rem;
+  padding: 8px;
+  border-bottom: 1px solid rgba(159, 124, 87, 0.4);
+  text-align: left;
+}
+
+.reservations-mini-table td {
+  padding: 12px 8px;
+  color: #d1c2b4;
+  font-size: 0.95rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(159, 124, 87, 0.15);
+}
+
+/* --- Center alignment for Booked and Available columns --- */
+.reservations-mini-table th:nth-child(2),
+.reservations-mini-table th:nth-child(3),
+.reservations-mini-table td:nth-child(2),
+.reservations-mini-table td:nth-child(3) {
+  text-align: center;
+}
+
+/* --- Interactive Rows (Clickable) --- */
+.reservations-mini-table tbody tr {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reservations-mini-table tbody tr:hover {
+  background-color: rgba(159, 124, 87, 0.15);
+  transform: scale(1.005);
+}
+
+.time-text {
+  color: #f3e5dc;
+  font-weight: 600;
+}
+
+/* --- Badges & Status --- */
+.badge-booked {
+  display: inline-block;
+  min-width: 28px;
+  text-align: center;
+  background: rgba(231, 76, 60, 0.2);
+  color: #ff9992;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.badge-available {
+  display: inline-block;
+  min-width: 28px;
+  text-align: center;
+  background: rgba(46, 204, 113, 0.2);
+  color: #a3e4d7;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .librarianDashboardContainer {
+    grid-template-columns: 1fr;
+  }
+}

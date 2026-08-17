@@ -28,7 +28,7 @@ import UsersManagementPage from "../pages/UsersManagementPage";
 import ReportsPage from "../pages/ReportsPage";
 import MyReservationsPage from "../pages/MyReservationsPage";
 import ManageReservationsPage from "../pages/ManageReservationsPage";
-
+import LibrarianDashboardPage from "../pages/LibrarianDashboardPage";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import GuestRoute from "../components/common/GuestRoute";
 import RoleRoute from "../components/common/RoleRoute";
@@ -123,10 +123,10 @@ export default function AppRoutes() {
         {/* ===== דפים לספרן בלבד ===== */}
 
         <Route
-          path="/librarian"
+          path="/admin/librarian"
           element={
             <RoleRoute allowedRoles={LIBRARIAN_ROLES}>
-              <Navigate to="/profile" replace />
+              <LibrarianDashboardPage />
             </RoleRoute>
           }
         />
