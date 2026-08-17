@@ -3,34 +3,32 @@
 useLibraryMap.js
 
 תיאור הקובץ:
-Custom Hook המרכז את מצב ולוגיקת מפת הספרייה.
+Custom Hook המרכז את מצב ולוגיקת עריכת מפת הספרייה.
 
 ה-Hook אחראי על:
 - בחירת סוג ומיקום של פריט חדש.
 - הוספה ומחיקה של פריטים.
 - חסימה וסיבוב של פריטים.
-- גרירת פריטים בתוך האזורים המותרים.
 - שמירת המפה ורענונה מהשרת.
+
+פעולות הגרירה מנוהלות דרך useMapDragging.
 =========================================================
 */
 
-import { useRef, useState } from "react";
+import { useState } from "react";
+
+import useMapDragging from "./useMapDragging";
 
 import { deleteMapItem, saveLibraryMap } from "../services/mapService";
 
-import {
-  clampPositionToZone,
-  getZoneByPosition,
-  isInsideAllowedZone,
-  mapZones,
-} from "../utils/mapUtils";
+import { getAvailablePositionInZone, mapZones } from "../utils/mapUtils";
 
 /*
 ---------------------------------------------------------
 useLibraryMap
 
 תפקיד:
-מספק לקומפוננטת LibraryMap את כל הנתונים
+מספק לקומפוננטת LibraryMap את הנתונים
 והפעולות הדרושים להצגה ולעריכת המפה.
 ---------------------------------------------------------
 */
@@ -45,13 +43,20 @@ export default function useLibraryMap({
 
   const [newItemPlacement, setNewItemPlacement] = useState(mapZones[0].id);
 
-  const [hoveredZoneId, setHoveredZoneId] = useState(null);
-
-  const [draggingItemId, setDraggingItemId] = useState(null);
-
-  const mapRef = useRef(null);
-
   const selectedItem = items.find((item) => item.seatId === selectedSeatId);
+
+  const {
+    mapRef,
+    hoveredZoneId,
+    setDraggingItemId,
+    handleMapPointerMove,
+    stopDragging,
+    handleMapPointerLeave,
+    updateItemPosition,
+  } = useMapDragging({
+    items,
+    setItems,
+  });
 
   /*
   ---------------------------------------------------------
@@ -73,11 +78,13 @@ export default function useLibraryMap({
 
     const generatedId = `temp-${Date.now()}`;
 
+    const availablePosition = getAvailablePositionInZone(zone, items);
+
     const newItem = {
       seatId: generatedId,
       type: newItemType,
-      x: (zone.minX + zone.maxX) / 2,
-      y: (zone.minY + zone.maxY) / 2,
+      x: availablePosition.x,
+      y: availablePosition.y,
       rotation: 0,
       status: "available",
       reservable: ["seat-to-add", "single-seat", "computer-seat"].includes(
@@ -141,7 +148,6 @@ export default function useLibraryMap({
       }
     } catch (error) {
       console.error("Error deleting map item:", error);
-
       window.alert("אירעה שגיאה בזמן מחיקת הפריט.");
     }
   };
@@ -218,144 +224,6 @@ export default function useLibraryMap({
       status: clickedItem.status,
       location: clickedItem.location,
     });
-  };
-
-  /*
-  ---------------------------------------------------------
-  getMapPercentPosition
-
-  תפקיד:
-  ממירה קואורדינטות מסך לאחוזים
-  יחסיים בתוך שטח המפה.
-  ---------------------------------------------------------
-  */
-  const getMapPercentPosition = (clientX, clientY) => {
-    if (!mapRef.current) {
-      return null;
-    }
-
-    const rectangle = mapRef.current.getBoundingClientRect();
-
-    const x = ((clientX - rectangle.left) / rectangle.width) * 100;
-
-    const y = ((clientY - rectangle.top) / rectangle.height) * 100;
-
-    return {
-      x: Math.max(0, Math.min(100, x)),
-      y: Math.max(0, Math.min(100, y)),
-    };
-  };
-
-  /*
-  ---------------------------------------------------------
-  handleMapPointerMove
-
-  תפקיד:
-  מעדכנת את האזור שנמצא תחת הסמן,
-  ומזיזה את הפריט הנגרר בתוך גבולות האזור שלו.
-  ---------------------------------------------------------
-  */
-  const handleMapPointerMove = (event) => {
-    const position = getMapPercentPosition(event.clientX, event.clientY);
-
-    if (!position) {
-      return;
-    }
-
-    const hoveredZone = getZoneByPosition(position.x, position.y);
-
-    setHoveredZoneId(hoveredZone?.id || null);
-
-    if (!draggingItemId) {
-      return;
-    }
-
-    const currentItem = items.find((item) => item.seatId === draggingItemId);
-
-    if (!currentItem) {
-      return;
-    }
-
-    const allowedZone = mapZones.find(
-      (zone) => zone.id === currentItem.location,
-    );
-
-    if (!allowedZone && !isInsideAllowedZone(position.x, position.y)) {
-      return;
-    }
-
-    const targetPosition = clampPositionToZone(
-      position.x,
-      position.y,
-      allowedZone,
-    );
-
-    setItems((previousItems) =>
-      previousItems.map((item) =>
-        item.seatId === draggingItemId
-          ? {
-              ...item,
-              x: targetPosition.x,
-              y: targetPosition.y,
-            }
-          : item,
-      ),
-    );
-  };
-
-  /*
-  ---------------------------------------------------------
-  stopDragging
-
-  תפקיד:
-  מסיימת את פעולת הגרירה.
-  ---------------------------------------------------------
-  */
-  const stopDragging = () => {
-    setDraggingItemId(null);
-  };
-
-  /*
-  ---------------------------------------------------------
-  handleMapPointerLeave
-
-  תפקיד:
-  מנקה את האזור המסומן ומסיימת גרירה
-  כאשר הסמן יוצא משטח המפה.
-  ---------------------------------------------------------
-  */
-  const handleMapPointerLeave = () => {
-    setHoveredZoneId(null);
-    stopDragging();
-  };
-
-  /*
-  ---------------------------------------------------------
-  updateItemPosition
-
-  תפקיד:
-  מעדכנת מיקום פריט לפי קואורדינטות הסמן,
-  בתנאי שהמיקום נמצא באזור מותר.
-  ---------------------------------------------------------
-  */
-  const updateItemPosition = (seatId, clientX, clientY) => {
-    const position = getMapPercentPosition(clientX, clientY);
-
-    if (!position || !isInsideAllowedZone(position.x, position.y)) {
-      return;
-    }
-
-    setItems((previousItems) =>
-      previousItems.map((item) =>
-        item.seatId === seatId
-          ? {
-              ...item,
-              x: position.x,
-              y: position.y,
-            }
-          : item,
-      ),
-    );
   };
 
   /*

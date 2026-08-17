@@ -1,19 +1,15 @@
 const express = require("express");
-const router = express.Router();
-const multer = require("multer");
-const path = require("path");
+
 const seatQueries = require("../database/queries/seatQueries");
-const reservationQueries = require("../database/queries/reservationQueries");
+const { requireLibrarian } = require("../middleware/auth");
+
+const router = express.Router();
 
 // Route for saving the seat map
-router.post("/save-map", async (req, res) => {
+router.post("/save-map", requireLibrarian, async (req, res) => {
   try {
     console.log("Received seat map data:", req.body);
-    if (!req.session.user || req.session.user.role !== "librarian") {
-      return res
-        .status(403)
-        .json({ message: "Access denied. Librarian privileges required." });
-    }
+
     const seatsArray = req.body;
     const results = [];
     for (const seatDetails of seatsArray) {
@@ -55,7 +51,7 @@ router.get("/get-map", async (req, res) => {
 });
 
 // Route for deleting a seat
-router.delete("/delete-seat/:seatId", async (req, res) => {
+router.delete("/delete-seat/:seatId", requireLibrarian, async (req, res) => {
   try {
     const seatId = req.params.seatId;
     const result = await seatQueries.deleteSeat(seatId);

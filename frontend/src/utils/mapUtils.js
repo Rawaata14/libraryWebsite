@@ -222,3 +222,54 @@ export const getSuggestedMapAreaUse = (
 
   return "-";
 };
+
+/*
+---------------------------------------------------------
+getAvailablePositionInZone
+
+תפקיד:
+מחפשת מיקום פנוי באזור שנבחר עבור פריט חדש,
+כדי למנוע הצבה מעל פריט קיים.
+---------------------------------------------------------
+*/
+export const getAvailablePositionInZone = (
+  zone,
+  items,
+) => {
+  const positionGap = 5;
+  const edgePadding = 3;
+
+  for (
+    let y = zone.minY + edgePadding;
+    y <= zone.maxY - edgePadding;
+    y += positionGap
+  ) {
+    for (
+      let x = zone.minX + edgePadding;
+      x <= zone.maxX - edgePadding;
+      x += positionGap
+    ) {
+      const positionIsAvailable = items.every((item) => {
+        const horizontalDistance = Math.abs(item.x - x);
+        const verticalDistance = Math.abs(item.y - y);
+
+        return (
+          horizontalDistance >= positionGap ||
+          verticalDistance >= positionGap
+        );
+      });
+
+      if (positionIsAvailable) {
+        return {
+          x,
+          y,
+        };
+      }
+    }
+  }
+
+  return {
+    x: (zone.minX + zone.maxX) / 2,
+    y: (zone.minY + zone.maxY) / 2,
+  };
+};

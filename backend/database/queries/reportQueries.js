@@ -7,6 +7,7 @@ reportQueries.js
 
 הקובץ כולל:
 - ספירת משתמשים.
+- ספירת משתמשים חסומים.
 - ספירת ספרים.
 - ספירת מקומות ישיבה.
 - ספירת הזמנות פעילות.
@@ -21,35 +22,47 @@ const doQuery = require("../query");
 getReports
 
 תפקיד:
-שליפת נתוני סטטיסטיקה מרכזיים עבור הספרן.
+שולפת נתוני סטטיסטיקה מרכזיים עבור דף הדוחות
+של הספרן.
 ---------------------------------------------------------
 */
 async function getReports() {
   try {
     const totalUsers = await doQuery("SELECT COUNT(*) AS count FROM `user`");
+
     const blockedUsers = await doQuery(
       "SELECT COUNT(*) AS count FROM `user` WHERE status = 'blocked'",
     );
+
     const totalBooks = await doQuery("SELECT COUNT(*) AS count FROM `book`");
+
     const totalSeats = await doQuery("SELECT COUNT(*) AS count FROM `seat`");
 
-    const activeReservations = await doQuery(
-      "SELECT COUNT(*) AS count FROM `reservation` WHERE status = 'active'",
-    );
+    const activeReservations = await doQuery(`
+      SELECT COUNT(*) AS count
+      FROM seat_reservation
+      WHERE LOWER(status) IN (
+        'pending',
+        'active',
+        'occupied',
+        'confirmed'
+      )
+        AND TIMESTAMP(reservationDate, endTime) >= NOW()
+    `);
 
     const unreadMessages = await doQuery(
-      "SELECT COUNT(*) AS count FROM `messages` WHERE isRead = FALSE",
+      "SELECT COUNT(*) AS count FROM `messages` WHERE isRead = 0",
     );
 
     return {
       success: true,
       reports: {
-        totalUsers: totalUsers[0].count,
-        blockedUsers: blockedUsers[0].count,
-        totalBooks: totalBooks[0].count,
-        totalSeats: totalSeats[0].count,
-        activeReservations: activeReservations[0].count,
-        unreadMessages: unreadMessages[0].count,
+        totalUsers: Number(totalUsers[0]?.count) || 0,
+        blockedUsers: Number(blockedUsers[0]?.count) || 0,
+        totalBooks: Number(totalBooks[0]?.count) || 0,
+        totalSeats: Number(totalSeats[0]?.count) || 0,
+        activeReservations: Number(activeReservations[0]?.count) || 0,
+        unreadMessages: Number(unreadMessages[0]?.count) || 0,
       },
     };
   } catch (error) {

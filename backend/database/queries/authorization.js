@@ -1,7 +1,6 @@
 const doQuery = require("../query");
 const bcrypt = require("bcrypt");
 
-
 /*
 ---------------------------------------------------------
 createSafeUser
@@ -30,7 +29,6 @@ function createSafeUser(user) {
     profile_image_name: user.profile_image_name,
   };
 }
-
 
 /*
 ---------------------------------------------------------
@@ -137,10 +135,9 @@ async function loginUser(email, password) {
   }
 
   try {
-    const users = await doQuery(
-      "SELECT * FROM `user` WHERE email = ?",
-      [normalizedEmail],
-    );
+    const users = await doQuery("SELECT * FROM `user` WHERE email = ?", [
+      normalizedEmail,
+    ]);
 
     if (users.length === 0) {
       return {
@@ -158,10 +155,7 @@ async function loginUser(email, password) {
       };
     }
 
-    const isPasswordCorrect = await bcrypt.compare(
-      password,
-      user.passwordHash,
-    );
+    const isPasswordCorrect = await bcrypt.compare(password, user.passwordHash);
 
     if (!isPasswordCorrect) {
       return {
@@ -170,10 +164,9 @@ async function loginUser(email, password) {
       };
     }
 
-    await doQuery(
-      "UPDATE `user` SET lastLoginAt = NOW() WHERE userId = ?",
-      [user.userId],
-    );
+    await doQuery("UPDATE `user` SET lastLoginAt = NOW() WHERE userId = ?", [
+      user.userId,
+    ]);
 
     const updatedUsers = await doQuery(
       "SELECT * FROM `user` WHERE userId = ?",
@@ -194,7 +187,6 @@ async function loginUser(email, password) {
     };
   }
 }
-
 
 /*
 ---------------------------------------------------------
@@ -225,10 +217,9 @@ async function updateProfileImage(email, profileImageName) {
       [profileImageName, email],
     );
 
-    const users = await doQuery(
-      "SELECT * FROM `user` WHERE email = ?",
-      [email],
-    );
+    const users = await doQuery("SELECT * FROM `user` WHERE email = ?", [
+      email,
+    ]);
 
     if (users.length === 0) {
       return {
@@ -331,10 +322,9 @@ async function updateUserProfile(currentEmail, updatedData) {
 
     await doQuery(updateSQL, params);
 
-    const updatedUsers = await doQuery(
-      "SELECT * FROM `user` WHERE email = ?",
-      [email],
-    );
+    const updatedUsers = await doQuery("SELECT * FROM `user` WHERE email = ?", [
+      email,
+    ]);
 
     if (updatedUsers.length === 0) {
       return {
@@ -402,16 +392,10 @@ updateUserStatus
 - נבדק שהמשתמש קיים לפני ביצוע העדכון.
 ---------------------------------------------------------
 */
-async function updateUserStatus(
-  email,
-  status,
-  currentLibrarianEmail,
-) {
+async function updateUserStatus(email, status, currentLibrarianEmail) {
   const normalizedEmail = email?.trim().toLowerCase();
   const normalizedStatus = status?.trim().toLowerCase();
-  const normalizedLibrarianEmail = currentLibrarianEmail
-    ?.trim()
-    .toLowerCase();
+  const normalizedLibrarianEmail = currentLibrarianEmail?.trim().toLowerCase();
 
   const allowedStatuses = ["active", "blocked"];
 
@@ -480,42 +464,83 @@ async function updateUserStatus(
 getUserDashboardStats
 
 תפקיד:
-שליפת נתוני דשבורד עבור משתמש רגיל לפי userId.
+שליפת נתוני Dashboard עבור משתמש רגיל לפי userId.
+
+הפונקציה מחזירה:
+- מספר הספרים המושאלים הפעילים.
+- מספר הזמנות המקומות העתידיות.
+- מספר ההתראות שלא נקראו.
+- חמש ההזמנות העתידיות הקרובות.
 ---------------------------------------------------------
 */
 async function getUserDashboardStats(userId) {
   try {
     const borrowedBooks = await doQuery(
-      "SELECT COUNT(*) AS count FROM `loan` WHERE userId = ? AND status = 'ACTIVE'",
-      [userId]
+      `SELECT COUNT(*) AS count
+       FROM \`loan\`
+       WHERE userId = ?
+         AND status = 'ACTIVE'`,
+      [userId],
     );
 
     const activeReservations = await doQuery(
-      "SELECT COUNT(*) AS count FROM `seat_reservation` WHERE userId = ? AND status IN ('pending', 'active')",
-      [userId]
+      `SELECT COUNT(*) AS count
+       FROM seat_reservation
+       WHERE userId = ?
+         AND LOWER(status) IN (
+           'pending',
+           'active',
+           'occupied',
+           'confirmed'
+         )
+         AND TIMESTAMP(
+           reservationDate,
+           endTime
+         ) >= NOW()`,
+      [userId],
     );
 
     const unreadNotifications = await doQuery(
-      "SELECT COUNT(*) AS count FROM `notification` WHERE userId = ? AND isRead = 0",
-      [userId]
+      `SELECT COUNT(*) AS count
+       FROM notification
+       WHERE userId = ?
+         AND isRead = 0`,
+      [userId],
     );
 
     const upcomingReservations = await doQuery(
-      `SELECT reservationId, seatId, reservationDate, startTime, endTime, status
+      `SELECT
+         reservationId,
+         seatId,
+         reservationDate,
+         startTime,
+         endTime,
+         status
        FROM seat_reservation
        WHERE userId = ?
-       AND reservationDate >= CURDATE()
-       ORDER BY reservationDate ASC, startTime ASC
+         AND LOWER(status) IN (
+           'pending',
+           'active',
+           'occupied',
+           'confirmed'
+         )
+         AND TIMESTAMP(
+           reservationDate,
+           endTime
+         ) >= NOW()
+       ORDER BY
+         reservationDate ASC,
+         startTime ASC
        LIMIT 5`,
-      [userId]
+      [userId],
     );
 
     return {
       success: true,
       stats: {
-        borrowedBooks: borrowedBooks[0].count,
-        activeReservations: activeReservations[0].count,
-        unreadNotifications: unreadNotifications[0].count,
+        borrowedBooks: borrowedBooks[0]?.count || 0,
+        activeReservations: activeReservations[0]?.count || 0,
+        unreadNotifications: unreadNotifications[0]?.count || 0,
         upcomingReservations,
       },
     };
