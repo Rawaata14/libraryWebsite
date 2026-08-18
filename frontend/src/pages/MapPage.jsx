@@ -8,7 +8,8 @@ MapPage.jsx
 העמוד אחראי על:
 - הצגת בחירת התאריך והשעה.
 - הצגת מפת המקומות.
-- הצגת סיכום המקום שנבחר.
+- פתיחת חלון הזמנה לאחר בחירת כיסא פנוי.
+- הצגת הודעת הצלחה או שגיאה נגישה.
 
 מצב ההזמנה והפעולות מנוהלים באמצעות:
 useSeatReservation
@@ -38,7 +39,11 @@ export default function MapPage() {
     availableSlots,
     selectedTime,
     selectedSeat,
-    setSelectedSeat,
+    isSubmitting,
+    mapRefreshKey,
+    reservationFeedback,
+    handleSeatSelect,
+    closeReservationDialog,
     handleDateChange,
     handleTimeChange,
     handleConfirmReservation,
@@ -50,6 +55,49 @@ export default function MapPage() {
 
       <div className="mapPageContainer">
         <div className="mapPageCard mapPageCardColumn">
+          {/*
+          =================================================
+          הוראות קצרות לתהליך ההזמנה
+          =================================================
+          */}
+
+          <ol className="reservationSteps" aria-label="Reservation steps">
+            <li>
+              <span>1</span>
+              Select date and time
+            </li>
+
+            <li>
+              <span>2</span>
+              Choose an available seat
+            </li>
+
+            <li>
+              <span>3</span>
+              Confirm reservation
+            </li>
+          </ol>
+
+          {/*
+          =================================================
+          הודעת הצלחה או שגיאה
+          =================================================
+          */}
+
+          {reservationFeedback && (
+            <div
+              className={`mapReservationFeedback ${
+                reservationFeedback.type === "success"
+                  ? "mapReservationSuccess"
+                  : "mapReservationError"
+              }`}
+              role={reservationFeedback.type === "error" ? "alert" : "status"}
+              aria-live="polite"
+            >
+              {reservationFeedback.message}
+            </div>
+          )}
+
           {/*
           =================================================
           בחירת תאריך, שעה ומקום
@@ -100,27 +148,34 @@ export default function MapPage() {
             </div>
 
             <RoomMap
-              onSeatSelect={setSelectedSeat}
+              key={mapRefreshKey}
+              onSeatSelect={handleSeatSelect}
               selectedSeatId={selectedSeat?.id}
               selectedDate={selectedDate}
               selectedTime={selectedTime}
             />
           </div>
-
-          {/*
-          =================================================
-          סיכום הבחירה ואישור ההזמנה
-          =================================================
-          */}
-
-          <SeatReservationSummary
-            selectedSeat={selectedSeat}
-            selectedDate={selectedDate}
-            selectedTime={selectedTime}
-            onConfirm={handleConfirmReservation}
-          />
         </div>
       </div>
+
+      {/*
+      ===================================================
+      חלון סיכום ואישור ההזמנה
+
+      מוצג רק לאחר בחירת כיסא פנוי.
+      ===================================================
+      */}
+
+      {selectedSeat && (
+        <SeatReservationSummary
+          selectedSeat={selectedSeat}
+          selectedDate={selectedDate}
+          selectedTime={selectedTime}
+          isSubmitting={isSubmitting}
+          onConfirm={handleConfirmReservation}
+          onClose={closeReservationDialog}
+        />
+      )}
     </PageShell>
   );
 }

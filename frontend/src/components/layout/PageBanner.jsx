@@ -4,23 +4,42 @@ PageBanner.jsx
 
 תיאור הקובץ:
 כותרת עליונה משותפת לדפי המערכת.
+
+הקומפוננטה אחראית על:
+- הצגת כותרת ראשית ברורה לכל עמוד.
+- שמירת מבנה סמנטי ונגיש.
+- טעינת קובץ העיצוב הייעודי לכותרת.
 =========================================================
 */
 
 import PropTypes from "prop-types";
+
+import "../../styles/page-banner.css";
 
 /*
 ---------------------------------------------------------
 PageBanner
 
 תפקיד:
-מציגה את כותרת הדף במבנה ובעיצוב אחידים.
+מציגה את כותרת הדף ככותרת ראשית מסוג h1.
 ---------------------------------------------------------
 */
 export default function PageBanner({ title }) {
-  return <div className="pageBanner">{title}</div>;
+  return (
+    <div className="pageBanner">
+      <h1 className="pageBannerTitle">{title}</h1>
+    </div>
+  );
 }
 
+/*
+---------------------------------------------------------
+PageBanner.propTypes
+
+תפקיד:
+מגדיר את כותרת הדף שהקומפוננטה מקבלת.
+---------------------------------------------------------
+*/
 PageBanner.propTypes = {
   title: PropTypes.string.isRequired,
 };

@@ -1,457 +1,152 @@
 /*
-  layout.css
-  ----------
-  עיצוב מעטפת המערכת.
+=========================================================
+layout.css
 
-  אחריות:
-  - PageShell
-  - Header
-  - Footer
-  - PageBanner
-  - Profile Page
+תיאור הקובץ:
+עיצוב מעטפת הדפים הראשית של המערכת.
+
+הקובץ אחראי רק על:
+- PageShell.
+- מסגרת האתר.
+- חלוקת המסך בין סרגל הספרנית לתוכן.
+- התאמת מבנה הדף למסכים צרים.
+
+עיצוב Header, Footer, Profile ו-PageBanner
+נמצא בקבצים נפרדים.
+=========================================================
+*/
+
+/*
+=========================================================
+מעטפת האתר
+=========================================================
 */
 
 .pageShell {
   width: 100%;
   max-width: 100%;
+
   margin: 0;
   padding: 0 12px;
 }
 
+/*
+---------------------------------------------------------
+frame
+
+תפקיד:
+יוצרת מסגרת כללית שמחזיקה את ה-Header,
+תוכן העמוד וה-Footer.
+---------------------------------------------------------
+*/
+
 .frame {
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
   min-height: 100vh;
 
   border-radius: 22px;
 
   overflow: hidden;
-
-  display: flex;
-
-  flex-direction: column;
 }
+
+/*
+---------------------------------------------------------
+libraryBg
+
+תפקיד:
+המחלקה נשמרת עבור מבנה קיים בפרויקט.
+
+רקע האתר עצמו מוגדר ב-globals.css ולכן אין צורך
+להגדיר כאן תמונת רקע נוספת.
+---------------------------------------------------------
+*/
 
 .libraryBg {
-  /*
-    הרקע הגלובלי מוגדר ב-globals.css.
-    המחלקה נשארת כדי לא לשבור קומפוננטות קיימות.
-  */
-}
-
-/* ===== Header ===== */
-
-.topbar {
-  background: linear-gradient(
-    180deg,
-    #24357d 0%,
-    #1a2557 100%
-  );
-
-  color: white;
-
-  padding: 14px 24px;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: space-between;
-
-  gap: 18px;
-
-  flex-wrap: wrap;
-
-  border-radius: 16px 16px 0 0;
-}
-
-/* Logo */
-
-.brand {
-  display: flex;
-
-  align-items: center;
-
-  gap: 10px;
-
-  font-size: clamp(24px, 3vw, 34px);
-
-  font-weight: 800;
-
-  color: white;
-
-  text-decoration: none;
-}
-
-.brandIcon {
-  display: inline-flex;
-
-  align-items: center;
-
-  justify-content: center;
-}
-
-/* Navigation */
-
-.navLinks {
-  display: flex;
-
-  align-items: center;
-
-  gap: 24px;
-
-  flex-wrap: wrap;
-}
-
-.navItem {
-  color: white;
-
-  text-decoration: none;
-
-  font-size: 18px;
-
-  font-weight: 600;
-
-  padding-bottom: 4px;
-
-  transition: 0.2s;
-}
-
-.navItem:hover {
-  color: var(--gold);
-}
-
-.activeNav {
-  color: var(--gold);
-
-  border-bottom: 2px solid var(--gold);
-}
-
-/* Header Actions */
-
-.headerActions {
-  display: flex;
-
-  align-items: center;
-
-  gap: 12px;
-}
-
-.headerLoginBtn {
-  background: #2a469c;
-
-  color: white;
-
-  padding: 10px 18px;
-
-  border-radius: 12px;
-
-  text-decoration: none;
-
-  font-weight: 700;
-
-  transition: 0.2s;
-}
-
-.headerLoginBtn:hover {
-  background: #17357f;
-}
-
-/* ===== Profile Section ===== */
-
-.headerProfileSection {
-  display: flex;
-
-  align-items: center;
-
-  gap: 12px;
-}
-
-.headerWelcomeText {
-  color: white;
-
-  font-weight: 700;
-
-  font-size: 1rem;
-}
-
-/* תמונת פרופיל */
-
-.profileImageLink {
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-}
-
-.headerProfileImage {
-  width: 48px;
-
-  height: 48px;
-
-  border-radius: 50%;
-
-  object-fit: cover;
-
-  border: 3px solid #f3d8c0;
-
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
-
-  transition: 0.2s;
-}
-
-.headerProfileImage:hover {
-  transform: scale(1.08);
-
-  border-color: #ffffff;
-}
-
-/* Logout */
-
-.headerLogoutBtn {
-  background: #7a2d26;
-
-  color: white;
-
-  padding: 10px 16px;
-
-  border-radius: 10px;
-
-  border: none;
-
-  font-weight: 700;
-
-  cursor: pointer;
-
-  transition: 0.2s;
-}
-
-.headerLogoutBtn:hover {
-  background: #5d1f1a;
-}
-
-/* User Chip */
-
-.userChip {
-  background: rgba(67, 24, 22, 0.85);
-
-  color: white;
-
-  padding: 10px 14px;
-
-  border-radius: 12px;
-
-  font-weight: 700;
-}
-
-/* ===== Page Banner ===== */
-
-.pageBanner {
-  background: linear-gradient(
-    180deg,
-    #7a463f 0%,
-    #5e312d 100%
-  );
-
-  color: #fff5ef;
-
-  text-align: center;
-
-  padding: 24px;
-
-  font-size: clamp(24px, 4vw, 38px);
-
-  font-weight: 800;
-
-  border-bottom: 6px double #9b6b57;
-}
-
-/* ===== Footer ===== */
-
-.footer {
-  background: linear-gradient(
-    180deg,
-    #6d3b35 0%,
-    #4c2421 100%
-  );
-
-  color: #fff7f3;
-
-  padding: 20px 26px;
-
-  margin-top: 40px;
-}
-
-.footerRow {
-  display: flex;
-
-  align-items: center;
-
-  justify-content: space-between;
-
-  gap: 16px;
-
-  flex-wrap: wrap;
-}
-
-.socials {
-  display: flex;
-
-  gap: 10px;
-}
-
-.socialBadge {
-  width: 42px;
-
-  height: 42px;
-
-  display: grid;
-
-  place-items: center;
-
-  border-radius: 10px;
-
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.footerContact {
-  display: flex;
-
-  gap: 26px;
-
-  flex-wrap: wrap;
-
-  font-size: 18px;
-
-  font-weight: 600;
-}
-
-/* ===== Profile Page ===== */
-
-.profilePage {
-  min-height: 100vh;
-
-  padding: 40px 20px;
-
-  display: flex;
-
-  justify-content: center;
-}
-
-.profileCard {
   width: 100%;
-
-  max-width: 1100px;
-
-  background: rgba(34, 20, 14, 0.92);
-
-  border: 2px solid #8d5a42;
-
-  border-radius: 24px;
-
-  padding: 32px;
-
-  color: white;
-
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
 }
 
-.profileHeader {
+/*
+=========================================================
+גוף הדף
+=========================================================
+*/
+
+/*
+---------------------------------------------------------
+pageShellBody
+
+תפקיד:
+מחלק את האזור המרכזי בין סרגל הספרנית
+לבין תוכן העמוד.
+
+כאשר אין סרגל ספרנית, תוכן העמוד תופס
+את כל הרוחב.
+---------------------------------------------------------
+*/
+
+.pageShellBody {
   display: flex;
-
-  align-items: center;
-
-  gap: 24px;
-
-  margin-bottom: 40px;
-}
-
-.profileImage {
-  width: 110px;
-
-  height: 110px;
-
-  border-radius: 50%;
-
-  object-fit: cover;
-
-  border: 4px solid #d8b08f;
-}
-
-.profileRole {
-  display: inline-block;
-
-  margin-top: 10px;
-
-  padding: 6px 14px;
-
-  background: #7a3e2e;
-
-  border-radius: 999px;
-
-  font-size: 14px;
-
-  font-weight: 700;
-}
-
-.profileSection h2 {
-  margin-bottom: 24px;
-}
-
-.profileGrid {
-  display: grid;
-
-  grid-template-columns: repeat(
-    auto-fit,
-    minmax(220px, 1fr)
-  );
-
+  align-items: flex-start;
   gap: 20px;
+  flex: 1;
+
+  width: 100%;
+  min-width: 0;
 }
 
-.profileBox {
-  background: rgba(255, 255, 255, 0.08);
+/*
+---------------------------------------------------------
+pageShellContent
 
-  border: 1px solid rgba(255, 255, 255, 0.12);
+תפקיד:
+מחזיק את תוכן העמוד ומאפשר לו להתכווץ
+מבלי ליצור גלילה אופקית לא רצויה.
+---------------------------------------------------------
+*/
 
-  border-radius: 18px;
+.pageShellContent {
+  flex: 1;
 
-  padding: 22px;
-
-  transition: 0.2s;
+  width: 100%;
+  min-width: 0;
 }
 
-.profileBox:hover {
-  transform: translateY(-4px);
-
-  background: rgba(255, 255, 255, 0.12);
-}
-
-/* ===== Responsive ===== */
+/*
+=========================================================
+טאבלט וחצי מסך
+=========================================================
+*/
 
 @media (max-width: 900px) {
-  .topbar {
+  .pageShellBody {
     flex-direction: column;
-
-    align-items: center;
-
-    text-align: center;
+    gap: 14px;
   }
 
-  .navLinks {
-    justify-content: center;
+  .pageShellContent {
+    width: 100%;
+  }
+}
+
+/*
+=========================================================
+טלפון
+=========================================================
+*/
+
+@media (max-width: 520px) {
+  .pageShell {
+    padding: 0;
   }
 
-  .headerActions {
-    justify-content: center;
+  .frame {
+    border-radius: 0;
   }
 
-  .profileHeader {
-    flex-direction: column;
-
-    text-align: center;
-  }
-
-  .profileGrid {
-    grid-template-columns: 1fr;
+  .pageShellBody {
+    gap: 10px;
   }
 }

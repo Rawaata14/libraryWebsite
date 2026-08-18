@@ -6,10 +6,11 @@ LibraryMap.jsx
 רכיב התצוגה של מפת הספרייה האינטראקטיבית.
 
 הקומפוננטה אחראית על:
-- הצגת סרגל כלי הניהול לספרן.
+- הצגת סרגל כלי הניהול לספרנית.
 - הצגת רקע המפה ואזורי הספרייה.
-- הצגת פריטי המפה.
-- הצגת פרטי הפריט הנבחר.
+- הצגת פריטי המפה והמושבים.
+- קביעה אילו פריטים ניתנים לבחירה.
+- הצגת פרטי הפריט הנבחר במצב ניהול.
 
 מצב העריכה והפעולות מנוהלים באמצעות:
 useLibraryMap
@@ -27,11 +28,29 @@ import { seatPropType } from "../../propTypes/seatPropTypes";
 
 /*
 ---------------------------------------------------------
+RESERVABLE_ITEM_TYPES
+
+תפקיד:
+מגדיר אילו סוגי פריטים במפה מייצגים מקומות
+ישיבה שניתן להזמין.
+
+שולחנות ועמדת הקבלה אינם נכללים ברשימה.
+---------------------------------------------------------
+*/
+const RESERVABLE_ITEM_TYPES = [
+  "seat",
+  "seat-to-add",
+  "single-seat",
+  "computer-seat",
+];
+
+/*
+---------------------------------------------------------
 LibraryMap
 
 תפקיד:
-מחברת בין לוגיקת המפה שב-Hook
-לבין רכיבי התצוגה של המפה.
+מחברת בין לוגיקת המפה שב-Hook לבין רכיבי
+התצוגה של המפה.
 ---------------------------------------------------------
 */
 export default function LibraryMap({
@@ -59,7 +78,6 @@ export default function LibraryMap({
     handleMapPointerMove,
     stopDragging,
     handleMapPointerLeave,
-    updateItemPosition,
     saveMap,
   } = useLibraryMap({
     items,
@@ -74,6 +92,8 @@ export default function LibraryMap({
       {/*
       =====================================================
       סרגל ניהול המפה
+
+      מוצג רק לספרנית שנמצאת בדף ניהול המפה.
       =====================================================
       */}
 
@@ -102,13 +122,20 @@ export default function LibraryMap({
       <div
         className="dynamicMapCanvas"
         ref={mapRef}
+        role="region"
+        aria-label="Interactive library seating map"
         onPointerMove={handleMapPointerMove}
         onPointerUp={stopDragging}
         onPointerLeave={handleMapPointerLeave}
       >
+        {/*
+        תמונת הרקע משמשת לצורכי עיצוב בלבד.
+        המושבים האינטראקטיביים מקבלים תיאור נגיש בנפרד.
+        */}
         <img
           src="/images/library-map.png"
-          alt="Library map"
+          alt=""
+          aria-hidden="true"
           className="dynamicMapBackground"
         />
 
@@ -136,12 +163,30 @@ export default function LibraryMap({
         {/*
         ==================================================
         פריטי המפה
+
+        משתמש רגיל:
+        יכול לבחור רק מקום ישיבה פנוי.
+
+        ספרנית:
+        יכולה לבחור כל פריט לצורך עריכה וניהול.
         ==================================================
         */}
 
         {items.map((item) => {
           const isTable = item.type === "table-4" || item.type === "table-8";
-          const isSeatClickable = isLibrarian || !isTable;
+
+          const isReservableItem = RESERVABLE_ITEM_TYPES.includes(item.type);
+
+          /*
+          -------------------------------------------------
+          בדיקת אפשרות בחירת הפריט
+
+          ספרנית יכולה לבחור כל פריט.
+          משתמש יכול לבחור רק מושב פנוי שניתן להזמנה.
+          -------------------------------------------------
+          */
+          const isItemClickable =
+            isLibrarian || (isReservableItem && item.status === "available");
 
           return (
             <div
@@ -160,10 +205,9 @@ export default function LibraryMap({
                 item={item}
                 isSelected={selectedSeatId === item.seatId}
                 onSelect={handleItemSelect}
-                onMove={updateItemPosition}
                 isLibrarian={isLibrarian}
                 setDraggingItemId={setDraggingItemId}
-                isClickable={isSeatClickable}
+                isClickable={isItemClickable}
               />
             </div>
           );
@@ -173,6 +217,8 @@ export default function LibraryMap({
       {/*
       =====================================================
       פרטי הפריט הנבחר
+
+      מוצגים רק במצב ניהול מפה.
       =====================================================
       */}
 

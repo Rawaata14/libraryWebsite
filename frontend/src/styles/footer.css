@@ -1,0 +1,199 @@
+/*
+=========================================================
+footer.css
+
+תיאור הקובץ:
+עיצוב אזור תחתית האתר.
+
+הקובץ אחראי על:
+- עיצוב פרטי הקשר.
+- עיצוב סמלי הרשתות החברתיות.
+- התאמת ה-Footer למסכים צרים.
+- הצגת מיקוד נגיש בקישורים.
+=========================================================
+*/
+
+/*
+=========================================================
+מבנה ה-Footer
+=========================================================
+*/
+
+.footer {
+  width: 100%;
+
+  margin-top: auto;
+  padding: 20px 26px;
+
+  background: linear-gradient(
+    180deg,
+    #6d3b35 0%,
+    #4c2421 100%
+  );
+
+  color: #fff7f3;
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+
+  width: 100%;
+}
+
+/*
+=========================================================
+רשתות חברתיות
+=========================================================
+*/
+
+.socials {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.socialBadge {
+  display: grid;
+  place-items: center;
+
+  width: 44px;
+  height: 44px;
+
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+
+  background: rgba(255, 255, 255, 0.13);
+  color: #ffffff;
+
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+/*
+=========================================================
+פרטי קשר
+=========================================================
+*/
+
+.footerContact {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 26px;
+  flex-wrap: wrap;
+
+  /*
+  אלמנט address מקבל כתב נטוי כברירת מחדל.
+  ההגדרה מבטלת זאת בכל גדלי המסך.
+  */
+  font-size: 18px;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.footerContactItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  color: #fff7f3;
+  text-decoration: none;
+}
+
+/*
+---------------------------------------------------------
+קישורי דוא"ל וטלפון
+
+גובה מינימלי של 44px מאפשר לחיצה נוחה
+גם במסכי מגע.
+---------------------------------------------------------
+*/
+
+a.footerContactItem {
+  min-height: 44px;
+}
+
+a.footerContactItem:hover {
+  color: #ffd28d;
+  text-decoration: underline;
+}
+
+a.footerContactItem:focus-visible {
+  outline: 4px solid #ffffff;
+  outline-offset: 4px;
+  border-radius: 5px;
+}
+
+/*
+=========================================================
+חצי מסך וטאבלט
+=========================================================
+*/
+
+@media (max-width: 850px) {
+  .footerRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .footerContact {
+    justify-content: flex-start;
+    gap: 12px 22px;
+  }
+}
+
+/*
+=========================================================
+טלפון
+=========================================================
+*/
+
+@media (max-width: 520px) {
+  .footer {
+    padding: 18px 16px;
+  }
+
+  .footerRow {
+    align-items: center;
+  }
+
+  .socials {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .footerContact {
+    align-items: flex-start;
+    flex-direction: column;
+
+    width: 100%;
+
+    font-size: 16px;
+  }
+
+  .footerContactItem {
+    width: 100%;
+  }
+}
+
+/*
+=========================================================
+הפחתת תנועה
+
+הקובץ אינו כולל כרגע אנימציות, אך ההגדרה
+נשמרת כהכנה להוספת קישורים חברתיים בעתיד.
+=========================================================
+*/
+
+@media (prefers-reduced-motion: reduce) {
+  .footer *,
+  .footer *::before,
+  .footer *::after {
+    scroll-behavior: auto;
+  }
+}

@@ -1,92 +1,102 @@
 /*
-  map-responsive.css
-  ------------------
-  התאמות למסכים קטנים.
+=========================================================
+map-responsive.css
+
+תיאור הקובץ:
+התאמות רספונסיביות לדף מפת הספרייה.
+
+הקובץ אחראי על:
+- התאמת אזור המפה למסכי מחשב, חצי מסך ומובייל.
+- שמירת שדות התאריך והשעה בשורה כל עוד יש מספיק מקום.
+- מניעת רווחים ופאנלים גדולים מדי במסכים צרים.
+=========================================================
 */
 
 @media (max-width: 1100px) {
   .mapPageContainer {
+    width: 100%;
     max-width: 100%;
-  }
-
-  .interactiveLibraryMap {
-    height: 760px;
-  }
-}
-
-@media (max-width: 900px) {
-  .mapFilters {
-    grid-template-columns: 1fr;
-  }
-
-  .interactiveLibraryMap {
-    height: 680px;
-  }
-
-  .zoneTitle {
-    font-size: 18px;
-  }
-
-  .table.round {
-    width: 62px;
-    height: 62px;
-  }
-
-  .table.computer {
-    width: 110px;
-    height: 48px;
-  }
-
-  .table.study {
-    width: 100px;
-    height: 48px;
-  }
-
-  .seat {
-    width: 17px;
-    height: 17px;
-  }
-}
-
-@media (max-width: 768px) {
-  .mapPageContainer {
-    padding: 12px;
+    margin-top: 12px;
+    padding: 14px;
   }
 
   .mapPageCard {
-    padding: 14px;
+    padding: 18px;
   }
 
   .mapSelectionPanel,
   .mapSummaryPanel {
-    padding: 14px;
+    padding: 16px;
+  }
+}
+
+/*
+---------------------------------------------------------
+חצי מסך וטאבלט
+
+שומר על התאריך והשעה באותה שורה כל עוד
+הרוחב מאפשר זאת.
+---------------------------------------------------------
+*/
+@media (max-width: 700px) {
+  .mapFilters {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 
-  .interactiveLibraryMap {
-    height: 560px;
+  .mapPageContainer {
+    padding: 10px;
+    margin-bottom: 24px;
   }
 
-  .zoneTitle {
-    font-size: 15px;
+  .mapPageCard {
+    padding: 10px;
+    border-radius: 16px;
   }
 
-  .zoneSubtitle {
-    display: none;
+  .mapPageCardColumn {
+    gap: 16px;
   }
 
-  .reception {
-    width: 110px;
-    height: 44px;
-    font-size: 12px;
+  .mapSelectionPanel,
+  .mapSummaryPanel {
+    padding: 12px;
+    border-radius: 14px;
   }
 
-  .entrance {
-    font-size: 11px;
-    padding: 7px 12px;
+  .mapSummaryTitle {
+    font-size: 24px;
   }
 
-  .roomLegend {
-    gap: 10px;
-    font-size: 12px;
+  .mapSummaryInfo p {
+    font-size: 16px;
+  }
+}
+
+/*
+---------------------------------------------------------
+מסכי טלפון קטנים
+---------------------------------------------------------
+*/
+@media (max-width: 480px) {
+  .mapPageContainer {
+    padding: 6px;
+  }
+
+  .mapPageCard {
+    padding: 6px;
+  }
+
+  .mapSelectionPanel,
+  .mapSummaryPanel {
+    padding: 10px;
+  }
+
+  .mapFilterInput {
+    padding: 11px 12px;
+  }
+
+  .mapSummaryTitle {
+    font-size: 21px;
   }
 }

@@ -86,3 +86,243 @@
 .mapSummaryButtonRow {
   margin-top: 20px;
 }
+
+/*
+=========================================================
+שלבי תהליך ההזמנה
+=========================================================
+*/
+
+.reservationSteps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reservationSteps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.09);
+  font-weight: 700;
+}
+
+.reservationSteps li span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #b34f3a;
+  color: #ffffff;
+}
+
+/*
+=========================================================
+משוב הזמנה
+=========================================================
+*/
+
+.mapReservationFeedback {
+  padding: 14px 16px;
+  border: 2px solid;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+.mapReservationSuccess {
+  background: #dceecb;
+  border-color: #4f7d39;
+  color: #214a18;
+}
+
+.mapReservationError {
+  background: #f3d3cf;
+  border-color: #a33d32;
+  color: #6f201a;
+}
+
+/*
+=========================================================
+חלון סיכום ההזמנה
+=========================================================
+*/
+
+.reservationDialogOpen {
+  overflow: hidden;
+}
+
+.seatReservationOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  justify-content: flex-end;
+  align-items: stretch;
+  padding: 18px;
+  background: rgba(18, 8, 5, 0.66);
+  backdrop-filter: blur(3px);
+}
+
+.seatReservationDialog {
+  width: min(420px, 100%);
+  height: 100%;
+  overflow-y: auto;
+  padding: 26px;
+  border: 2px solid #9d634c;
+  border-radius: 20px;
+  background: #efe0d7;
+  color: #3d2019;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.42);
+}
+
+.seatReservationDialog:focus {
+  outline: none;
+}
+
+.seatReservationDialogHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.seatReservationStep {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #8a3e2e;
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.seatReservationCloseButton {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border: 2px solid #7a4c3a;
+  border-radius: 50%;
+  background: transparent;
+  color: #3d2019;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.seatReservationCloseButton:hover {
+  background: #f3d3cf;
+}
+
+.seatReservationCloseButton:focus-visible {
+  outline: 4px solid #163d8c;
+  outline-offset: 3px;
+}
+
+.seatReservationDescription {
+  margin: 4px 0 22px;
+  font-size: 16px;
+}
+
+.seatReservationDetail {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(61, 32, 25, 0.2);
+}
+
+.seatReservationDetail span {
+  color: #6c5148;
+}
+
+.seatReservationDetail strong {
+  text-align: right;
+}
+
+.seatReservationDialog .mapSummaryButtonRow {
+  display: grid;
+  gap: 10px;
+}
+
+.confirmSeatReservationButton,
+.chooseAnotherSeatButton {
+  width: 100%;
+  min-height: 48px;
+}
+
+.chooseAnotherSeatButton {
+  background: transparent;
+  border: 2px solid #7a4c3a;
+  color: #3d2019;
+}
+
+.chooseAnotherSeatButton:hover {
+  background: #e5cfc2;
+}
+
+.seatReservationDialog button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/*
+=========================================================
+חצי מסך ומובייל
+
+החלון הופך ל-Bottom Sheet כדי שלא יהיה צר מדי.
+=========================================================
+*/
+
+@media (max-width: 800px) {
+  .reservationSteps {
+    grid-template-columns: 1fr;
+  }
+
+  .reservationSteps li {
+    padding: 9px 12px;
+  }
+
+  .seatReservationOverlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .seatReservationDialog {
+    width: 100%;
+    height: auto;
+    max-height: 88dvh;
+    padding: 20px;
+    border-right: none;
+    border-bottom: none;
+    border-left: none;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .seatReservationDialog .mapSummaryTitle {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .reservationSteps li:not(:first-child) {
+    display: none;
+  }
+
+  .seatReservationDialog {
+    padding: 16px;
+  }
+
+  .seatReservationDetail {
+    padding: 10px 0;
+  }
+}

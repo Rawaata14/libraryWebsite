@@ -465,3 +465,65 @@ Quick Management
     padding: 22px;
   }
 }
+
+/*
+---------------------------------------------------------
+כותרת דשבורד הפרופיל ופעולות רענון
+---------------------------------------------------------
+*/
+
+.profileDashboardHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.profileDashboardRefreshButton,
+.dashboardRefreshButton {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 2px solid #9d634c;
+  border-radius: 10px;
+  background: #8f4132;
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profileDashboardRefreshButton:hover,
+.dashboardRefreshButton:hover {
+  background: #6f3026;
+}
+
+.profileDashboardRefreshButton:focus-visible,
+.dashboardRefreshButton:focus-visible {
+  outline: 4px solid #163d8c;
+  outline-offset: 3px;
+}
+
+.profileBox {
+  text-decoration: none;
+  color: inherit;
+}
+
+.profileBox:focus-visible {
+  outline: 4px solid #ffffff;
+  outline-offset: 4px;
+}
+
+.dashboardMainValue {
+  color: #ffae38;
+  font-size: 34px;
+}
+
+@media (max-width: 600px) {
+  .profileDashboardHeading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .profileDashboardRefreshButton {
+    width: 100%;
+  }
+}

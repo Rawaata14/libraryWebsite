@@ -1,8 +1,20 @@
 /*
-  MapItem.jsx
-  -----------
-  רכיב שמציג אייקון אחד על גבי מפת הספרייה ומנהל לחיצה ונעילת גרירה.
+=========================================================
+MapItem.jsx
+
+תיאור הקובץ:
+רכיב המציג פריט יחיד על גבי מפת הספרייה.
+
+הקומפוננטה אחראית על:
+- הצגת האייקון המתאים לסוג הפריט.
+- בחירת מושב פנוי על ידי המשתמש.
+- בחירת וגרירת פריטים על ידי הספרנית.
+- מניעת בחירה של מושבים תפוסים או חסומים.
+- הוספת מידע נגיש לכפתורי המפה.
+=========================================================
 */
+
+import PropTypes from "prop-types";
 
 import chairIcon from "../../assets/icons/seat-to-add.png";
 import singleSeatIcon from "../../assets/icons/single-seat.png";
@@ -11,11 +23,22 @@ import table8Icon from "../../assets/icons/table-8.png";
 import computerSeatIcon from "../../assets/icons/computer-seat.png";
 import receptionIcon from "../../assets/icons/reception.png";
 
-import PropTypes from "prop-types";
 import { seatPropType } from "../../propTypes/seatPropTypes";
 
+/*
+---------------------------------------------------------
+icons
+
+תפקיד:
+מתאים בין סוג פריט המפה לבין קובץ התמונה שלו.
+
+קיימת תמיכה גם בשם seat וגם בשם seat-to-add,
+כדי לתמוך בפריטים קיימים ובפריטים חדשים.
+---------------------------------------------------------
+*/
 const icons = {
   seat: chairIcon,
+  "seat-to-add": chairIcon,
   "single-seat": singleSeatIcon,
   "table-4": table4Icon,
   "table-8": table8Icon,
@@ -23,62 +46,123 @@ const icons = {
   reception: receptionIcon,
 };
 
+/*
+---------------------------------------------------------
+getItemAccessibleLabel
+
+תפקיד:
+יוצרת תיאור ברור עבור קוראי מסך וטכנולוגיות מסייעות.
+---------------------------------------------------------
+*/
+const getItemAccessibleLabel = (item) => {
+  const itemNumber = item.seatId ? ` ${item.seatId}` : "";
+  const location = item.location
+    ? ` in ${item.location.replaceAll("-", " ")}`
+    : "";
+
+  return `${item.type}${itemNumber}${location}, status: ${item.status}`;
+};
+
+/*
+---------------------------------------------------------
+MapItem
+
+תפקיד:
+מציגה פריט מפה ומנהלת בחירה וגרירה בהתאם
+להרשאות המשתמש ולמצב הפריט.
+---------------------------------------------------------
+*/
 export default function MapItem({
   item,
   isSelected,
   onSelect,
   isLibrarian,
   setDraggingItemId,
-  style, // 💡 מקבלים את הסטייל שנשלח מ-LibraryMap (מכיל את ה-pointerEvents: "auto")
-  isClickable = true, // 💡 פרופ חדש שמאפשר לשלוט אם הפריט ניתן ללחיצה או לא (ברירת מחדל: כן)
+  style,
+  isClickable = true,
 }) {
-  const handlePointerDown = (e) => {
-    if (!isLibrarian) return;
+  const itemIcon = icons[item.type] || chairIcon;
+  const accessibleLabel = getItemAccessibleLabel(item);
 
-    e.preventDefault();
-    // 🔒 נועל את כל תנועות העכבר/מצביע על הרהיט הזה
-    e.currentTarget.setPointerCapture(e.pointerId);
+  /*
+  -------------------------------------------------------
+  handlePointerDown
 
-    if (onSelect) {
-      onSelect(item.seatId);
-      setDraggingItemId(item.seatId);
+  תפקיד:
+  מתחילה בחירה וגרירה של פריט במצב ניהול.
+  משתמש רגיל אינו יכול לגרור פריטי מפה.
+  -------------------------------------------------------
+  */
+  const handlePointerDown = (event) => {
+    if (!isLibrarian || !isClickable) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+
+    onSelect(item.seatId);
+    setDraggingItemId(item.seatId);
+  };
+
+  /*
+  -------------------------------------------------------
+  handlePointerUp
+
+  תפקיד:
+  משחררת את נעילת המצביע לאחר סיום גרירת פריט.
+  -------------------------------------------------------
+  */
+  const handlePointerUp = (event) => {
+    if (!isLibrarian) {
+      return;
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
     }
   };
 
-  const handlePointerUp = (e) => {
-    if (!isLibrarian) return;
-    // 🔓 משחרר את הנעילה כשהרמנו את האצבע מהעכבר
-    e.currentTarget.releasePointerCapture(e.pointerId);
-  };
+  /*
+  -------------------------------------------------------
+  handleClick
 
+  תפקיד:
+  בוחרת את הפריט רק אם הוא ניתן לבחירה.
+  -------------------------------------------------------
+  */
   const handleClick = () => {
-    if (isClickable && onSelect) {
-      onSelect(item.seatId);
+    if (!isClickable) {
+      return;
     }
+
+    onSelect(item.seatId);
   };
 
   return (
     <button
       type="button"
+      disabled={!isClickable}
+      aria-label={accessibleLabel}
+      aria-pressed={isSelected}
       className={`mapIconItem ${item.type} ${item.status} ${
         isSelected ? "selected" : ""
       }`}
       style={{
-        ...style, // 🔥 מיזוג הסטייל החיצוני (כולל pointerEvents: "auto" שמציל את הגרירה!)
-
+        ...style,
         left: `${item.x}%`,
         top: `${item.y}%`,
         "--item-rotation": `${item.rotation || 0}deg`,
-        touchAction: "none", // 📱 מונע מהדפדפן לגלול את המסך בניידים בזמן גרירה
-        pointerEvents: isClickable ? "auto" : "none", // 💡 אם הפריט לא ניתן ללחיצה, מבטל את האירוע
-        cursor: isClickable ? "pointer" : "default", // 💡 משנה את הסמן בהתאם ליכולת הלחיצה
+        touchAction: "none",
+        pointerEvents: isClickable ? "auto" : "none",
+        cursor: isClickable ? "pointer" : "not-allowed",
       }}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onClick={handleClick}
-      title={`${item.type} - ${item.status}`}
+      title={accessibleLabel}
     >
-      <img src={icons[item.type]} alt={item.type} draggable={false} />
+      <img src={itemIcon} alt="" aria-hidden="true" draggable={false} />
     </button>
   );
 }
@@ -96,7 +180,6 @@ MapItem.propTypes = {
   item: seatPropType.isRequired,
   isSelected: PropTypes.bool.isRequired,
   onSelect: PropTypes.func.isRequired,
-  onMove: PropTypes.func,
   isLibrarian: PropTypes.bool.isRequired,
   setDraggingItemId: PropTypes.func.isRequired,
   style: PropTypes.object,

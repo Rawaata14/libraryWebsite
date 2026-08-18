@@ -1,0 +1,79 @@
+/*
+=========================================================
+page-banner.css
+
+תיאור הקובץ:
+עיצוב כותרת הדף המשותפת לדפי המערכת.
+
+הקובץ אחראי על:
+- הצגת שם הדף.
+- שמירת גודל טקסט רספונסיבי.
+- התאמת הריווח למסכים צרים.
+=========================================================
+*/
+
+.pageBanner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  min-height: 106px;
+
+  padding: 22px 24px;
+  border-bottom: 6px double #9b6b57;
+
+  background: linear-gradient(
+    180deg,
+    #7a463f 0%,
+    #5e312d 100%
+  );
+
+  color: #fff5ef;
+  text-align: center;
+}
+
+.pageBannerTitle {
+  margin: 0;
+
+  color: inherit;
+
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+/*
+=========================================================
+חצי מסך וטאבלט
+=========================================================
+*/
+
+@media (max-width: 800px) {
+  .pageBanner {
+    min-height: 88px;
+    padding: 18px 20px;
+  }
+
+  .pageBannerTitle {
+    font-size: clamp(27px, 6vw, 36px);
+  }
+}
+
+/*
+=========================================================
+טלפון
+=========================================================
+*/
+
+@media (max-width: 480px) {
+  .pageBanner {
+    min-height: 74px;
+    padding: 14px 12px;
+    border-bottom-width: 4px;
+  }
+
+  .pageBannerTitle {
+    font-size: 26px;
+  }
+}

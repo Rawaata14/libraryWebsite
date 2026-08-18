@@ -75,10 +75,17 @@
 /* ===== אזור המפה ===== */
 
 .dynamicMapCanvas {
+  container-type: inline-size;
   user-select: none;
   position: relative;
   width: 100%;
-  aspect-ratio: 1600 / 1024;
+
+  /*
+מציג את אזור הספרייה בצורה רחבה יותר
+ומצמצם את השוליים הריקים שבתמונת המקור.
+*/
+aspect-ratio: 25 / 16;
+
   overflow: hidden;
   border: 3px solid #7a4b3d;
   border-radius: 20px;
@@ -99,19 +106,29 @@
   transform: translate(-50%, -50%);
   z-index: 5;
 
-  background: rgba(70, 35, 25, 0.45);
+  background: rgba(70, 35, 25, 0.55);
   backdrop-filter: blur(3px);
 
   color: white;
-  padding: 10px 18px;
+
+  /*
+  הגודל משתנה בהתאם לרוחב המפה,
+  אך נשמר גודל מינימלי קריא.
+  */
+  padding: clamp(6px, 0.8cqw, 10px)
+    clamp(9px, 1.5cqw, 18px);
+
+  max-width: 24cqw;
   border-radius: 14px;
 
-  font-size: 18px;
+  font-size: clamp(12px, 1.5cqw, 18px);
   font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
 
   pointer-events: none;
 
-  border: 2px solid rgba(255, 255, 255, 0.14);
+  border: 2px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18);
 
   transition:
@@ -146,9 +163,15 @@
   cursor: grabbing;
 }
 
-.mapIconItem:focus,
-.mapIconItem:focus-visible {
+.mapIconItem:focus {
   outline: none;
+}
+
+.mapIconItem:focus-visible {
+  outline: 4px solid #ffffff;
+  outline-offset: 4px;
+  border-radius: 8px;
+  box-shadow: 0 0 0 7px #163d8c;
 }
 
 .mapIconItem img {
@@ -170,30 +193,56 @@
   transform: scale(1.05);
 }
 
-/* ===== גדלי אייקונים ===== */
+/*
+---------------------------------------------------------
+פריט מפה שאינו ניתן לבחירה
+
+תפקיד:
+מבהיר שמושב תפוס, מושב חסום או פריט שאינו
+מיועד להזמנה אינם ניתנים ללחיצה.
+---------------------------------------------------------
+*/
+
+.mapIconItem:disabled {
+  cursor: not-allowed;
+}
+
+.mapIconItem:disabled img,
+.mapIconItem:disabled:hover img {
+  transform: none;
+}
+
+/*
+---------------------------------------------------------
+גדלים רספונסיביים לפריטי המפה
+
+הגדלים משתנים ביחס לרוחב המפה, אך נשמר גודל
+מינימלי שמאפשר לזהות וללחוץ על המושבים.
+---------------------------------------------------------
+*/
 
 .mapIconItem.seat img {
-  width: 42px;
+  width: clamp(24px, 3.5cqw, 42px);
 }
 
 .mapIconItem.single-seat img {
-  width: 150px;
+  width: clamp(70px, 12.5cqw, 150px);
 }
 
 .mapIconItem.table-4 img {
-  width: 105px;
+  width: clamp(54px, 8.75cqw, 105px);
 }
 
 .mapIconItem.table-8 img {
-  width: 155px;
+  width: clamp(78px, 12.9cqw, 155px);
 }
 
 .mapIconItem.computer-seat img {
-  width: 110px;
+  width: clamp(56px, 9.2cqw, 110px);
 }
 
 .mapIconItem.reception img {
-  width: 160px;
+  width: clamp(80px, 13.3cqw, 160px);
 }
 
 /* ===== אובייקט חסום ===== */
@@ -255,7 +304,11 @@
   font-size: 15px;
 }
 
-/* ===== מובייל ===== */
+/*
+=========================================================
+התאמות סרגל ניהול המפה למסכים צרים
+=========================================================
+*/
 
 @media (max-width: 900px) {
   .mapToolbar {
@@ -266,32 +319,8 @@
     flex-direction: column;
   }
 
-  .mapIconItem.seat img {
-    width: 32px;
-  }
-
-  .mapIconItem.single-seat img {
-    width: 110px;
-  }
-
-  .mapIconItem.table-4 img {
-    width: 82px;
-  }
-
-  .mapIconItem.table-8 img {
-    width: 120px;
-  }
-
-  .mapIconItem.computer-seat img {
-    width: 82px;
-  }
-
-  .mapIconItem.reception img {
-    width: 120px;
-  }
-
-  .mapZoneLabel {
-    font-size: 13px;
-    padding: 7px 10px;
+  .mapToolbarButtons button {
+    width: 100%;
+    min-height: 44px;
   }
 }

@@ -9,8 +9,10 @@ Custom Hook לניהול תהליך הזמנת מקום במפה.
 - ניהול התאריך והשעה שנבחרו.
 - טעינת שעות פנויות.
 - ניהול הכיסא שנבחר.
+- פתיחה וסגירה של חלון ההזמנה.
 - אימות נתוני ההזמנה.
 - יצירת הזמנה חדשה.
+- הצגת משוב הצלחה או שגיאה.
 =========================================================
 */
 
@@ -29,8 +31,7 @@ import {
 getTodayDateValue
 
 תפקיד:
-מחזירה את התאריך הנוכחי בפורמט YYYY-MM-DD,
-המתאים לשדה input מסוג date.
+מחזירה את התאריך הנוכחי בפורמט YYYY-MM-DD.
 ---------------------------------------------------------
 */
 const getTodayDateValue = () => new Date().toISOString().split("T")[0];
@@ -40,8 +41,8 @@ const getTodayDateValue = () => new Date().toISOString().split("T")[0];
 useSeatReservation
 
 תפקיד:
-מספק לדף המפה את הנתונים והפעולות
-הדרושים לבחירת מקום וליצירת הזמנה.
+מספק לדף המפה את הנתונים והפעולות הדרושים
+לבחירת מקום וליצירת הזמנה.
 ---------------------------------------------------------
 */
 export default function useSeatReservation() {
@@ -52,20 +53,22 @@ export default function useSeatReservation() {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedSeat, setSelectedSeat] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mapRefreshKey, setMapRefreshKey] = useState(0);
+  const [reservationFeedback, setReservationFeedback] = useState(null);
 
   /*
-  ---------------------------------------------------------
+  -------------------------------------------------------
   fetchAvailableSlots
 
   תפקיד:
   טוענת מהשרת את השעות הפנויות לתאריך שנבחר
   ושומרת בחירה קיימת אם היא עדיין זמינה.
-  ---------------------------------------------------------
+  -------------------------------------------------------
   */
   const fetchAvailableSlots = useCallback(async (date) => {
     try {
       const response = await getAvailableReservationSlots(date);
-
       const slots = response.data.slots || [];
 
       setAvailableSlots(slots);
@@ -86,87 +89,122 @@ export default function useSeatReservation() {
 
       setAvailableSlots([]);
       setSelectedTime("");
+      setReservationFeedback({
+        type: "error",
+        message: "The available times could not be loaded.",
+      });
     }
   }, []);
 
   /*
-  ---------------------------------------------------------
+  -------------------------------------------------------
   טעינת שעות פנויות
 
   תפקיד:
   מרעננת את השעות בכל פעם שהתאריך משתנה.
-  ---------------------------------------------------------
+  -------------------------------------------------------
   */
   useEffect(() => {
     fetchAvailableSlots(selectedDate);
   }, [fetchAvailableSlots, selectedDate]);
 
   /*
-  ---------------------------------------------------------
+  -------------------------------------------------------
+  handleSeatSelect
+
+  תפקיד:
+  שומרת כיסא פנוי שנבחר ופותחת את חלון
+  סיכום ההזמנה.
+  -------------------------------------------------------
+  */
+  const handleSeatSelect = (seat) => {
+    if (!seat || seat.status !== "available") {
+      return;
+    }
+
+    setReservationFeedback(null);
+    setSelectedSeat(seat);
+  };
+
+  /*
+  -------------------------------------------------------
+  closeReservationDialog
+
+  תפקיד:
+  סוגרת את חלון ההזמנה ומנקה את בחירת הכיסא.
+  -------------------------------------------------------
+  */
+  const closeReservationDialog = useCallback(() => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setSelectedSeat(null);
+  }, [isSubmitting]);
+
+  /*
+  -------------------------------------------------------
   handleDateChange
 
   תפקיד:
-  מעדכנת את התאריך ומנקה את הכיסא שנבחר,
-  משום שזמינות הכיסאות תלויה בתאריך.
-  ---------------------------------------------------------
+  מעדכנת את התאריך ומנקה את הכיסא שנבחר.
+  -------------------------------------------------------
   */
   const handleDateChange = (date) => {
     setSelectedDate(date);
     setSelectedSeat(null);
+    setReservationFeedback(null);
   };
 
   /*
-  ---------------------------------------------------------
+  -------------------------------------------------------
   handleTimeChange
 
   תפקיד:
-  מעדכנת את השעה ומנקה את הכיסא שנבחר,
-  משום שזמינות הכיסאות תלויה בשעה.
-  ---------------------------------------------------------
+  מעדכנת את השעה ומנקה את הכיסא שנבחר.
+  -------------------------------------------------------
   */
   const handleTimeChange = (time) => {
     setSelectedTime(time);
     setSelectedSeat(null);
+    setReservationFeedback(null);
   };
 
   /*
-  ---------------------------------------------------------
+  -------------------------------------------------------
   handleConfirmReservation
 
   תפקיד:
-  מאמתת את המשתמש ואת פרטי הבחירה,
-  ולאחר מכן שולחת בקשה ליצירת ההזמנה.
-  ---------------------------------------------------------
+  מאמתת את פרטי הבחירה ושולחת בקשה ליצירת
+  ההזמנה. לאחר הצלחה מרעננת את המפה.
+  -------------------------------------------------------
   */
   const handleConfirmReservation = async () => {
     if (!user) {
-      window.alert("User not logged in. Please log in to reserve a seat.");
-
       navigate("/login");
       return;
     }
 
-    if (!selectedSeat) {
-      window.alert("יש לבחור כיסא לפני אישור ההזמנה");
-      return;
-    }
-
-    if (selectedSeat.status !== "available") {
-      window.alert("הכיסא הנבחר אינו פנוי להזמנה");
-      return;
-    }
-
-    if (!selectedTime) {
-      window.alert("יש לבחור שעה תקינה להזמנה");
+    if (!selectedSeat || selectedSeat.status !== "available" || !selectedTime) {
+      setReservationFeedback({
+        type: "error",
+        message: "Please select an available seat and time.",
+      });
       return;
     }
 
     const [startTime, endTime] = selectedTime.split(" - ");
 
     if (!startTime || !endTime) {
-      window.alert("פורמט שעת ההזמנה אינו תקין");
+      setReservationFeedback({
+        type: "error",
+        message: "The selected reservation time is invalid.",
+      });
       return;
     }
+
+    setIsSubmitting(true);
+    setReservationFeedback(null);
 
     try {
       const response = await createSeatReservation({
@@ -177,29 +215,35 @@ export default function useSeatReservation() {
       });
 
       if (response.status !== 200 && response.status !== 201) {
-        window.alert("The reservation could not be completed.");
-        return;
+        throw new Error("The reservation could not be completed.");
       }
 
-      window.alert(
-        `ההזמנה אושרה עבור כיסא שמספרו: ${selectedSeat.id}\nתאריך: ${selectedDate}\nשעה: ${selectedTime}`,
-      );
+      setReservationFeedback({
+        type: "success",
+        message: `Seat ${selectedSeat.id} was reserved for ${selectedDate}, ${selectedTime}.`,
+      });
+
+      setSelectedSeat(null);
 
       /*
-        אין לשנות ישירות את selectedSeat.status.
-        לאחר הצלחה מנקים את הבחירה ומרעננים
-        את נתוני הזמינות מהשרת.
+      שינוי המפתח גורם למפה להיטען מחדש
+      ולהציג את סטטוס הכיסאות המעודכן.
       */
-      setSelectedSeat(null);
+      setMapRefreshKey((currentKey) => currentKey + 1);
 
       await fetchAvailableSlots(selectedDate);
     } catch (error) {
       console.error("Error confirming seat reservation:", error);
 
-      window.alert(
-        error.response?.data?.message ||
+      setReservationFeedback({
+        type: "error",
+        message:
+          error.response?.data?.message ||
+          error.message ||
           "An error occurred while confirming the reservation.",
-      );
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -209,7 +253,11 @@ export default function useSeatReservation() {
     availableSlots,
     selectedTime,
     selectedSeat,
-    setSelectedSeat,
+    isSubmitting,
+    mapRefreshKey,
+    reservationFeedback,
+    handleSeatSelect,
+    closeReservationDialog,
     handleDateChange,
     handleTimeChange,
     handleConfirmReservation,
