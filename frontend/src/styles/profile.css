@@ -527,3 +527,110 @@ Quick Management
     width: 100%;
   }
 }
+
+/*
+=========================================================
+כרטיסי פעולות נגישים
+
+תיאור:
+כרטיסי Quick Actions מוגדרים ככפתורים אמיתיים,
+כדי לאפשר הפעלה גם באמצעות מקלדת.
+=========================================================
+*/
+
+.profileActionButton {
+  width: 100%;
+  min-height: 100%;
+
+  appearance: none;
+
+  color: inherit;
+  font: inherit;
+  text-align: left;
+
+  cursor: pointer;
+}
+
+.profileActionButton:hover {
+  transform: translateY(-5px);
+}
+
+.profileActionButton:focus-visible {
+  outline: 4px solid #ffb74d;
+  outline-offset: 3px;
+}
+
+.profileActionButton h3,
+.profileActionButton p {
+  pointer-events: none;
+}
+
+/*
+=========================================================
+שגיאת טעינת דשבורד
+
+תיאור:
+מציג הודעה ברורה וכפתור ניסיון חוזר כאשר
+טעינת נתוני הדשבורד נכשלת.
+=========================================================
+*/
+
+.dashboardLoadError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  margin-bottom: 22px;
+  padding: 14px 16px;
+
+  color: #ffe4df;
+  background: rgba(139, 32, 25, 0.5);
+  border: 1px solid #dc665a;
+  border-radius: 12px;
+}
+
+.dashboardLoadError button {
+  flex-shrink: 0;
+  min-height: 42px;
+  padding: 8px 15px;
+
+  color: #ffffff;
+  background: #a94c39;
+  border: 0;
+  border-radius: 8px;
+
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.dashboardLoadError button:hover {
+  background: #873829;
+}
+
+.dashboardLoadError button:focus-visible {
+  outline: 4px solid #ffb74d;
+  outline-offset: 3px;
+}
+
+/*
+---------------------------------------------------------
+התאמה למסכים קטנים
+---------------------------------------------------------
+*/
+
+@media (max-width: 600px) {
+  .profileActionButton {
+    min-height: auto;
+  }
+
+  .dashboardLoadError {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dashboardLoadError button {
+    width: 100%;
+  }
+}

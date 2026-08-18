@@ -1,0 +1,406 @@
+/*
+=========================================================
+my-messages.css
+
+תיאור הקובץ:
+עיצוב עמוד השיחות של המשתמש.
+
+העיצוב כולל:
+- רשימת שיחות.
+- חלון שיחה.
+- בועות הודעה.
+- טופס תשובה.
+- תמיכה במסכים קטנים.
+=========================================================
+*/
+
+.myMessagesPageContainer {
+  width: min(1180px, calc(100% - 32px));
+  margin: 32px auto 48px;
+}
+
+.myMessagesLayout {
+  display: grid;
+  grid-template-columns: minmax(250px, 330px) minmax(0, 1fr);
+  min-height: 600px;
+  overflow: hidden;
+
+  color: #fff;
+  background: rgba(43, 29, 23, 0.94);
+  border: 2px solid #89533f;
+  border-radius: 20px;
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.35);
+}
+
+.myMessagesSidebar {
+  min-width: 0;
+  background: rgba(25, 15, 12, 0.72);
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.myMessagesSidebarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.myMessagesSidebarHeader h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.myMessagesSidebarHeader span {
+  min-width: 32px;
+  padding: 5px 9px;
+
+  color: #2b1d17;
+  background: #ffb347;
+  border-radius: 999px;
+
+  font-weight: 800;
+  text-align: center;
+}
+
+.myMessagesConversationList {
+  max-height: 700px;
+  overflow-y: auto;
+}
+
+.myMessagesConversationButton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  width: 100%;
+  padding: 18px 20px;
+
+  color: #fff;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.myMessagesConversationButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.myMessagesConversationButton:focus-visible {
+  position: relative;
+  z-index: 1;
+
+  outline: 3px solid #ffb347;
+  outline-offset: -3px;
+}
+
+.myMessagesConversationSelected {
+  background: rgba(176, 76, 52, 0.42);
+  border-left: 5px solid #ffb347;
+}
+
+.myMessagesConversationTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.myMessagesConversationTop strong {
+  overflow-wrap: anywhere;
+}
+
+.myMessagesUnreadBadge {
+  min-width: 25px;
+  padding: 3px 7px;
+
+  color: #2b1d17;
+  background: #ffb347;
+  border-radius: 999px;
+
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.myMessagesConversationPreview {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #ead6cd;
+
+  font-size: 14px;
+  line-height: 1.4;
+
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.myMessagesConversationDate {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+}
+
+.myMessagesThread {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.myMessagesThreadHeader {
+  padding: 22px 26px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.myMessagesThreadHeader span {
+  color: #ffb347;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.myMessagesThreadHeader h2 {
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.myMessagesThreadBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+
+  min-height: 300px;
+  max-height: 520px;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.myMessagesBubble {
+  width: fit-content;
+  max-width: min(75%, 620px);
+  padding: 14px 16px;
+  border-radius: 16px;
+}
+
+.myMessagesBubble strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #ffb347;
+}
+
+.myMessagesBubble p {
+  margin: 0 0 8px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.myMessagesBubble time {
+  display: block;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 12px;
+}
+
+.myMessagesBubbleUser {
+  align-self: flex-end;
+  background: #7e3f32;
+  border-bottom-right-radius: 4px;
+}
+
+.myMessagesBubbleLibrary {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.11);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom-left-radius: 4px;
+}
+
+.myMessagesReplyForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  padding: 20px 24px;
+  background: rgba(20, 12, 10, 0.5);
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.myMessagesReplyForm label {
+  font-weight: 800;
+}
+
+.myMessagesReplyForm textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 13px 15px;
+  resize: vertical;
+
+  color: #2b1d17;
+  background: #fffaf7;
+  border: 2px solid #89533f;
+  border-radius: 12px;
+
+  font: inherit;
+}
+
+.myMessagesReplyForm textarea:focus-visible {
+  outline: 3px solid #ffb347;
+  outline-offset: 2px;
+}
+
+.myMessagesReplyFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.myMessagesReplyFooter span {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 13px;
+}
+
+.myMessagesReplyFooter button,
+.myMessagesContactLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 44px;
+  padding: 10px 20px;
+
+  color: #fff;
+  background: #a94c39;
+  border: 0;
+  border-radius: 10px;
+
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.myMessagesReplyFooter button:hover,
+.myMessagesContactLink:hover {
+  background: #873829;
+}
+
+.myMessagesReplyFooter button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.myMessagesFeedback {
+  margin: 0 24px 20px;
+  padding: 12px 15px;
+  border-radius: 10px;
+}
+
+.myMessagesFeedbackSuccess {
+  color: #d8ffe0;
+  background: rgba(30, 112, 57, 0.45);
+  border: 1px solid #4eaa66;
+}
+
+.myMessagesFeedbackError {
+  color: #ffe0dc;
+  background: rgba(139, 32, 25, 0.48);
+  border: 1px solid #dc665a;
+}
+
+.myMessagesState {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+
+  min-height: 340px;
+  padding: 32px;
+
+  color: #fff;
+  background: rgba(43, 29, 23, 0.94);
+  border: 2px solid #89533f;
+  border-radius: 20px;
+
+  text-align: center;
+}
+
+.myMessagesState h2,
+.myMessagesState p {
+  margin: 0;
+}
+
+.myMessagesEmptyIcon {
+  font-size: 44px;
+}
+
+@media (max-width: 800px) {
+  .myMessagesPageContainer {
+    width: min(100% - 20px, 650px);
+    margin-top: 20px;
+  }
+
+  .myMessagesLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .myMessagesSidebar {
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .myMessagesConversationList {
+    max-height: 260px;
+  }
+
+  .myMessagesThreadBody {
+    max-height: 460px;
+    padding: 18px;
+  }
+
+  .myMessagesBubble {
+    max-width: 88%;
+  }
+}
+
+@media (max-width: 480px) {
+  .myMessagesPageContainer {
+    width: calc(100% - 12px);
+  }
+
+  .myMessagesSidebarHeader,
+  .myMessagesThreadHeader {
+    padding: 18px;
+  }
+
+  .myMessagesConversationButton {
+    padding: 15px 16px;
+  }
+
+  .myMessagesThreadBody {
+    padding: 14px;
+  }
+
+  .myMessagesBubble {
+    max-width: 94%;
+  }
+
+  .myMessagesReplyForm {
+    padding: 16px 14px;
+  }
+
+  .myMessagesReplyFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .myMessagesReplyFooter button {
+    width: 100%;
+  }
+}

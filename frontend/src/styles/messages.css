@@ -102,3 +102,62 @@ messages.css
   font-weight: 800;
   cursor: pointer;
 }
+
+/*
+=========================================================
+תוספות לעמוד הודעות הספרן
+=========================================================
+*/
+
+.librarianMessageUserName {
+  color: #ffb347;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.librarianMessageSender {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+
+  margin: 10px 0 0;
+  color: #ead6cd;
+}
+
+.librarianMessageSender strong {
+  color: #fff;
+}
+
+.librarianMessageSender span:last-child {
+  padding: 3px 9px;
+
+  color: #ffcf87;
+  background: rgba(255, 179, 71, 0.13);
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.librarianGuestNotice {
+  margin: 20px 24px;
+  padding: 16px;
+
+  color: #ffe2b5;
+  background: rgba(139, 91, 35, 0.38);
+  border: 1px solid #c78b46;
+  border-radius: 12px;
+
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .librarianMessageSender {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .librarianGuestNotice {
+    margin: 16px 14px;
+  }
+}

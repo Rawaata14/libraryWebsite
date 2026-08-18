@@ -1,33 +1,33 @@
 /*
 =========================================================
-MessagesPage.jsx
+MyMessagesPage.jsx
 
 תיאור הקובץ:
-עמוד ניהול שיחות עבור הספרן.
+עמוד השיחות של המשתמש המחובר.
 
 העמוד כולל:
-- קיבוץ הודעות לפי שיחה.
-- הצגת הודעות חדשות.
-- סימון שיחה כנקראה.
-- הצגת פרטי המשתמש.
-- שליחת תשובה למשתמש רשום.
-- הבחנה בין משתמש רשום לאורח.
+- הצגת כל שיחות המשתמש.
+- הצגת מספר הודעות שלא נקראו.
+- בחירת שיחה.
+- הצגת ההודעות לפי סדר השליחה.
+- שליחת תשובה לספרן.
+- סימון הודעות הספרן כנקראו.
 =========================================================
 */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
 
 import {
-  getAllMessages,
+  getMyMessages,
   markConversationAsRead,
   replyToConversation,
 } from "../services/messageService";
 
 import "../styles/my-messages.css";
-import "../styles/messages.css";
 
 /*
 ---------------------------------------------------------
@@ -59,8 +59,8 @@ function formatMessageDate(dateValue) {
 groupMessagesByConversation
 
 תפקיד:
-מקבץ את כל ההודעות לפי conversationId
-ומסדר את השיחות לפי ההודעה האחרונה.
+מקבץ את ההודעות לפי conversationId ויוצר
+רשימת שיחות מסודרת לפי ההודעה האחרונה.
 ---------------------------------------------------------
 */
 function groupMessagesByConversation(messages) {
@@ -72,9 +72,6 @@ function groupMessagesByConversation(messages) {
     if (!conversationMap.has(conversationId)) {
       conversationMap.set(conversationId, {
         conversationId,
-        userId: message.userId,
-        senderName: message.senderName,
-        senderEmail: message.senderEmail,
         subject: message.subject,
         messages: [],
         unreadCount: 0,
@@ -85,27 +82,10 @@ function groupMessagesByConversation(messages) {
     const conversation = conversationMap.get(conversationId);
 
     conversation.messages.push(message);
+    conversation.latestDate = message.createdAt;
 
-    if (new Date(message.createdAt) > new Date(conversation.latestDate)) {
-      conversation.latestDate = message.createdAt;
-    }
-
-    /*
-    עבור הספרן, הודעה חדשה היא הודעה
-    שה-recipientRole שלה הוא librarian.
-    */
-    if (message.recipientRole === "librarian" && !message.isRead) {
+    if (message.recipientRole === "reader" && !message.isRead) {
       conversation.unreadCount += 1;
-    }
-
-    /*
-    שומר את פרטי המשתמש ולא את פרטי הספרן
-    כאשר קיימות תשובות משני הצדדים.
-    */
-    if (message.senderRole !== "librarian") {
-      conversation.senderName = message.senderName;
-      conversation.senderEmail = message.senderEmail;
-      conversation.userId = message.userId;
     }
   });
 
@@ -126,13 +106,13 @@ function groupMessagesByConversation(messages) {
 
 /*
 ---------------------------------------------------------
-MessagesPage
+MyMessagesPage
 
 תפקיד:
-מאפשר לספרן לקרוא שיחות ולהשיב למשתמשים.
+מציג ומנהל את שיחות המשתמש עם הספרייה.
 ---------------------------------------------------------
 */
-export default function MessagesPage() {
+export default function MyMessagesPage() {
   const [messages, setMessages] = useState([]);
   const [selectedConversationId, setSelectedConversationId] = useState("");
   const [replyText, setReplyText] = useState("");
@@ -148,25 +128,25 @@ export default function MessagesPage() {
   fetchMessages
 
   תפקיד:
-  טוען את כל השיחות המותרות לספרן.
+  טוען מחדש את כל שיחות המשתמש.
   ---------------------------------------------------------
   */
   const fetchMessages = useCallback(async () => {
     try {
       setIsLoading(true);
 
-      const data = await getAllMessages();
+      const data = await getMyMessages();
       const loadedMessages = data.messages || [];
 
       setMessages(loadedMessages);
 
       if (loadedMessages.length > 0) {
         setSelectedConversationId((currentConversationId) => {
-          const conversationStillExists = loadedMessages.some(
+          const currentConversationStillExists = loadedMessages.some(
             (message) => message.conversationId === currentConversationId,
           );
 
-          if (conversationStillExists) {
+          if (currentConversationStillExists) {
             return currentConversationId;
           }
 
@@ -176,11 +156,12 @@ export default function MessagesPage() {
         setSelectedConversationId("");
       }
     } catch (error) {
-      console.error("Failed to load messages:", error);
+      console.error("Failed to load user messages:", error);
 
       setFeedback({
         type: "error",
-        message: error.message || "An error occurred while loading messages.",
+        message:
+          error.message || "An error occurred while loading your messages.",
       });
     } finally {
       setIsLoading(false);
@@ -207,10 +188,10 @@ export default function MessagesPage() {
 
   /*
   ---------------------------------------------------------
-  סימון הודעות כנקראו
+  סימון שיחה כנקראה
 
-  כאשר הספרן פותח שיחה, רק ההודעות שנשלחו
-  אל הספרן מסומנות כנקראו.
+  בכל פעם שהמשתמש פותח שיחה, הודעות הספרן
+  באותה שיחה מסומנות כנקראו.
   ---------------------------------------------------------
   */
   useEffect(() => {
@@ -225,7 +206,7 @@ export default function MessagesPage() {
         setMessages((currentMessages) =>
           currentMessages.map((message) =>
             message.conversationId === selectedConversationId &&
-            message.recipientRole === "librarian"
+            message.recipientRole === "reader"
               ? {
                   ...message,
                   isRead: true,
@@ -246,7 +227,7 @@ export default function MessagesPage() {
   handleConversationSelect
 
   תפקיד:
-  פותח שיחה שנבחרה מרשימת השיחות.
+  פותח את השיחה שנבחרה ומנקה הודעות קודמות.
   ---------------------------------------------------------
   */
   const handleConversationSelect = (conversationId) => {
@@ -263,7 +244,7 @@ export default function MessagesPage() {
   handleReplySubmit
 
   תפקיד:
-  שולח תשובת ספרן למשתמש הרשום.
+  שולח תשובה חדשה לספרן בתוך השיחה הפעילה.
   ---------------------------------------------------------
   */
   const handleReplySubmit = async (event) => {
@@ -275,15 +256,6 @@ export default function MessagesPage() {
       setFeedback({
         type: "error",
         message: "Please write a reply before sending.",
-      });
-
-      return;
-    }
-
-    if (!selectedConversation?.userId) {
-      setFeedback({
-        type: "error",
-        message: "A guest cannot receive replies inside the website.",
       });
 
       return;
@@ -307,11 +279,11 @@ export default function MessagesPage() {
 
       await fetchMessages();
     } catch (error) {
-      console.error("Failed to send librarian reply:", error);
+      console.error("Failed to send reply:", error);
 
       setFeedback({
         type: "error",
-        message: error.message || "An error occurred while sending the reply.",
+        message: error.message || "An error occurred while sending your reply.",
       });
     } finally {
       setIsReplying(false);
@@ -320,12 +292,12 @@ export default function MessagesPage() {
 
   return (
     <PageShell>
-      <PageBanner title="Messages" />
+      <PageBanner title="My Messages" />
 
       <main className="myMessagesPageContainer">
         {isLoading ? (
           <div className="myMessagesState" role="status" aria-live="polite">
-            Loading conversations...
+            Loading your conversations...
           </div>
         ) : conversations.length === 0 ? (
           <div className="myMessagesState">
@@ -333,18 +305,24 @@ export default function MessagesPage() {
               ✉️
             </span>
 
-            <h2>No messages yet</h2>
+            <h2>No conversations yet</h2>
 
-            <p>New user messages will appear here.</p>
+            <p>
+              Contact the library if you have a question or need assistance.
+            </p>
+
+            <Link className="myMessagesContactLink" to="/about">
+              Contact the Library
+            </Link>
           </div>
         ) : (
           <div className="myMessagesLayout">
             <aside
               className="myMessagesSidebar"
-              aria-label="User conversations"
+              aria-label="Your conversations"
             >
               <div className="myMessagesSidebarHeader">
-                <h2>User Conversations</h2>
+                <h2>Conversations</h2>
 
                 <span>{conversations.length}</span>
               </div>
@@ -382,14 +360,10 @@ export default function MessagesPage() {
                         )}
                       </span>
 
-                      <span className="librarianMessageUserName">
-                        {conversation.senderName}
-                      </span>
-
                       <span className="myMessagesConversationPreview">
                         {lastMessage?.senderRole === "librarian"
-                          ? "You: "
-                          : `${conversation.senderName}: `}
+                          ? "Library: "
+                          : "You: "}
                         {lastMessage?.messageText}
                       </span>
 
@@ -404,48 +378,33 @@ export default function MessagesPage() {
 
             <section
               className="myMessagesThread"
-              aria-label="Selected user conversation"
+              aria-label="Selected conversation"
             >
               {selectedConversation && (
                 <>
                   <header className="myMessagesThreadHeader">
                     <div>
                       <span>Subject</span>
-
                       <h2>{selectedConversation.subject}</h2>
-
-                      <p className="librarianMessageSender">
-                        <strong>{selectedConversation.senderName}</strong>
-
-                        <span>{selectedConversation.senderEmail}</span>
-
-                        <span>
-                          {selectedConversation.userId
-                            ? "Registered user"
-                            : "Guest"}
-                        </span>
-                      </p>
                     </div>
                   </header>
 
                   <div className="myMessagesThreadBody" aria-live="polite">
                     {selectedConversation.messages.map((message) => {
-                      const isLibrarianMessage =
+                      const isLibraryMessage =
                         message.senderRole === "librarian";
 
                       return (
                         <article
                           key={message.messageId}
                           className={`myMessagesBubble ${
-                            isLibrarianMessage
-                              ? "myMessagesBubbleUser"
-                              : "myMessagesBubbleLibrary"
+                            isLibraryMessage
+                              ? "myMessagesBubbleLibrary"
+                              : "myMessagesBubbleUser"
                           }`}
                         >
                           <strong>
-                            {isLibrarianMessage
-                              ? "You — Librarian"
-                              : message.senderName}
+                            {isLibraryMessage ? "Library" : "You"}
                           </strong>
 
                           <p>{message.messageText}</p>
@@ -458,49 +417,42 @@ export default function MessagesPage() {
                     })}
                   </div>
 
-                  {selectedConversation.userId ? (
-                    <form
-                      className="myMessagesReplyForm"
-                      onSubmit={handleReplySubmit}
-                    >
-                      <label htmlFor="librarian-message-reply">
-                        Reply to {selectedConversation.senderName}
-                      </label>
+                  <form
+                    className="myMessagesReplyForm"
+                    onSubmit={handleReplySubmit}
+                  >
+                    <label htmlFor="my-message-reply">
+                      Reply to the Library
+                    </label>
 
-                      <textarea
-                        id="librarian-message-reply"
-                        rows="4"
-                        value={replyText}
-                        onChange={(event) => {
-                          setReplyText(event.target.value);
+                    <textarea
+                      id="my-message-reply"
+                      rows="4"
+                      value={replyText}
+                      onChange={(event) => {
+                        setReplyText(event.target.value);
 
-                          setFeedback({
-                            type: "",
-                            message: "",
-                          });
-                        }}
-                        maxLength={3000}
-                        placeholder="Write your reply..."
-                        required
-                      />
+                        setFeedback({
+                          type: "",
+                          message: "",
+                        });
+                      }}
+                      maxLength={3000}
+                      placeholder="Write your reply..."
+                      required
+                    />
 
-                      <div className="myMessagesReplyFooter">
-                        <span>{replyText.length}/3000</span>
+                    <div className="myMessagesReplyFooter">
+                      <span>{replyText.length}/3000</span>
 
-                        <button
-                          type="submit"
-                          disabled={isReplying || !replyText.trim()}
-                        >
-                          {isReplying ? "Sending..." : "Send Reply"}
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <div className="librarianGuestNotice">
-                      This message was sent by a guest. An email service is
-                      required to send a reply.
+                      <button
+                        type="submit"
+                        disabled={isReplying || !replyText.trim()}
+                      >
+                        {isReplying ? "Sending..." : "Send Reply"}
+                      </button>
                     </div>
-                  )}
+                  </form>
 
                   {feedback.message && (
                     <div

@@ -14,7 +14,7 @@ UserProfileDashboard.jsx
 =========================================================
 */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { getUserDashboardStats } from "../../services/dashboardService";
@@ -29,7 +29,7 @@ import {
 UserProfileDashboard
 
 תפקיד:
-טוענת ומציגה את נתוני הדשבורד של המשתמש המחובר.
+טוען ומציג את נתוני הדשבורד של המשתמש המחובר.
 ---------------------------------------------------------
 */
 export default function UserProfileDashboard() {
@@ -42,40 +42,45 @@ export default function UserProfileDashboard() {
   });
 
   const [upcomingReservations, setUpcomingReservations] = useState([]);
+
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   /*
   ---------------------------------------------------------
   fetchDashboardStats
 
   תפקיד:
-  טוענת מהשרת את הסטטיסטיקות ואת ההזמנות העתידיות
+  טוען מהשרת את הסטטיסטיקות ואת ההזמנות העתידיות
   של המשתמש המחובר.
   ---------------------------------------------------------
   */
-  const fetchDashboardStats = async () => {
+  const fetchDashboardStats = useCallback(async () => {
     try {
       setIsLoading(true);
+      setLoadError("");
 
       const response = await getUserDashboardStats();
 
-      if (response.data.success) {
-        const dashboardStats = response.data.stats || {};
-
-        setStats({
-          borrowedBooks: Number(dashboardStats.borrowedBooks) || 0,
-          activeReservations:
-            Number(dashboardStats.activeReservations) || 0,
-          unreadNotifications:
-            Number(dashboardStats.unreadNotifications) || 0,
-        });
-
-        setUpcomingReservations(
-          Array.isArray(dashboardStats.upcomingReservations)
-            ? dashboardStats.upcomingReservations
-            : [],
+      if (!response.data.success) {
+        throw new Error(
+          response.data.message || "Failed to load dashboard information",
         );
       }
+
+      const dashboardStats = response.data.stats || {};
+
+      setStats({
+        borrowedBooks: Number(dashboardStats.borrowedBooks) || 0,
+        activeReservations: Number(dashboardStats.activeReservations) || 0,
+        unreadNotifications: Number(dashboardStats.unreadNotifications) || 0,
+      });
+
+      setUpcomingReservations(
+        Array.isArray(dashboardStats.upcomingReservations)
+          ? dashboardStats.upcomingReservations
+          : [],
+      );
     } catch (error) {
       console.error("User dashboard stats error:", error);
 
@@ -86,33 +91,51 @@ export default function UserProfileDashboard() {
       });
 
       setUpcomingReservations([]);
+
+      setLoadError(
+        error.message || "An error occurred while loading the dashboard.",
+      );
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   /*
   ---------------------------------------------------------
   טעינת נתוני הדשבורד
 
   תפקיד:
-  טוענת את נתוני המשתמש כאשר הקומפוננטה עולה.
+  טוען את נתוני המשתמש כאשר הקומפוננטה עולה.
   ---------------------------------------------------------
   */
   useEffect(() => {
     fetchDashboardStats();
-  }, []);
+  }, [fetchDashboardStats]);
 
   return (
     <div className="profileSection">
       <h2>User Dashboard</h2>
+
+      {loadError && (
+        <div className="dashboardLoadError" role="alert">
+          {loadError}
+
+          <button type="button" onClick={fetchDashboardStats}>
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {/* ===== סיכום המשתמש ===== */}
 
       <section className="dashboardBlock">
         <h3 className="dashboardBlockTitle">My Summary</h3>
 
         <div className="dashboardStatsGrid">
           <div className="dashboardStatCard">
-            <span className="dashboardStatIcon">📚</span>
+            <span className="dashboardStatIcon" aria-hidden="true">
+              📚
+            </span>
 
             <div>
               <h4>{stats.borrowedBooks}</h4>
@@ -121,7 +144,9 @@ export default function UserProfileDashboard() {
           </div>
 
           <div className="dashboardStatCard">
-            <span className="dashboardStatIcon">📅</span>
+            <span className="dashboardStatIcon" aria-hidden="true">
+              📅
+            </span>
 
             <div>
               <h4>{stats.activeReservations}</h4>
@@ -130,7 +155,9 @@ export default function UserProfileDashboard() {
           </div>
 
           <div className="dashboardStatCard">
-            <span className="dashboardStatIcon">🔔</span>
+            <span className="dashboardStatIcon" aria-hidden="true">
+              🔔
+            </span>
 
             <div>
               <h4>{stats.unreadNotifications}</h4>
@@ -140,12 +167,16 @@ export default function UserProfileDashboard() {
         </div>
       </section>
 
+      {/* ===== ההזמנות הקרובות ===== */}
+
       <section className="dashboardBlock">
         <h3 className="dashboardBlockTitle">Upcoming Reservations</h3>
 
         <div className="userReservationsList">
           {isLoading ? (
-            <p className="dashboardEmptyText">Loading reservations...</p>
+            <p className="dashboardEmptyText" role="status">
+              Loading reservations...
+            </p>
           ) : upcomingReservations.length > 0 ? (
             upcomingReservations.map((reservation) => (
               <div
@@ -156,51 +187,68 @@ export default function UserProfileDashboard() {
                   <strong>Seat {reservation.seatId}</strong>
 
                   <p>
-                    {formatReservationDate(
-                      reservation.reservationDate,
-                    )}{" "}
-                    | {formatReservationTime(reservation.startTime)} -{" "}
+                    {formatReservationDate(reservation.reservationDate)}
+                    {" | "}
+                    {formatReservationTime(reservation.startTime)}
+                    {" - "}
                     {formatReservationTime(reservation.endTime)}
                   </p>
                 </div>
 
-                <span className="reservationStatus">
+                <span
+                  className={`reservationStatus ${reservation.status || ""}`}
+                >
                   {getStatusLabel(reservation.status)}
                 </span>
               </div>
             ))
           ) : (
-            <p className="dashboardEmptyText">
-              No upcoming reservations.
-            </p>
+            <p className="dashboardEmptyText">No upcoming reservations.</p>
           )}
         </div>
       </section>
+
+      {/* ===== פעולות מהירות ===== */}
 
       <section className="dashboardBlock">
         <h3 className="dashboardBlockTitle">Quick Actions</h3>
 
         <div className="profileGrid">
-          <div className="profileBox" onClick={() => navigate("/map")}>
+          <button
+            type="button"
+            className="profileBox profileActionButton"
+            onClick={() => navigate("/map")}
+          >
             <h3>🪑 Study Rooms</h3>
             <p>Reserve a study seat or room</p>
-          </div>
+          </button>
 
-          <div
-            className="profileBox"
+          <button
+            type="button"
+            className="profileBox profileActionButton"
             onClick={() => navigate("/books")}
           >
             <h3>📖 Books</h3>
             <p>Browse and reserve books</p>
-          </div>
+          </button>
 
-          <div
-            className="profileBox"
+          <button
+            type="button"
+            className="profileBox profileActionButton"
             onClick={() => navigate("/my-reservations")}
           >
             <h3>📅 My Reservations</h3>
             <p>View your active reservations</p>
-          </div>
+          </button>
+
+          <button
+            type="button"
+            className="profileBox profileActionButton"
+            onClick={() => navigate("/my-messages")}
+          >
+            <h3>✉️ My Messages</h3>
+            <p>View messages and replies from the library</p>
+          </button>
         </div>
       </section>
     </div>

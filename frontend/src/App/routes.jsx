@@ -28,6 +28,7 @@ import UsersManagementPage from "../pages/UsersManagementPage";
 import ReportsPage from "../pages/ReportsPage";
 import MyReservationsPage from "../pages/MyReservationsPage";
 import ManageReservationsPage from "../pages/ManageReservationsPage";
+import MyMessagesPage from "../pages/MyMessagesPage";
 import LibrarianDashboardPage from "../pages/LibrarianDashboardPage";
 import ProtectedRoute from "../components/common/ProtectedRoute";
 import GuestRoute from "../components/common/GuestRoute";
@@ -44,6 +45,18 @@ LIBRARIAN_ROLES
 ---------------------------------------------------------
 */
 const LIBRARIAN_ROLES = ["librarian"];
+
+
+/*
+---------------------------------------------------------
+READER_ROLES
+
+תפקיד:
+מרכז את רשימת התפקידים המורשים לגשת
+לדפים האישיים של משתמשי הספרייה.
+---------------------------------------------------------
+*/
+const READER_ROLES = ["reader"];
 
 /*
 ---------------------------------------------------------
@@ -117,6 +130,15 @@ export default function AppRoutes() {
             <ProtectedRoute>
               <MyReservationsPage />
             </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/my-messages"
+          element={
+            <RoleRoute allowedRoles={READER_ROLES}>
+              <MyMessagesPage />
+            </RoleRoute>
           }
         />
 
