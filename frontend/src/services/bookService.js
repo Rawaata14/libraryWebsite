@@ -31,3 +31,21 @@ export const addBook = async (bookFormData) => {
     withCredentials: true,
   });
 };
+
+/*
+---------------------------------------------------------
+reserveBook
+
+תפקיד:
+שולחת לשרת בקשה לשריון או השאלת ספר ספציפי.
+---------------------------------------------------------
+*/
+export const reserveBook = async (bookId, reservationData) => {
+  return axios.post(
+    buildApiUrl(`/books/${bookId}/reserve`),
+    {},
+    {
+      withCredentials: true,
+    },
+  );
+};

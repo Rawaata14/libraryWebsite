@@ -9,16 +9,20 @@
   - בהמשך יתחבר לשרת ולבסיס הנתונים
 */
 
-import { useLocation } from "react-router-dom";
-import { useContext } from "react";
-import { AuthContext } from "../context/AuthContext";
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
 import Button from "../components/common/Button";
+import { useBookReservation } from "../hooks/useBookReservation";
 
 export default function ReserveBookPage() {
-  const { state: book } = useLocation();
-  const { user } = useContext(AuthContext);
+  const { book, user, isLoading, error, successMessage, handleReserveBook } =
+    useBookReservation();
+
+  const onReservaeClick = () => {
+    handleReserveBook({
+      bookId: book.bookId,
+    });
+  };
 
   return (
     <PageShell>
@@ -33,11 +37,10 @@ export default function ReserveBookPage() {
             </div>
           ) : (
             <>
-              <div className="reserveSuccess">
-                ✔ You have a seat reserved
-                <br />
-                <span>Today: 14:00 - 16:00</span>
-              </div>
+              {successMessage && (
+                <div className="reserveSuccess">{successMessage}</div>
+              )}
+              {error && <div className="reserveError">{error}</div>}
 
               <div className="reserveContent">
                 <div className="reserveBook">
@@ -74,7 +77,13 @@ export default function ReserveBookPage() {
                     ⚠ Reservation valid only during seat time
                   </div>
 
-                  <Button variant="primary">Reserve Book</Button>
+                  <Button
+                    variant="primary"
+                    onClick={onReservaeClick}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Reserving..." : "Reserve Book"}
+                  </Button>
                 </div>
               </div>
             </>

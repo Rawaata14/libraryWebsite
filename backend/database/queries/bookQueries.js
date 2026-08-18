@@ -91,8 +91,52 @@ async function getBookById(bookId) {
     throw new Error("An error occurred while fetching the book by ID");
   }
 }
+
+async function reserveBook(bookId, userId) {
+  try {
+    // בדיקה האם הספר קיים ויש עותקים זמינים
+    const checkSql = "SELECT * FROM book WHERE bookId = ?";
+    const books = await doQuery(checkSql, [bookId]);
+
+    if (books.length === 0) {
+      return { success: false, message: "Book not found" };
+    }
+
+    const book = books[0];
+
+    if (book.available_quantity <= 0) {
+      return { success: false, message: "No available copies for reservation" };
+    }
+
+    // עדכון כמות העותקים הזמינים (הפחתה ב-1)
+    const newAvailableQuantity = book.available_quantity - 1;
+    const updateSql = "UPDATE book SET available_quantity = ? WHERE bookId = ?";
+    await doQuery(updateSql, [newAvailableQuantity, bookId]);
+
+    const loanDate = new Date();
+    const dueDate = new Date();
+    dueDate.setDate(loanDate.getDate() + 14); // הגדרת תאריך החזרה ל-14 ימים מהיום
+
+    const status = "active"; // סטטוס ההשאלה
+
+    const insertLoanSql =
+      "INSERT INTO loan (userId, bookId, loanDate, dueDate, status) VALUES (?, ?, ?, ?, ?)";
+    const result = await doQuery(insertLoanSql, [userId, bookId, loanDate, dueDate, status]); // כאן יש להחליף את userId ב-ID של המשתמש שמבצע את השריון
+
+    if (result.affectedRows > 0) {
+      return { success: true, message: "Book reserved successfully" };
+    }
+
+    return { success: false, message: "Failed to reserve book" };
+  } catch (error) {
+    console.error("Error reserving book:", error);
+    throw error;
+  }
+}
+
 module.exports = {
   addBook,
   getAllBooks,
   getBookById,
+  reserveBook,
 };

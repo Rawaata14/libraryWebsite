@@ -63,4 +63,29 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+// Route for reserving a book
+router.post("/:id/reserve", async (req, res) => {
+  try {
+    // בדיקה שהמשתמש מחובר למערכת
+    if (!req.session.user || !req.session.user.userId) {
+      return res
+        .status(401)
+        .json({ message: "Access denied. Please log in first." });
+    }
+
+    const bookId = req.params.id;
+    const userId = req.session.user.userId;
+    const result = await bookQueries.reserveBook(bookId, userId);
+
+    if (result.success) {
+      res.status(200).json(result);
+    } else {
+      res.status(400).json(result);
+    }
+  } catch (error) {
+    console.error("Error in reserving book:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 module.exports = router;
