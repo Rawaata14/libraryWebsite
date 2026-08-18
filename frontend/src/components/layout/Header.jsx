@@ -8,27 +8,28 @@ Header.jsx
 הקובץ כולל:
 - ניווט בין דפי המערכת.
 - תפריט רספונסיבי למסכים צרים.
-- הצגת משתמש מחובר ותמונת פרופיל.
-- מעבר לדף הפרופיל.
+- הצגת שם המשתמש ותמונת הפרופיל.
+- תפריט פרופיל מותאם למשתמש ולספרנית.
 - התנתקות מהמערכת.
 - תמיכה במקלדת ובקוראי מסך.
 =========================================================
 */
 
 import { useContext, useEffect, useRef, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 
 import { AuthContext } from "../../context/AuthContext";
 import { getProfileImageSrc } from "../../utils/profileImage";
 
 import "../../styles/header.css";
+
 /*
 ---------------------------------------------------------
 Header
 
 תפקיד:
-מציגה את סרגל הניווט הראשי ומתאימה אותו
-למסך מלא, חצי מסך וטלפון.
+מציגה את סרגל הניווט הראשי ואת תפריטי
+הניווט והפרופיל.
 ---------------------------------------------------------
 */
 export default function Header() {
@@ -39,33 +40,51 @@ export default function Header() {
 
   const headerRef = useRef(null);
   const menuButtonRef = useRef(null);
+  const profileButtonRef = useRef(null);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+
+  const displayName = user?.fullName || user?.name || "Library User";
 
   const navClassName = ({ isActive }) =>
     isActive ? "navItem activeNav" : "navItem";
 
+  const profileLinkClassName = ({ isActive }) =>
+    isActive ? "profileMenuItem activeProfileMenuItem" : "profileMenuItem";
+
   /*
   -------------------------------------------------------
-  סגירת התפריט לאחר מעבר לעמוד אחר
+  סגירת התפריטים לאחר מעבר לעמוד אחר
   -------------------------------------------------------
   */
   useEffect(() => {
     setIsMenuOpen(false);
+    setIsProfileMenuOpen(false);
   }, [location.pathname]);
 
   /*
   -------------------------------------------------------
-  סגירת התפריט באמצעות Escape או לחיצה מחוץ ל-Header
+  סגירת התפריטים באמצעות Escape או לחיצה מחוץ ל-Header
   -------------------------------------------------------
   */
   useEffect(() => {
-    if (!isMenuOpen) {
+    if (!isMenuOpen && !isProfileMenuOpen) {
       return undefined;
     }
 
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (isProfileMenuOpen) {
+        setIsProfileMenuOpen(false);
+        profileButtonRef.current?.focus();
+        return;
+      }
+
+      if (isMenuOpen) {
         setIsMenuOpen(false);
         menuButtonRef.current?.focus();
       }
@@ -74,6 +93,7 @@ export default function Header() {
     const handlePointerDown = (event) => {
       if (headerRef.current && !headerRef.current.contains(event.target)) {
         setIsMenuOpen(false);
+        setIsProfileMenuOpen(false);
       }
     };
 
@@ -82,20 +102,47 @@ export default function Header() {
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
+
       document.removeEventListener("pointerdown", handlePointerDown);
     };
-  }, [isMenuOpen]);
+  }, [isMenuOpen, isProfileMenuOpen]);
+
+  /*
+  -------------------------------------------------------
+  handleMainMenuToggle
+
+  תפקיד:
+  פותחת או סוגרת את תפריט הניווט הרספונסיבי.
+  -------------------------------------------------------
+  */
+  const handleMainMenuToggle = () => {
+    setIsMenuOpen((currentValue) => !currentValue);
+    setIsProfileMenuOpen(false);
+  };
+
+  /*
+  -------------------------------------------------------
+  handleProfileMenuToggle
+
+  תפקיד:
+  פותחת או סוגרת את תפריט הפרופיל.
+  -------------------------------------------------------
+  */
+  const handleProfileMenuToggle = () => {
+    setIsProfileMenuOpen((currentValue) => !currentValue);
+  };
 
   /*
   -------------------------------------------------------
   handleLogout
 
   תפקיד:
-  סוגרת את התפריט ומפעילה את פעולת ההתנתקות.
+  סוגרת את כל התפריטים ומפעילה התנתקות.
   -------------------------------------------------------
   */
   const handleLogout = () => {
     setIsMenuOpen(false);
+    setIsProfileMenuOpen(false);
     logout();
   };
 
@@ -124,7 +171,7 @@ export default function Header() {
         }
         aria-expanded={isMenuOpen}
         aria-controls="main-navigation-menu"
-        onClick={() => setIsMenuOpen((currentValue) => !currentValue)}
+        onClick={handleMainMenuToggle}
       >
         <span aria-hidden="true">{isMenuOpen ? "×" : "☰"}</span>
       </button>
@@ -179,34 +226,108 @@ export default function Header() {
               Login / Sign Up
             </NavLink>
           ) : (
-            <>
-              <div className="headerProfileSection">
-                <span className="headerWelcomeText">
-                  Welcome {user?.fullName || user?.name || "Library User"}
-                </span>
-
-                <Link
-                  to="/profile"
-                  className="profileImageLink"
-                  aria-label="Open your profile"
-                >
-                  <img
-                    src={getProfileImageSrc(user)}
-                    alt=""
-                    aria-hidden="true"
-                    className="headerProfileImage"
-                  />
-                </Link>
-              </div>
+            <div className="headerProfileMenu">
+              {/*
+              =============================================
+              כפתור פתיחת תפריט הפרופיל
+              =============================================
+              */}
 
               <button
+                ref={profileButtonRef}
                 type="button"
-                className="headerLogoutBtn"
-                onClick={handleLogout}
+                className="headerProfileMenuButton"
+                aria-label={`Open profile menu for ${displayName}`}
+                aria-haspopup="menu"
+                aria-expanded={isProfileMenuOpen}
+                aria-controls="header-profile-menu"
+                onClick={handleProfileMenuToggle}
               >
-                Logout
+                <span className="headerUserName">{displayName}</span>
+
+                <img
+                  src={getProfileImageSrc(user)}
+                  alt=""
+                  aria-hidden="true"
+                  className="headerProfileImage"
+                />
+
+                <span
+                  className={`profileMenuChevron ${
+                    isProfileMenuOpen ? "profileMenuChevronOpen" : ""
+                  }`}
+                  aria-hidden="true"
+                >
+                  ▾
+                </span>
               </button>
-            </>
+
+              {/*
+              =============================================
+              רשימת פעולות הפרופיל
+              =============================================
+              */}
+
+              {isProfileMenuOpen && (
+                <div
+                  id="header-profile-menu"
+                  className="profileDropdownMenu"
+                  role="menu"
+                  aria-label="Profile actions"
+                >
+                  <div className="profileDropdownIdentity">
+                    <strong>{displayName}</strong>
+
+                    {user?.email && <span>{user.email}</span>}
+
+                    <small>{isLibrarian ? "Librarian" : "Library User"}</small>
+                  </div>
+
+                  <div className="profileDropdownDivider" />
+
+                  <NavLink
+                    to="/profile"
+                    className={profileLinkClassName}
+                    role="menuitem"
+                  >
+                    <span aria-hidden="true">👤</span>
+                    My Profile
+                  </NavLink>
+
+                  {isLibrarian ? (
+                    <NavLink
+                      to="/admin/librarian"
+                      className={profileLinkClassName}
+                      role="menuitem"
+                    >
+                      <span aria-hidden="true">📊</span>
+                      Librarian Dashboard
+                    </NavLink>
+                  ) : (
+                    <NavLink
+                      to="/my-reservations"
+                      className={profileLinkClassName}
+                      role="menuitem"
+                    >
+                      <span aria-hidden="true">📅</span>
+                      My Reservations
+                    </NavLink>
+                  )}
+
+                  <div className="profileDropdownDivider" />
+
+                  <button
+                    type="button"
+                    className="profileMenuItem profileMenuLogout"
+                    role="menuitem"
+                    onClick={handleLogout}
+                  >
+                    <span aria-hidden="true">↪</span>
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

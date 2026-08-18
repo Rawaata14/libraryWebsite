@@ -25,11 +25,7 @@ footer.css
   margin-top: auto;
   padding: 20px 26px;
 
-  background: linear-gradient(
-    180deg,
-    #6d3b35 0%,
-    #4c2421 100%
-  );
+  background: linear-gradient(180deg, #6d3b35 0%, #4c2421 100%);
 
   color: #fff7f3;
 }
