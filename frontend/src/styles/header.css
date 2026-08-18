@@ -33,11 +33,7 @@ header.css
   width: 100%;
   padding: 12px 24px;
 
-  background: linear-gradient(
-    180deg,
-    #24357d 0%,
-    #1a2557 100%
-  );
+  background: linear-gradient(180deg, #24357d 0%, #1a2557 100%);
 
   color: #ffffff;
   border-radius: 16px 16px 0 0;
@@ -333,11 +329,7 @@ header.css
     border: 2px solid rgba(255, 255, 255, 0.28);
     border-radius: 0 0 16px 16px;
 
-    background: linear-gradient(
-      180deg,
-      #1f2e70 0%,
-      #151f4c 100%
-    );
+    background: linear-gradient(180deg, #1f2e70 0%, #151f4c 100%);
 
     box-shadow: 0 16px 30px rgba(0, 0, 0, 0.42);
   }

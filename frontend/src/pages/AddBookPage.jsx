@@ -19,7 +19,6 @@ import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
 import InputField from "../components/common/InputField";
 import Button from "../components/common/Button";
-import BackButton from "../components/common/BackButton";
 
 import useAddBookForm from "../hooks/useAddBookForm";
 
@@ -58,8 +57,6 @@ export default function AddBookPage() {
           style={{ maxWidth: "600px" }}
           onSubmit={handleSubmit}
         >
-          <BackButton />
-          
           <h2>Book Details</h2>
 
           <p>Fill in the information to add a book to the library collection</p>

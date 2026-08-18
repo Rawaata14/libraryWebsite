@@ -1,0 +1,125 @@
+/*
+=========================================================
+back-button.css
+
+תיאור הקובץ:
+עיצוב כפתור החזרה המשותף לדפי המערכת.
+
+הקובץ אחראי על:
+- עיצוב כפתור החזרה בראש הדף.
+- שמירת גודל לחיץ ונגיש.
+- התאמת הכפתור למסכים צרים.
+- הצגת מיקוד ברור למקלדת.
+
+עיצוב החץ הקטן בטפסי Login ו-Register
+נשאר ב-forms.css.
+=========================================================
+*/
+
+/*
+=========================================================
+מעטפת כפתור החזרה בדף
+=========================================================
+*/
+
+.pageBackButtonContainer {
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+
+  padding: 14px 20px 0;
+}
+
+/*
+=========================================================
+כפתור החזרה
+=========================================================
+*/
+
+.pageBackButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-width: 104px;
+  min-height: 46px;
+
+  padding: 9px 16px;
+
+  border: 2px solid rgba(255, 255, 255, 0.65);
+  border-radius: 11px;
+
+  background: rgba(40, 20, 16, 0.82);
+  color: #ffffff;
+
+  font-size: 17px;
+  font-weight: 800;
+
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.28);
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.pageBackButton:hover {
+  background: #713c31;
+  border-color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.pageBackButton:active {
+  transform: translateY(0);
+}
+
+.pageBackButton:focus-visible {
+  outline: 4px solid #ffffff;
+  outline-offset: 4px;
+}
+
+.backButtonArrow {
+  font-size: 23px;
+  line-height: 1;
+}
+
+.backButtonText {
+  line-height: 1;
+}
+
+/*
+=========================================================
+טלפון
+=========================================================
+*/
+
+@media (max-width: 520px) {
+  .pageBackButtonContainer {
+    padding: 10px 12px 0;
+  }
+
+  .pageBackButton {
+    min-width: 94px;
+    min-height: 44px;
+
+    padding: 8px 13px;
+
+    font-size: 16px;
+  }
+}
+
+/*
+=========================================================
+הפחתת תנועה
+=========================================================
+*/
+
+@media (prefers-reduced-motion: reduce) {
+  .pageBackButton {
+    transition: none;
+  }
+}
