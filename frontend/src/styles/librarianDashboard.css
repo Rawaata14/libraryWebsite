@@ -10,9 +10,16 @@
 }
 
 .dashboard-header {
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   text-align: left;
   color: #fff9f4;
+}
+
+.h1 {
+  margin-bottom: 5px;
+}
+.p {
+  margin-bottom: 10px;
 }
 
 .librarianDashboardContainer {
@@ -34,13 +41,14 @@
   flex-direction: column;
 }
 
-.dashboard-card h3 {
+.dashboard-card h2 {
   color: #f3e5dc;
   font-size: 1.25rem;
   margin-bottom: 15px;
   border-bottom: 1px solid rgba(159, 124, 87, 0.3);
   padding-bottom: 8px;
   text-align: left;
+  font-weight: 400;
 }
 
 .card-content {

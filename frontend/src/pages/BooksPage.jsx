@@ -61,7 +61,8 @@ export default function BooksPage() {
   }, [searchTerm, selectedCategory, books]);
 
   const handleReserve = (book) => {
-    navigate(`/reserve-book/${book.id}`, { state: book });
+    console.log("Navigating to reserve book page for:", book);
+    navigate(`/reserve-book/${book.bookId}`, { state: book });
   };
 
   return (
@@ -116,7 +117,7 @@ export default function BooksPage() {
             <div className="booksGrid">
               {filteredBooks.map((book) => (
                 <BookCard
-                  key={book.id}
+                  key={book.bookId}
                   book={book}
                   onReserve={() => handleReserve(book)}
                 />

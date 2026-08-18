@@ -40,8 +40,8 @@ export default function LibrarianDashboardPage() {
       <div className="dashboard-page-wrapper">
         <header className="dashboard-header">
           <div>
-            <h1>Librarian Dashboard</h1>
-            <p>Library activity and management overview</p>
+            <h1 className="h1">Librarian Dashboard</h1>
+            <p className="p">Library activity and management overview</p>
           </div>
 
           <button

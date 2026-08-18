@@ -10,12 +10,15 @@
 */
 
 import { useLocation } from "react-router-dom";
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
 import Button from "../components/common/Button";
 
 export default function ReserveBookPage() {
   const { state: book } = useLocation();
+  const { user } = useContext(AuthContext);
 
   return (
     <PageShell>
@@ -38,10 +41,17 @@ export default function ReserveBookPage() {
 
               <div className="reserveContent">
                 <div className="reserveBook">
-                  <img src={book.image} alt={book.title} />
+                  <img
+                    src={
+                      book.book_image_name?.startsWith("http")
+                        ? book.book_image_name
+                        : `http://localhost:8000/uploads/${book.book_image_name}`
+                    }
+                    alt={book.title}
+                  />
                   <h3>Title: {book.title}</h3>
                   <p>by {book.author}</p>
-                  <p>Available Copies: 3</p>
+                  <p>Available Copies: {book.available_quantity}</p>
                 </div>
 
                 <div className="reserveDetails">
@@ -54,10 +64,10 @@ export default function ReserveBookPage() {
                     <strong>Time:</strong> 14:00 - 16:00
                   </p>
                   <p>
-                    <strong>User:</strong> Tom Smith
+                    <strong>User:</strong> {user?.fullName}
                   </p>
                   <p>
-                    <strong>Email:</strong> tom.smith@email.com
+                    <strong>Email:</strong> {user?.email}
                   </p>
 
                   <div className="reserveNote">

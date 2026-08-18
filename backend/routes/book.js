@@ -39,15 +39,28 @@ router.post("/add-book", upload.single("image"), async (req, res) => {
 });
 
 router.get("/all-books", async (req, res) => {
-  try{
+  try {
     const books = await bookQueries.getAllBooks();
     res.status(200).json(books);
-  }catch(error){
+  } catch (error) {
     console.error("Error in fetching books:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });
 
-
+router.get("/:id", async (req, res) => {
+  const bookId = req.params.id;
+  try {
+    const book = await bookQueries.getBookById(bookId);
+    if (book) {
+      res.status(200).json(book);
+    } else {
+      res.status(404).json({ message: "Book not found" });
+    }
+  } catch (error) {
+    console.error("Error in fetching book by ID:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
 
 module.exports = router;

@@ -68,16 +68,31 @@ async function addBook(bookDetails) {
 }
 
 async function getAllBooks() {
-    try {
-        const sql = "SELECT * FROM book";
-        const books = await doQuery(sql);
-        return books;
-    } catch (error) {
-        console.error("Error fetching books:", error);
-        throw new Error("An error occurred while fetching books");
+  try {
+    const sql = "SELECT * FROM book";
+    const books = await doQuery(sql);
+    return books;
+  } catch (error) {
+    console.error("Error fetching books:", error);
+    throw new Error("An error occurred while fetching books");
+  }
+}
+
+async function getBookById(bookId) {
+  try {
+    const sql = "SELECT * FROM book WHERE bookId = ?";
+    const books = await doQuery(sql, [bookId]);
+    if (books.length === 0) {
+      return null; // No book found with the given ID
     }
+    return books[0]; // Return the first (and only) book found
+  } catch (error) {
+    console.error("Error fetching book by ID:", error);
+    throw new Error("An error occurred while fetching the book by ID");
+  }
 }
 module.exports = {
   addBook,
-  getAllBooks
+  getAllBooks,
+  getBookById,
 };
