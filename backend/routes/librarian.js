@@ -96,6 +96,7 @@ router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
           SELECT COUNT(*) AS count
           FROM messages
           WHERE isRead = 0
+            AND recipientRole = 'librarian'
         `),
 
       doQuery(`
@@ -149,6 +150,7 @@ router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
           SELECT senderName, createdAt
           FROM messages
           WHERE DATE(createdAt) = CURDATE()
+            AND recipientRole = 'librarian'
           ORDER BY createdAt DESC
           LIMIT 5
         `),
