@@ -3,13 +3,13 @@
 bookService.js
 
 תיאור הקובץ:
-מרכז את בקשות ה-API הקשורות לניהול ספרים.
+מרכז את בקשות ה-API הקשורות לספרים.
 
-השירות אחראי בשלב זה על:
-- הוספת ספר חדש עם תמונת כריכה.
-
-ריכוז הבקשות מפריד בין תקשורת השרת
-לבין טפסי ורכיבי React.
+השירות אחראי על:
+- שליפת כל הספרים.
+- שליפת ספר לפי מזהה.
+- הוספת ספר.
+- שריון ספר במסגרת הזמנת כיסא.
 =========================================================
 */
 
@@ -22,19 +22,32 @@ import { buildApiUrl } from "../config/api";
 getAllBooks
 
 תפקיד:
-שולפת מהשרת את כל הספרים במאגר.
-
-החזרת response.data מתוך השירות מונעת מהעמודים
-להכיר את מבנה התגובה של axios.
+שולפת את כל הספרים במאגר.
 ---------------------------------------------------------
 */
 export const getAllBooks = async () => {
-  const response = await axios.get(
-    buildApiUrl("/books/all-books"),
-    {
-      withCredentials: true,
-    },
-  );
+  const response = await axios.get(buildApiUrl("/books/all-books"), {
+    withCredentials: true,
+  });
+
+  return response.data;
+};
+
+/*
+---------------------------------------------------------
+getBookById
+
+תפקיד:
+שולפת ספר לפי bookId.
+
+הפונקציה מאפשרת לשחזר את פרטי הספר גם לאחר
+רענון ישיר של דף השריון.
+---------------------------------------------------------
+*/
+export const getBookById = async (bookId) => {
+  const response = await axios.get(buildApiUrl(`/books/${bookId}`), {
+    withCredentials: true,
+  });
 
   return response.data;
 };
@@ -44,8 +57,7 @@ export const getAllBooks = async () => {
 addBook
 
 תפקיד:
-שולחת לשרת נתוני ספר חדש באמצעות FormData,
-כדי לאפשר גם העלאת תמונת כריכה.
+שולחת לשרת ספר חדש יחד עם תמונת כריכה.
 ---------------------------------------------------------
 */
 export const addBook = async (bookFormData) => {
@@ -59,13 +71,16 @@ export const addBook = async (bookFormData) => {
 reserveBook
 
 תפקיד:
-שולחת לשרת בקשה לשריון או השאלת ספר ספציפי.
+שולחת בקשה לשריון ספר במסגרת הזמנת
+כיסא מסוימת השייכת למשתמש המחובר.
 ---------------------------------------------------------
 */
-export const reserveBook = async (bookId) => {
+export const reserveBook = async (bookId, reservationId) => {
   return axios.post(
     buildApiUrl(`/books/${bookId}/reserve`),
-    {},
+    {
+      reservationId,
+    },
     {
       withCredentials: true,
     },

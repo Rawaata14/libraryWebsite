@@ -1,7 +1,17 @@
 /*
-  reserve-book.css
-  ----------------
-  עיצוב דף שריון ספר.
+=========================================================
+reserve-book.css
+
+תיאור הקובץ:
+עיצוב דף שריון ספר במסגרת הזמנת כיסא.
+
+הקובץ כולל:
+- פריסת הספר ופרטי ההזמנה.
+- בחירת הזמנת כיסא.
+- הודעות הצלחה ושגיאה.
+- מצב ללא הזמנות.
+- תמיכה במסכים קטנים.
+=========================================================
 */
 
 .reservePage {
@@ -11,94 +21,299 @@
 .reserveContainer {
   max-width: 1100px;
   margin: 0 auto;
+  padding: 24px;
+
   background: rgba(239, 224, 215, 0.96);
+
   border: 2px solid #7a4b3d;
   border-radius: 18px;
-  padding: 24px;
+}
+
+.reserveLoading {
+  color: #3d2019;
+
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.reserveSuccess,
+.reserveError {
+  margin-bottom: 24px;
+  padding: 16px 20px;
+
+  border-radius: 12px;
+
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
 }
 
 .reserveSuccess {
-  background: rgba(244, 231, 221, 0.95);
-  border: 2px solid #b48a72;
-  border-radius: 14px;
-  padding: 20px;
-  text-align: center;
-  font-size: 22px;
-  font-weight: 700;
-  color: #4b2a21;
-  margin-bottom: 24px;
+  color: #1f552d;
+  background: #e0f2e4;
+  border: 2px solid #4b8b5d;
 }
 
-.reserveSuccess span {
-  font-size: 18px;
-  font-weight: 600;
+.reserveError {
+  color: #7b211a;
+  background: #f8d8d4;
+  border: 2px solid #a84238;
 }
 
 .reserveContent {
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: minmax(260px, 350px) 1fr;
   gap: 28px;
+  align-items: start;
+}
+
+.reserveBook {
+  color: #3d2019;
 }
 
 .reserveBook img {
+  display: block;
+
   width: 100%;
   max-width: 290px;
+  max-height: 430px;
+  margin: 0 auto 18px;
+
+  object-fit: cover;
+
   border: 3px solid #6a4035;
-  margin-bottom: 16px;
+  border-radius: 8px;
+
+  box-shadow: 0 10px 22px rgba(61, 32, 25, 0.25);
 }
 
-.reserveBook h3,
+.reserveBook h2 {
+  margin-bottom: 14px;
+
+  font-size: 24px;
+  line-height: 1.3;
+}
+
 .reserveBook p {
-  color: #3d2019;
   margin-bottom: 10px;
+
+  font-size: 17px;
 }
 
 .reserveDetails {
+  padding: 24px;
+
+  color: #3d2019;
   background: rgba(248, 235, 225, 0.95);
+
   border: 2px solid #9e7464;
   border-radius: 14px;
-  padding: 24px;
+}
+
+.reserveDetails > h2 {
+  margin-bottom: 20px;
+
+  font-size: 28px;
+}
+
+.reserveDetails > p {
+  margin-bottom: 12px;
+
+  font-size: 18px;
+}
+
+.reserveField {
+  margin-top: 24px;
+}
+
+.reserveField label {
+  display: block;
+
+  margin-bottom: 9px;
+
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.reserveReservationSelect {
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 14px;
+
   color: #3d2019;
+  background: #fffaf7;
+
+  border: 2px solid #8c5c4b;
+  border-radius: 10px;
+
+  font-size: 16px;
+  font-weight: 600;
 }
 
-.reserveDetails h3 {
-  margin-bottom: 18px;
-  font-size: 30px;
+.reserveReservationSelect:focus-visible {
+  outline: 3px solid #1f57a8;
+  outline-offset: 3px;
 }
 
-.reserveDetails p {
+.reserveReservationSelect:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.reserveSelectedReservation {
+  margin-top: 22px;
+  padding: 18px;
+
+  background: rgba(255, 250, 247, 0.9);
+
+  border: 1px solid #b9917d;
+  border-radius: 12px;
+}
+
+.reserveSelectedReservation h3 {
   margin-bottom: 14px;
+
   font-size: 20px;
+}
+
+.reserveSelectedReservation dl {
+  display: grid;
+  gap: 10px;
+
+  margin: 0;
+}
+
+.reserveSelectedReservation dl > div {
+  display: grid;
+  grid-template-columns: minmax(130px, 170px) 1fr;
+  gap: 12px;
+}
+
+.reserveSelectedReservation dt {
+  font-weight: 800;
+}
+
+.reserveSelectedReservation dd {
+  margin: 0;
 }
 
 .reserveNote {
   margin: 22px 0;
   padding: 14px;
+
+  color: #5b391d;
   background: #f3dfc4;
-  border: 1px solid #d0a96a;
+
+  border: 1px solid #c79550;
   border-radius: 10px;
-  font-size: 18px;
+
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.reserveNoReservations {
+  margin-top: 24px;
+  padding: 22px;
+
+  text-align: center;
+
+  background: #f3dfc4;
+  border: 2px solid #c79550;
+  border-radius: 12px;
+}
+
+.reserveNoReservations h3 {
+  margin-bottom: 10px;
+
+  font-size: 21px;
+}
+
+.reserveNoReservations p {
+  max-width: 570px;
+  margin: 0 auto 18px;
+
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.reserveActions {
+  display: flex;
+  justify-content: flex-start;
 }
 
 .reserveEmptyState {
-  text-align: center;
+  padding: 35px 20px;
+
   color: #3d2019;
-  padding: 30px 20px;
+  text-align: center;
 }
+
+.reserveEmptyState h2 {
+  margin-bottom: 10px;
+}
+
+.reserveEmptyState p {
+  margin-bottom: 20px;
+
+  font-size: 17px;
+}
+
+/*
+=========================================================
+Tablet
+=========================================================
+*/
 
 @media (max-width: 992px) {
   .reserveContent {
     grid-template-columns: 1fr;
   }
+
+  .reserveBook {
+    text-align: center;
+  }
 }
 
+/*
+=========================================================
+Mobile
+=========================================================
+*/
+
 @media (max-width: 600px) {
-  .reserveDetails h3 {
-    font-size: 24px;
+  .reservePage {
+    padding: 14px 10px;
   }
 
-  .reserveDetails p,
-  .reserveSuccess {
-    font-size: 18px;
+  .reserveContainer {
+    padding: 16px;
+  }
+
+  .reserveDetails {
+    padding: 18px 14px;
+  }
+
+  .reserveDetails > h2 {
+    font-size: 23px;
+  }
+
+  .reserveSelectedReservation dl > div {
+    grid-template-columns: 1fr;
+    gap: 3px;
+
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(122, 75, 61, 0.25);
+  }
+
+  .reserveReservationSelect {
+    font-size: 15px;
+  }
+
+  .reserveActions,
+  .reserveActions button,
+  .reserveNoReservations button,
+  .reserveEmptyState button {
+    width: 100%;
   }
 }
