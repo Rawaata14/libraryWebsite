@@ -1,51 +1,66 @@
+/*
+=========================================================
+book.js
+
+תיאור הקובץ:
+Routes עבור מערכת הספרים.
+
+הקובץ אחראי על:
+- הוספת ספר על ידי ספרן.
+- העלאת תמונת כריכה.
+- שליפת כל הספרים.
+- שליפת ספר לפי מזהה.
+- שריון ספר במסגרת הזמנת כיסא תקפה.
+=========================================================
+*/
+
 const express = require("express");
-const router = express.Router();
 const multer = require("multer");
 const path = require("path");
-const bookQueries = require("../database/queries/bookQueries");
 const fs = require("fs/promises");
 
-// Configure multer for file uploads
+const bookQueries = require("../database/queries/bookQueries");
+
+const router = express.Router();
+
+/*
+---------------------------------------------------------
+storage
+
+תפקיד:
+מגדירה היכן וכיצד נשמרות תמונות הספרים.
+
+שימוש בנתיב מוחלט מונע תלות בתיקייה
+שממנה הופעל השרת.
+---------------------------------------------------------
+*/
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
+  destination(req, file, callback) {
+    const uploadsDirectory = path.join(__dirname, "..", "uploads");
+
+    callback(null, uploadsDirectory);
   },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
+
+  filename(req, file, callback) {
+    /*
+    החלפת תווי נתיב מונעת שימוש בשם קובץ
+    שמכיל נתיב מלא במקום שם בלבד.
+    */
+    const safeOriginalName = file.originalname.replace(/[/\\]/g, "_");
+
+    callback(null, `${Date.now()}-${safeOriginalName}`);
   },
 });
-const upload = multer({ storage: storage });
 
-// Route for adding a new book
-router.post("/add-book", upload.single("image"), async (req, res) => {
-  try {
-    if (!req.session.user || req.session.user.role !== "librarian") {
-      return res
-        .status(403)
-        .json({ message: "Access denied. Librarian privileges required." });
-    }
-    const bookDetails = req.body;
-    bookDetails.image = req.file ? req.file.filename : null;
+const upload = multer({
+  storage,
 
-    const result = await bookQueries.addBook(bookDetails);
-
-    /*
-     אם הספר כבר קיים, התמונה שהתקבלה אינה נשמרת בספר.
-     גם במקרה של כישלון אין להשאיר קובץ יתום בתיקיית uploads.
-    */
-    if (!result.success || result.bookAlreadyExists) {
-      await removeUploadedFile(req.file);
-    }
-
-    if (result.success) {
-      res.status(201).json(result);
-    } else {
-      res.status(400).json(result);
-    }
-  } catch (error) {
-    console.error("Error in adding book:", error);
-    res.status(500).json({ message: "Internal server error" });
-  }
+  /*
+  הגבלת גודל התמונה ל-5MB.
+  */
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
 });
 
 /*
@@ -53,14 +68,11 @@ router.post("/add-book", upload.single("image"), async (req, res) => {
 removeUploadedFile
 
 תפקיד:
-מוחקת קובץ שהועלה לשרת אך אינו נדרש.
+מוחקת תמונה שהועלתה אך אינה נדרשת.
 
 הפונקציה משמשת כאשר:
 - הוספת הספר נכשלה.
-- הספר כבר קיים והמערכת עדכנה רק את הכמות.
-
-כישלון במחיקת התמונה נרשם בשרת, אך אינו מבטל
-פעולה מוצלחת שבוצעה במסד הנתונים.
+- כבר קיים ספר עם אותו ISBN.
 ---------------------------------------------------------
 */
 async function removeUploadedFile(file) {
@@ -75,53 +87,192 @@ async function removeUploadedFile(file) {
   }
 }
 
+/*
+---------------------------------------------------------
+POST /books/add-book
+
+תפקיד:
+מוסיפה ספר חדש למערכת.
+
+גישה:
+רק משתמש בעל תפקיד librarian רשאי להוסיף ספר.
+---------------------------------------------------------
+*/
+router.post("/add-book", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.session?.user) {
+      await removeUploadedFile(req.file);
+
+      return res.status(401).json({
+        success: false,
+        message: "User is not authenticated.",
+      });
+    }
+
+    if (req.session.user.role !== "librarian") {
+      await removeUploadedFile(req.file);
+
+      return res.status(403).json({
+        success: false,
+        message: "Librarian privileges are required.",
+      });
+    }
+
+    const bookDetails = {
+      ...req.body,
+      image: req.file?.filename || null,
+    };
+
+    const result = await bookQueries.addBook(bookDetails);
+
+    /*
+      אם הספר כבר קיים, עודכנה רק הכמות.
+      במקרה כזה התמונה החדשה אינה נדרשת.
+
+      גם כאשר ההוספה נכשלה, אין להשאיר
+      קובץ שאינו מקושר לספר במסד.
+      */
+    if (!result.success || result.bookAlreadyExists) {
+      await removeUploadedFile(req.file);
+    }
+
+    if (result.success) {
+      return res.status(201).json(result);
+    }
+
+    return res.status(400).json(result);
+  } catch (error) {
+    await removeUploadedFile(req.file);
+
+    console.error("Error adding book:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+});
+
+/*
+---------------------------------------------------------
+GET /books/all-books
+
+תפקיד:
+מחזירה את כל הספרים במאגר.
+הנתיב ציבורי כדי שגם אורחים יוכלו לעיין בספרים.
+---------------------------------------------------------
+*/
 router.get("/all-books", async (req, res) => {
   try {
     const books = await bookQueries.getAllBooks();
-    res.status(200).json(books);
+
+    return res.status(200).json(books);
   } catch (error) {
-    console.error("Error in fetching books:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Error fetching books:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
   }
 });
 
+/*
+---------------------------------------------------------
+GET /books/:id
+
+תפקיד:
+מחזירה ספר אחד לפי bookId.
+---------------------------------------------------------
+*/
 router.get("/:id", async (req, res) => {
-  const bookId = req.params.id;
   try {
-    const book = await bookQueries.getBookById(bookId);
-    if (book) {
-      res.status(200).json(book);
-    } else {
-      res.status(404).json({ message: "Book not found" });
+    const bookId = Number(req.params.id);
+
+    if (!Number.isInteger(bookId) || bookId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid book ID.",
+      });
     }
+
+    const book = await bookQueries.getBookById(bookId);
+
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: "Book not found.",
+      });
+    }
+
+    return res.status(200).json(book);
   } catch (error) {
-    console.error("Error in fetching book by ID:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Error fetching book:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
   }
 });
 
-// Route for reserving a book
+/*
+---------------------------------------------------------
+POST /books/:id/reserve
+
+תפקיד:
+משריינת ספר עבור המשתמש המחובר במסגרת
+הזמנת כיסא תקפה השייכת לו.
+
+ה-Frontend שולח:
+{
+  "reservationId": 12
+}
+---------------------------------------------------------
+*/
 router.post("/:id/reserve", async (req, res) => {
   try {
-    // בדיקה שהמשתמש מחובר למערכת
-    if (!req.session.user || !req.session.user.userId) {
-      return res
-        .status(401)
-        .json({ message: "Access denied. Please log in first." });
+    if (!req.session?.user?.userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Please log in before reserving a book.",
+      });
     }
 
-    const bookId = req.params.id;
-    const userId = req.session.user.userId;
-    const result = await bookQueries.reserveBook(bookId, userId);
+    const bookId = Number(req.params.id);
 
-    if (result.success) {
-      res.status(200).json(result);
-    } else {
-      res.status(400).json(result);
+    const seatReservationId = Number(req.body.reservationId);
+
+    if (!Number.isInteger(bookId) || bookId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid book ID.",
+      });
     }
+
+    if (!Number.isInteger(seatReservationId) || seatReservationId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "A seat reservation must be selected before reserving a book.",
+      });
+    }
+
+    const result = await bookQueries.reserveBook(
+      bookId,
+      req.session.user.userId,
+      seatReservationId,
+    );
+
+    return res
+      .status(result.statusCode || (result.success ? 201 : 400))
+      .json(result);
   } catch (error) {
-    console.error("Error in reserving book:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Error reserving book:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
   }
 });
 
