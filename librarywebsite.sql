@@ -140,12 +140,31 @@ CREATE TABLE `system_log` (
 
 CREATE TABLE `messages` (
   `messageId` int(11) NOT NULL,
+
+  -- מזהה משותף לכל ההודעות הנמצאות באותה שיחה
+  `conversationId` char(36) DEFAULT NULL,
+
+  -- מזהה המשתמש שפתח את השיחה; נשאר NULL עבור אורח
+  `userId` int(11) DEFAULT NULL,
+
+  -- תפקיד שולח ההודעה: guest, reader או librarian
+  `senderRole` varchar(20) NOT NULL DEFAULT 'guest',
+
+  -- התפקיד שאליו ההודעה מיועדת
+  `recipientRole` varchar(20) NOT NULL DEFAULT 'librarian',
+
   `senderName` varchar(100) NOT NULL,
   `senderEmail` varchar(100) NOT NULL,
+
+  -- נושא משותף שמאפשר להציג את השיחה בצורה ברורה
+  `subject` varchar(150) NOT NULL,
+
   `messageText` text NOT NULL,
   `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
   `isRead` tinyint(1) NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -245,9 +264,19 @@ ALTER TABLE `notification`
 --
 ALTER TABLE `messages`
   ADD PRIMARY KEY (`messageId`),
-  ADD KEY `isRead` (`isRead`),
-  ADD KEY `createdAt` (`createdAt`);
 
+  -- מאפשר שליפה יעילה של כל ההודעות בשיחה מסוימת
+  ADD KEY `idx_messages_conversation` (`conversationId`),
+
+  -- מאפשר שליפה יעילה של השיחות השייכות למשתמש
+  ADD KEY `idx_messages_user` (`userId`),
+
+  -- משמש לחישוב ושליפת הודעות שלא נקראו לפי הנמען
+  ADD KEY `idx_messages_recipient_read` (`recipientRole`, `isRead`),
+
+  -- משמש למיון ההודעות לפי זמן יצירתן
+  ADD KEY `idx_messages_created_at` (`createdAt`);
+  
 --
 -- Indexes for table `seat`
 --
