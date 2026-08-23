@@ -9,14 +9,13 @@ Custom Hook המרכז את הלוגיקה העסקית, ניהול ה-State
 */
 
 import { useState, useContext } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
-import {  reserveBook } from "../services/bookService";
+import { reserveBook } from "../services/bookService";
 
 export function useBookReservation() {
   const { state: book } = useLocation();
   const { user } = useContext(AuthContext);
-  const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -30,12 +29,12 @@ export function useBookReservation() {
   שולחת לשרת בקשה לשריון ומטפלת בתגובה (הצלחה או שגיאה).
   ---------------------------------------------------------
   */
-  const handleReserveBook = async (reservationData) => {
+  const handleReserveBook = async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // קריאה לשירות שיצרנו 
+      // קריאה לשירות שיצרנו
       await reserveBook(book.bookId);
 
       setSuccessMessage("הספר שוריין בהצלחה!");

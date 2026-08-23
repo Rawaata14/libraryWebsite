@@ -40,7 +40,7 @@ reserveBook
 שולחת לשרת בקשה לשריון או השאלת ספר ספציפי.
 ---------------------------------------------------------
 */
-export const reserveBook = async (bookId, reservationData) => {
+export const reserveBook = async (bookId) => {
   return axios.post(
     buildApiUrl(`/books/${bookId}/reserve`),
     {},
