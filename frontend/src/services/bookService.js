@@ -19,6 +19,28 @@ import { buildApiUrl } from "../config/api";
 
 /*
 ---------------------------------------------------------
+getAllBooks
+
+תפקיד:
+שולפת מהשרת את כל הספרים במאגר.
+
+החזרת response.data מתוך השירות מונעת מהעמודים
+להכיר את מבנה התגובה של axios.
+---------------------------------------------------------
+*/
+export const getAllBooks = async () => {
+  const response = await axios.get(
+    buildApiUrl("/books/all-books"),
+    {
+      withCredentials: true,
+    },
+  );
+
+  return response.data;
+};
+
+/*
+---------------------------------------------------------
 addBook
 
 תפקיד:

@@ -15,9 +15,9 @@ import { useNavigate } from "react-router-dom";
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
 import BookCard from "../components/common/BookCard";
-import { AuthContext } from "../../src/context/AuthContext";
+import { AuthContext } from "../context/AuthContext";
 import Button from "../components/common/Button";
-import axios from "axios";
+import { getAllBooks } from "../services/bookService";
 
 export default function BooksPage() {
   const navigate = useNavigate();
@@ -32,10 +32,8 @@ export default function BooksPage() {
   useEffect(() => {
     const fetchBooks = async () => {
       try {
-        const response = await axios.get(
-          "http://localhost:8000/books/all-books",
-        );
-        setBooks(response.data);
+        const booksData = await getAllBooks();
+        setBooks(booksData);
       } catch (error) {
         console.error("Error fetching books:", error);
       }
@@ -61,7 +59,6 @@ export default function BooksPage() {
   }, [searchTerm, selectedCategory, books]);
 
   const handleReserve = (book) => {
-    console.log("Navigating to reserve book page for:", book);
     navigate(`/reserve-book/${book.bookId}`, { state: book });
   };
 

@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
 import BookCard from "../common/BookCard";
+import { getAllBooks } from "../../services/bookService";
 
 export default function RecommendedBooks() {
   const navigate = useNavigate();
@@ -10,10 +10,8 @@ export default function RecommendedBooks() {
   useEffect(() => {
     const fetchRecommended = async () => {
       try {
-        const response = await axios.get(
-          "http://localhost:8000/books/all-books",
-        );
-        setRecommendedBooks(response.data.slice(0, 4));
+        const booksData = await getAllBooks();
+        setRecommendedBooks(booksData.slice(0, 4));
       } catch (error) {
         console.error("Error fetching recommended books:", error);
       }
@@ -22,7 +20,7 @@ export default function RecommendedBooks() {
   }, []);
 
   const handleReserve = (book) => {
-    navigate(`/reserve-book/${book.isbn}`, { state: book });
+    navigate(`/reserve-book/${book.bookId}`, { state: book });
   };
 
   return (
@@ -32,7 +30,7 @@ export default function RecommendedBooks() {
       <div className="booksGrid">
         {recommendedBooks.map((book) => (
           <BookCard
-            key={book.isbn} // שימוש ב-isbn מה-DB
+            key={book.bookId} // שימוש ב-isbn מה-DB
             book={book}
             onReserve={() => handleReserve(book)}
           />
