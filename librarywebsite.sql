@@ -63,6 +63,9 @@ CREATE TABLE `loan` (
   `loanId` int(11) NOT NULL,
   `userId` int(11) NOT NULL,
   `bookId` int(11) NOT NULL,
+  -- הזמנת הכיסא שבמסגרתה הספר הושאל
+  `seatReservationId` int(11) DEFAULT NULL,
+
   `loanDate` date NOT NULL,
   `dueDate` date NOT NULL,
   `returnDate` date DEFAULT NULL,
@@ -246,10 +249,18 @@ ALTER TABLE `book`
 --
 ALTER TABLE `loan`
   ADD PRIMARY KEY (`loanId`),
+
+  ADD UNIQUE KEY `uq_loan_reservation_book`
+    (`seatReservationId`, `bookId`),
+
   ADD KEY `idx_loan_user_status_due`
     (`userId`, `status`, `dueDate`),
+
   ADD KEY `idx_loan_book_status`
-    (`bookId`, `status`);
+    (`bookId`, `status`),
+
+  ADD KEY `idx_loan_seat_reservation`
+    (`seatReservationId`);
 
 --
 -- Indexes for table `notification`
@@ -532,9 +543,15 @@ ALTER TABLE `loan`
     ON DELETE RESTRICT
     ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_loan_book`
-    FOREIGN KEY (`bookId`) REFERENCES `book` (`bookId`)
-    ON DELETE RESTRICT
-    ON UPDATE CASCADE;
+  FOREIGN KEY (`bookId`) REFERENCES `book` (`bookId`)
+  ON DELETE RESTRICT
+  ON UPDATE CASCADE,
+
+ADD CONSTRAINT `fk_loan_seat_reservation`
+  FOREIGN KEY (`seatReservationId`)
+  REFERENCES `seat_reservation` (`reservationId`)
+  ON DELETE RESTRICT
+  ON UPDATE CASCADE;
 
 --
 -- Constraints for table `notification`
