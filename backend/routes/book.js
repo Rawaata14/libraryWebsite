@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const path = require("path");
 const bookQueries = require("../database/queries/bookQueries");
+const fs = require("fs/promises");
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -27,6 +28,15 @@ router.post("/add-book", upload.single("image"), async (req, res) => {
     bookDetails.image = req.file ? req.file.filename : null;
 
     const result = await bookQueries.addBook(bookDetails);
+
+    /*
+     אם הספר כבר קיים, התמונה שהתקבלה אינה נשמרת בספר.
+     גם במקרה של כישלון אין להשאיר קובץ יתום בתיקיית uploads.
+    */
+    if (!result.success || result.bookAlreadyExists) {
+      await removeUploadedFile(req.file);
+    }
+
     if (result.success) {
       res.status(201).json(result);
     } else {
@@ -37,6 +47,33 @@ router.post("/add-book", upload.single("image"), async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 });
+
+/*
+---------------------------------------------------------
+removeUploadedFile
+
+תפקיד:
+מוחקת קובץ שהועלה לשרת אך אינו נדרש.
+
+הפונקציה משמשת כאשר:
+- הוספת הספר נכשלה.
+- הספר כבר קיים והמערכת עדכנה רק את הכמות.
+
+כישלון במחיקת התמונה נרשם בשרת, אך אינו מבטל
+פעולה מוצלחת שבוצעה במסד הנתונים.
+---------------------------------------------------------
+*/
+async function removeUploadedFile(file) {
+  if (!file?.path) {
+    return;
+  }
+
+  try {
+    await fs.unlink(file.path);
+  } catch (error) {
+    console.error("Failed to remove unused uploaded book image:", error);
+  }
+}
 
 router.get("/all-books", async (req, res) => {
   try {

@@ -63,6 +63,14 @@ async function addBook(bookDetails) {
 
       return {
         success: true,
+
+        /*
+         מסמן ל-Route שהספר כבר היה קיים.
+         במקרה כזה הכמות עודכנה, אבל התמונה החדשה
+         שהועלתה אינה נחוצה ויש למחוק אותה.
+         */
+        bookAlreadyExists: true,
+
         message: `Book already exists. Quantity updated to ${newTotalQuantity}`,
       };
     } else {
