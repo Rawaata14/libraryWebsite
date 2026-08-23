@@ -17,8 +17,9 @@ async function addBook(bookDetails) {
   }
   const normalizedStatus = status || "available"; // Default status is "available"
   const normalizedCategory = category || "General"; // Default category is "General"
-  const quantityInt = parseInt(quantity);
-  if (quantityInt < 1) {
+  const quantityInt = Number.parseInt(quantity, 10);
+
+  if (!Number.isInteger(quantityInt) || quantityInt < 1) {
     return { success: false, message: "Quantity must be at least 1" };
   }
 
@@ -27,16 +28,42 @@ async function addBook(bookDetails) {
     const existingBook = await doQuery(checkBookSQL, [isbn]);
     if (existingBook.length > 0) {
       const book = existingBook[0];
-      const newQuantity = book.quantity + quantityInt;
-      const newAvailableQuantity = book.availableQuantity + quantityInt;
 
-      const updateBookSQL =
-        "UPDATE book SET quantity = ?, availableQuantity = ? WHERE isbn = ?";
-      await doQuery(updateBookSQL, [newQuantity, newAvailableQuantity, isbn]);
+      /*
+  ---------------------------------------------------------
+  עדכון מלאי של ספר קיים
+
+  שמות השדות חייבים להתאים לשמות העמודות במסד הנתונים:
+  total_quantity ו-available_quantity.
+
+  ההמרה ל-Number מונעת חיבור כמחרוזת במקרה שבו MySQL
+  מחזיר את ערך הכמות כמחרוזת.
+  ---------------------------------------------------------
+  */
+      const currentTotalQuantity = Number(book.total_quantity) || 0;
+
+      const currentAvailableQuantity = Number(book.available_quantity) || 0;
+
+      const newTotalQuantity = currentTotalQuantity + quantityInt;
+
+      const newAvailableQuantity = currentAvailableQuantity + quantityInt;
+
+      const updateBookSQL = `
+    UPDATE book
+    SET total_quantity = ?,
+        available_quantity = ?
+    WHERE isbn = ?
+  `;
+
+      await doQuery(updateBookSQL, [
+        newTotalQuantity,
+        newAvailableQuantity,
+        isbn,
+      ]);
 
       return {
         success: true,
-        message: `Book already exists. Quantity updated to ${newQuantity}`,
+        message: `Book already exists. Quantity updated to ${newTotalQuantity}`,
       };
     } else {
       console.log("Adding new book with details:", bookDetails);
@@ -121,7 +148,13 @@ async function reserveBook(bookId, userId) {
 
     const insertLoanSql =
       "INSERT INTO loan (userId, bookId, loanDate, dueDate, status) VALUES (?, ?, ?, ?, ?)";
-    const result = await doQuery(insertLoanSql, [userId, bookId, loanDate, dueDate, status]); // כאן יש להחליף את userId ב-ID של המשתמש שמבצע את השריון
+    const result = await doQuery(insertLoanSql, [
+      userId,
+      bookId,
+      loanDate,
+      dueDate,
+      status,
+    ]); // כאן יש להחליף את userId ב-ID של המשתמש שמבצע את השריון
 
     if (result.affectedRows > 0) {
       return { success: true, message: "Book reserved successfully" };
