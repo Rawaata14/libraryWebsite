@@ -23,14 +23,43 @@ async function addSeat(seatDetails) {
   }
 }
 
-async function getAllSeats() {
+/*
+---------------------------------------------------------
+getMapSeatsByTimeSlot
+
+תפקיד:
+שולפת את כל הכיסאות ומחשבת את הסטטוס הדינמי שלהם
+רק עבור מפת הכיסאות, לפי תאריך וטווח שעות.
+---------------------------------------------------------
+*/
+async function getMapSeatsByTimeSlot(reservationDate, startTime, endTime) {
   try {
-    const getSeatsSQL = "SELECT * FROM seat";
-    const seats = await doQuery(getSeatsSQL);
-    return { success: true, data: seats };
+    const getMapSQL = `
+      SELECT 
+        s.*, -- מחזיר את כל השדות של הכיסא (כולל x, y, width, height וכו')
+        CASE 
+          WHEN sr.reservationId IS NOT NULL THEN 'occupied'
+          ELSE 'available'
+        END AS status
+      FROM seat s
+      LEFT JOIN seat_reservation sr 
+        ON s.seatId = sr.seatId 
+        AND sr.reservationDate = ? 
+        AND sr.status <> 'cancelled'
+        AND sr.startTime < ? 
+        AND sr.endTime > ?
+    `;
+
+    const mapSeats = await doQuery(getMapSQL, [
+      reservationDate,
+      endTime,
+      startTime,
+    ]);
+
+    return { success: true, map: mapSeats };
   } catch (error) {
-    console.error("Error in fetching seats:", error);
-    return { success: false, message: "Failed to fetch seats" };
+    console.error("Error fetching map seats by time slot:", error);
+    return { success: false, message: "Failed to fetch map seats" };
   }
 }
 
@@ -70,7 +99,7 @@ async function deleteSeat(seatId) {
 
 module.exports = {
   addSeat,
-  getAllSeats,
+  getMapSeatsByTimeSlot,
   updateSeat,
   deleteSeat,
 };

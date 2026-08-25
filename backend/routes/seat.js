@@ -35,12 +35,27 @@ router.post("/save-map", requireLibrarian, async (req, res) => {
   }
 });
 
-// Route for fetching the seat map
+// Route for fetching the seat map by date and time slot
 router.get("/get-map", async (req, res) => {
   try {
-    const result = await seatQueries.getAllSeats();
+    // 1. מקבלים את התאריך והשעה מה-Frontend
+    const { date, time } = req.query;
+
+    let startTime = null;
+    let endTime = null;
+
+    // 2. השרת מפצל את המחרוזת של השעה ל-startTime ו-endTime
+    if (time && time.includes(" - ")) {
+      const parts = time.split(" - ");
+      startTime = parts[0];
+      endTime = parts[1];
+    }
+
+    // 3. קוראים לפונקציה החדשה ב-Queries עם הנתונים המעובדים
+    const result = await seatQueries.getMapSeatsByTimeSlot(date, startTime, endTime);
+
     if (result.success) {
-      res.status(200).json({ map: result.data });
+      res.status(200).json({ map: result.map });
     } else {
       res.status(500).json({ message: "Failed to fetch seat map" });
     }

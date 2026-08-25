@@ -65,6 +65,7 @@ router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
     const [
       todayReservationsResult,
       activeLoansResult,
+      activeLoansListResult,
       overdueBooksResult,
       unreadMessagesResult,
       blockedSeatsResult,
@@ -85,6 +86,18 @@ router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
           FROM loan
           WHERE LOWER(status) = 'active'
         `),
+
+      doQuery(`SELECT 
+            loanId,
+            bookId,
+            userId,
+            loanDate,
+            dueDate,
+            status
+          FROM loan
+          WHERE LOWER(status) = 'active'
+          ORDER BY loanDate DESC
+          LIMIT 10`),
 
       doQuery(`
           SELECT COUNT(*) AS count
@@ -211,6 +224,8 @@ router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
       success: true,
       stats: {
         activeLoans: Number(activeLoansResult[0]?.count) || 0,
+
+        activeLoansList: activeLoansListResult || [],
 
         overdueBooks: Number(overdueBooksResult[0]?.count) || 0,
 

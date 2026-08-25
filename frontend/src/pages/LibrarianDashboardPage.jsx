@@ -22,6 +22,8 @@ import useLibrarianDashboard from "../hooks/useLibrarianDashboard";
 
 import "../styles/librarianDashboard.css";
 
+import { formatReservationDate } from "../utils/reservationUtils";
+
 /*
 ---------------------------------------------------------
 LibrarianDashboardPage
@@ -36,7 +38,7 @@ export default function LibrarianDashboardPage() {
     useLibrarianDashboard();
 
   return (
-    <PageShell hideSidebar = {true}>
+    <PageShell hideSidebar={true}>
       <div className="dashboard-page-wrapper">
         <header className="dashboard-header">
           <div>
@@ -127,7 +129,7 @@ export default function LibrarianDashboardPage() {
 
             {/*
             ===============================================
-            נתוני הספרייה המרכזיים
+            נתוני הספרייה המרכזיים - Active Loans
             ===============================================
             */}
 
@@ -135,9 +137,42 @@ export default function LibrarianDashboardPage() {
               <h2>Active Loans</h2>
 
               <div className="card-content">
-                <strong className="dashboardMainValue">
-                  {stats.activeLoans}
-                </strong>
+                {stats.activeLoansList && stats.activeLoansList.length > 0 ? (
+                  <div className="reservations-table-container">
+                    <table className="reservations-mini-table">
+                      <caption className="visuallyHidden">
+                        Active book loans list
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">Loan ID</th>
+                          <th scope="col">Book ID</th>
+                          <th scope="col">User ID</th>
+                          <th scope="col">Due Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {stats.activeLoansList.map((loan) => (
+                          <tr key={loan.loanId}>
+                            <td>{loan.loanId}</td>
+                            <td>{loan.bookId}</td>
+                            <td>{loan.userId}</td>
+                            <td>{formatReservationDate(loan.dueDate)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p>No active loans.</p>
+                )}
+
+                <p
+                  className="todayReservationsTotal"
+                  style={{ marginTop: "1rem" }}
+                >
+                  Total active loans: <strong>{stats.activeLoans}</strong>
+                </p>
               </div>
             </section>
 

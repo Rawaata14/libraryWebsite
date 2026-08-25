@@ -92,16 +92,16 @@ async function reserveSeat(reservationDetails) {
       VALUES (?, ?, ?, ?, ?, ?)
     `;
 
-    const updateSeatStatusSQL = `
-      UPDATE seat
-      SET status = ?
-      WHERE seatId = ?
-    `;
-
-    const updateSeatResult = await doQuery(updateSeatStatusSQL, [
-      status,
-      seatId,
-    ]);
+    
+    // const updateSeatStatusSQL = `
+    //   UPDATE seat
+    //   SET status = ?
+    //   WHERE seatId = ?
+    // `;
+    // const updateSeatResult = await doQuery(updateSeatStatusSQL, [
+    //   status,
+    //   seatId,
+    // ]);
 
     const result = await doQuery(insertReservationSQL, [
       userId,
@@ -279,13 +279,13 @@ async function cancelReservation(reservationId, userId) {
     }
 
     // 3. עדכון סטטוס הכיסא בחזרה ל-'available' (כדי שיהפוך לירוק במפה!)
-    const updateSeatStatusSQL = `
-      UPDATE seat
-      SET status = 'available'
-      WHERE seatId = ?
-    `;
+    //const updateSeatStatusSQL = `
+    //  UPDATE seat
+    //  SET status = 'available'
+    //  WHERE seatId = ?
+    //`;
 
-    await doQuery(updateSeatStatusSQL, [seatId]);
+    //await doQuery(updateSeatStatusSQL, [seatId]);
 
     return {
       success: true,

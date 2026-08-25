@@ -83,9 +83,9 @@ async function registerUser(detailsToInsert) {
 
     const insertResult = await doQuery(
       `INSERT INTO \`user\`
-        (fullName, email, phone, address, passwordHash, role, status)
-       VALUES (?, ?, ?, ?, ?, 'reader', 'active')`,
-      [fullName, email, phone, address, hashedPassword],
+        (fullName, email, phone, passwordHash, role, status)
+       VALUES (?, ?, ?, ?, 'reader', 'active')`,
+      [fullName, email, phone, hashedPassword],
     );
 
     const createdUsers = await doQuery(

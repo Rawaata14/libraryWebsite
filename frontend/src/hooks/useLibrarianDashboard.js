@@ -68,6 +68,7 @@ const DEFAULT_HOURLY_RESERVATIONS = [
 
 const initialStats = {
   activeLoans: 0,
+  activeLoansList: [],
   overdueBooks: 0,
   unreadMessages: 0,
   blockedSeats: 0,
@@ -131,6 +132,12 @@ export default function useLibrarianDashboard() {
 
       setStats({
         activeLoans: Number(receivedStats.activeLoans) || 0,
+
+        activeLoansList: Array.isArray(receivedStats.activeLoansList)
+          ? receivedStats.activeLoansList
+          : Array.isArray(receivedStats.activeLoans)
+            ? receivedStats.activeLoans
+            : [],
 
         overdueBooks: Number(receivedStats.overdueBooks) || 0,
 
