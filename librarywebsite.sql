@@ -63,6 +63,9 @@ CREATE TABLE `loan` (
   `loanId` int(11) NOT NULL,
   `userId` int(11) NOT NULL,
   `bookId` int(11) NOT NULL,
+  -- הזמנת הכיסא שבמסגרתה הספר הושאל
+  `seatReservationId` int(11) DEFAULT NULL,
+
   `loanDate` date NOT NULL,
   `dueDate` date NOT NULL,
   `returnDate` date DEFAULT NULL,
@@ -140,12 +143,31 @@ CREATE TABLE `system_log` (
 
 CREATE TABLE `messages` (
   `messageId` int(11) NOT NULL,
+
+  -- מזהה משותף לכל ההודעות הנמצאות באותה שיחה
+  `conversationId` char(36) DEFAULT NULL,
+
+  -- מזהה המשתמש שפתח את השיחה; נשאר NULL עבור אורח
+  `userId` int(11) DEFAULT NULL,
+
+  -- תפקיד שולח ההודעה: guest, reader או librarian
+  `senderRole` varchar(20) NOT NULL DEFAULT 'guest',
+
+  -- התפקיד שאליו ההודעה מיועדת
+  `recipientRole` varchar(20) NOT NULL DEFAULT 'librarian',
+
   `senderName` varchar(100) NOT NULL,
   `senderEmail` varchar(100) NOT NULL,
+
+  -- נושא משותף שמאפשר להציג את השיחה בצורה ברורה
+  `subject` varchar(150) NOT NULL,
+
   `messageText` text NOT NULL,
   `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
   `isRead` tinyint(1) NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB
+  DEFAULT CHARSET=utf8mb4
+  COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -227,10 +249,18 @@ ALTER TABLE `book`
 --
 ALTER TABLE `loan`
   ADD PRIMARY KEY (`loanId`),
+
+  ADD UNIQUE KEY `uq_loan_reservation_book`
+    (`seatReservationId`, `bookId`),
+
   ADD KEY `idx_loan_user_status_due`
     (`userId`, `status`, `dueDate`),
+
   ADD KEY `idx_loan_book_status`
-    (`bookId`, `status`);
+    (`bookId`, `status`),
+
+  ADD KEY `idx_loan_seat_reservation`
+    (`seatReservationId`);
 
 --
 -- Indexes for table `notification`
@@ -245,9 +275,19 @@ ALTER TABLE `notification`
 --
 ALTER TABLE `messages`
   ADD PRIMARY KEY (`messageId`),
-  ADD KEY `isRead` (`isRead`),
-  ADD KEY `createdAt` (`createdAt`);
 
+  -- מאפשר שליפה יעילה של כל ההודעות בשיחה מסוימת
+  ADD KEY `idx_messages_conversation` (`conversationId`),
+
+  -- מאפשר שליפה יעילה של השיחות השייכות למשתמש
+  ADD KEY `idx_messages_user` (`userId`),
+
+  -- משמש לחישוב ושליפת הודעות שלא נקראו לפי הנמען
+  ADD KEY `idx_messages_recipient_read` (`recipientRole`, `isRead`),
+
+  -- משמש למיון ההודעות לפי זמן יצירתן
+  ADD KEY `idx_messages_created_at` (`createdAt`);
+  
 --
 -- Indexes for table `seat`
 --
@@ -503,9 +543,15 @@ ALTER TABLE `loan`
     ON DELETE RESTRICT
     ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_loan_book`
-    FOREIGN KEY (`bookId`) REFERENCES `book` (`bookId`)
-    ON DELETE RESTRICT
-    ON UPDATE CASCADE;
+  FOREIGN KEY (`bookId`) REFERENCES `book` (`bookId`)
+  ON DELETE RESTRICT
+  ON UPDATE CASCADE,
+
+ADD CONSTRAINT `fk_loan_seat_reservation`
+  FOREIGN KEY (`seatReservationId`)
+  REFERENCES `seat_reservation` (`reservationId`)
+  ON DELETE RESTRICT
+  ON UPDATE CASCADE;
 
 --
 -- Constraints for table `notification`
