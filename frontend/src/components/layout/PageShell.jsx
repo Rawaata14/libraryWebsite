@@ -6,11 +6,11 @@ PageShell.jsx
 מעטפת משותפת לכל דפי המערכת.
 
 הקומפוננטה אחראית על:
-- הצגת Header קבוע.
-- הצגת סרגל ספרנית למשתמשת מורשית.
+- הצגת Header קבוע (עם אפשרות הסתרה).
+- הצגת סרגל ספרנית למשתמשת מורשית (עם אפשרות הסתרה).
 - הצגת כפתור חזרה בדפים פנימיים.
 - הצגת תוכן הדף.
-- הצגת Footer קבוע.
+- הצגת Footer קבוע (עם אפשרות הסתרה).
 =========================================================
 */
 
@@ -48,9 +48,10 @@ PageShell
 תפקיד:
 עוטפת את תוכן הדף בין ה-Header ל-Footer,
 מציגה סרגל ספרנית וכפתור חזרה בדפים פנימיים.
+מאפשרת גם הסתרה של רכיבים דרך Props לפי צורך.
 ---------------------------------------------------------
 */
-export default function PageShell({ children }) {
+export default function PageShell({ children, hideSidebar = false }) {
   const { isLibrarian } = useContext(AuthContext);
   const location = useLocation();
 
@@ -64,7 +65,8 @@ export default function PageShell({ children }) {
         <Header />
 
         <div className="pageShellBody">
-          {isLibrarian && <LibrarianSidebar />}
+          {/* מציג את הסרגל רק אם המשתמשת ספרנית וגם לא ביקשו להסתיר */}
+          {isLibrarian && !hideSidebar && <LibrarianSidebar />}
 
           <main className="pageShellContent">
             {shouldShowBackButton && (
@@ -88,9 +90,12 @@ export default function PageShell({ children }) {
 PageShell.propTypes
 
 תפקיד:
-מגדיר את תוכן הדף שמתקבל בתוך המעטפת.
+מגדיר את סוגי הנתונים (PropTypes) עבור המעטפת וה-Props החדשים.
 ---------------------------------------------------------
 */
 PageShell.propTypes = {
   children: PropTypes.node.isRequired,
+  hideHeader: PropTypes.bool,
+  hideFooter: PropTypes.bool,
+  hideSidebar: PropTypes.bool,
 };

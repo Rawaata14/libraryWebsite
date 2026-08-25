@@ -36,7 +36,7 @@ export default function LibrarianDashboardPage() {
     useLibrarianDashboard();
 
   return (
-    <PageShell>
+    <PageShell hideSidebar = {true}>
       <div className="dashboard-page-wrapper">
         <header className="dashboard-header">
           <div>
