@@ -27,6 +27,7 @@ export default function MapToolbar({
   onToggleBlock,
   onRotate,
   hasSelectedItem,
+  cancelChanges,
   saveMap,
 }) {
   return (
@@ -91,6 +92,11 @@ export default function MapToolbar({
           Delete
         </button>
 
+        {/* ביטול שינויים */}
+        <button type="button" onClick={cancelChanges}>
+          Cancel Changes
+        </button>
+
         {/* שמירה */}
         <button type="button" onClick={saveMap}>
           Save Map
@@ -120,4 +126,5 @@ MapToolbar.propTypes = {
   onRotate: PropTypes.func.isRequired,
   hasSelectedItem: PropTypes.bool.isRequired,
   saveMap: PropTypes.func.isRequired,
+  cancelChanges: PropTypes.func.isRequired,
 };

@@ -10,12 +10,13 @@ Custom Hook המרכז את מצב ולוגיקת עריכת מפת הספריי
 - הוספה ומחיקה של פריטים.
 - חסימה וסיבוב של פריטים.
 - שמירת המפה ורענונה מהשרת.
+- ביטול שינויים וחזרה למצב הקודם.
 
 פעולות הגרירה מנוהלות דרך useMapDragging.
 =========================================================
 */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import useMapDragging from "./useMapDragging";
 
@@ -40,8 +41,17 @@ export default function useLibraryMap({
   fetchLatestSeats,
 }) {
   const [newItemType, setNewItemType] = useState("seat");
-
   const [newItemPlacement, setNewItemPlacement] = useState(mapZones[0].id);
+
+  // שמירת עותק גיבוי של המצב המקורי לצורך ביטול שינויים
+  const [initialItems, setInitialItems] = useState([]);
+
+  // בכל פעם שהפריטים נטענים מחדש מהשרת, נעעדכן גם את הגיבוי המקורי
+  useEffect(() => {
+    if (items.length > 0 && initialItems.length === 0) {
+      setInitialItems(JSON.parse(JSON.stringify(items)));
+    }
+  }, [items, initialItems.length]);
 
   const selectedItem = items.find((item) => item.seatId === selectedSeatId);
 
@@ -60,11 +70,29 @@ export default function useLibraryMap({
 
   /*
   ---------------------------------------------------------
-  addItem
+  cancelChanges
 
   תפקיד:
-  מוסיפה פריט זמני במרכז האזור שנבחר
-  ומסמנת אותו כפריט הנבחר.
+  מחזיר את פריטי המפה למצבם המקורי שהיה לפני
+  השינויים הלא שמורים.
+  ---------------------------------------------------------
+  */
+  const cancelChanges = () => {
+    const userConfirmed = window.confirm(
+      "האם את בטוחה שברצונך לבטל את כל השינויים שלא נשמרו?",
+    );
+
+    if (!userConfirmed) {
+      return;
+    }
+
+    setItems(JSON.parse(JSON.stringify(initialItems)));
+    onSeatSelect(null);
+  };
+
+  /*
+  ---------------------------------------------------------
+  addItem
   ---------------------------------------------------------
   */
   const addItem = () => {
@@ -77,7 +105,6 @@ export default function useLibraryMap({
     }
 
     const generatedId = `temp-${Date.now()}`;
-
     const availablePosition = getAvailablePositionInZone(zone, items);
 
     const newItem = {
@@ -105,10 +132,6 @@ export default function useLibraryMap({
   /*
   ---------------------------------------------------------
   deleteItem
-
-  תפקיד:
-  מוחקת פריט זמני מה-State או פריט קיים
-  מהשרת ולאחר מכן מהרשימה המקומית.
   ---------------------------------------------------------
   */
   const deleteItem = async () => {
@@ -155,10 +178,6 @@ export default function useLibraryMap({
   /*
   ---------------------------------------------------------
   toggleBlockItem
-
-  תפקיד:
-  מחליפה את סטטוס הפריט הנבחר בין
-  available לבין blocked.
   ---------------------------------------------------------
   */
   const toggleBlockItem = () => {
@@ -181,9 +200,6 @@ export default function useLibraryMap({
   /*
   ---------------------------------------------------------
   rotateSelectedItem
-
-  תפקיד:
-  מסובבת את הפריט הנבחר ב-90 מעלות.
   ---------------------------------------------------------
   */
   const rotateSelectedItem = () => {
@@ -206,10 +222,6 @@ export default function useLibraryMap({
   /*
   ---------------------------------------------------------
   handleItemSelect
-
-  תפקיד:
-  מאתרת את הפריט שנלחץ ומעבירה את פרטיו
-  לקומפוננטה האב.
   ---------------------------------------------------------
   */
   const handleItemSelect = (seatId) => {
@@ -231,8 +243,8 @@ export default function useLibraryMap({
   saveMap
 
   תפקיד:
-  שומרת את מבנה המפה בשרת ומרעננת
-  את הפריטים לאחר שמירה מוצלחת.
+  שומרת את מבנה המפה בשרת, מעדכנת את הגיבוי המקומי
+  ומרעננת את הפריטים לאחר שמירה מוצלחת.
   ---------------------------------------------------------
   */
   const saveMap = async () => {
@@ -245,6 +257,10 @@ export default function useLibraryMap({
       }
 
       window.alert("Map saved successfully!");
+
+      // לאחר שמירה מוצלחת, מעדכנים את הגיבוי כך שהמצב החדש יהפוך למצב המקורי החדש
+      setInitialItems(JSON.parse(JSON.stringify(items)));
+
       onSeatSelect(null);
 
       if (fetchLatestSeats) {
@@ -252,7 +268,6 @@ export default function useLibraryMap({
       }
     } catch (error) {
       console.error("Error saving library map:", error);
-
       window.alert("An error occurred while saving the map. Please try again.");
     }
   };
@@ -276,5 +291,6 @@ export default function useLibraryMap({
     handleMapPointerLeave,
     updateItemPosition,
     saveMap,
+    cancelChanges, 
   };
 }

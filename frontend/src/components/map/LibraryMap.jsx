@@ -78,6 +78,7 @@ export default function LibraryMap({
     handleMapPointerMove,
     stopDragging,
     handleMapPointerLeave,
+    cancelChanges,
     saveMap,
   } = useLibraryMap({
     items,
@@ -109,6 +110,7 @@ export default function LibraryMap({
           onToggleBlock={toggleBlockItem}
           onRotate={rotateSelectedItem}
           hasSelectedItem={Boolean(selectedSeatId)}
+          cancelChanges={cancelChanges}
           saveMap={saveMap}
         />
       )}
