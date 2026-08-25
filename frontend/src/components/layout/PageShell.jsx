@@ -69,11 +69,7 @@ export default function PageShell({ children, hideSidebar = false }) {
           {isLibrarian && !hideSidebar && <LibrarianSidebar />}
 
           <main className="pageShellContent">
-            {shouldShowBackButton && (
-              <div className="pageBackButtonContainer">
-                <BackButton variant="page" />
-              </div>
-            )}
+            
 
             {children}
           </main>

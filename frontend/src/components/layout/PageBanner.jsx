@@ -11,11 +11,14 @@ PageBanner.jsx
 - טעינת קובץ העיצוב הייעודי לכותרת.
 =========================================================
 */
+import { useLocation } from "react-router-dom";
 
 import PropTypes from "prop-types";
 
 import "../../styles/page-banner.css";
+import BackButton from "../common/BackButton";
 
+const PAGES_WITHOUT_BACK_BUTTON = ["/", "/home", "/dashboard"];
 /*
 ---------------------------------------------------------
 PageBanner
@@ -25,9 +28,23 @@ PageBanner
 ---------------------------------------------------------
 */
 export default function PageBanner({ title }) {
+  const location = useLocation();
+
+  const shouldShowBackButton = !PAGES_WITHOUT_BACK_BUTTON.includes(
+    location.pathname,
+  );
   return (
     <div className="pageBanner">
-      <h1 className="pageBannerTitle">{title}</h1>
+      <div>
+        {shouldShowBackButton && (
+          <div className="pageBackButtonContainer">
+            <BackButton variant="page" />
+          </div>
+        )}
+      </div>
+      <div className="pageBannerTitleContainer">
+        <h1 className="pageBannerTitle">{title}</h1>
+      </div>
     </div>
   );
 }
