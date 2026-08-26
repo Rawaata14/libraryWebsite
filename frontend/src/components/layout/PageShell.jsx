@@ -3,61 +3,41 @@
 PageShell.jsx
 
 תיאור הקובץ:
-מעטפת משותפת לכל דפי המערכת.
+מעטפת משותפת לדפי המערכת.
 
 הקומפוננטה אחראית על:
-- הצגת Header קבוע (עם אפשרות הסתרה).
-- הצגת סרגל ספרנית למשתמשת מורשית (עם אפשרות הסתרה).
-- הצגת כפתור חזרה בדפים פנימיים.
-- הצגת תוכן הדף.
-- הצגת Footer קבוע (עם אפשרות הסתרה).
+- הצגת Header קבוע.
+- הצגת סרגל הספרנית למשתמשת מורשית.
+- הצגת תוכן העמוד.
+- הצגת Footer קבוע.
+
+כפתור החזרה מוצג ברמת כותרת העמוד ולא מתוך
+המעטפת, ולכן אינו מנוהל בקובץ זה.
 =========================================================
 */
 
 import { useContext } from "react";
 import PropTypes from "prop-types";
-import { useLocation } from "react-router-dom";
 
 import { AuthContext } from "../../context/AuthContext";
 
-import BackButton from "../common/BackButton";
 import Footer from "./Footer";
 import Header from "./Header";
 import LibrarianSidebar from "./LibrarianSidebar";
 
 /*
 ---------------------------------------------------------
-PAGES_WITHOUT_BACK_BUTTON
-
-תפקיד:
-מגדיר את העמודים הראשיים שבהם אין צורך
-להציג כפתור חזרה.
----------------------------------------------------------
-*/
-const PAGES_WITHOUT_BACK_BUTTON = [
-  "/",
-  "/admin/librarian",
-  "/login",
-  "/register",
-];
-
-/*
----------------------------------------------------------
 PageShell
 
 תפקיד:
-עוטפת את תוכן הדף בין ה-Header ל-Footer,
-מציגה סרגל ספרנית וכפתור חזרה בדפים פנימיים.
-מאפשרת גם הסתרה של רכיבים דרך Props לפי צורך.
+עוטפת את תוכן הדף בין ה-Header ל-Footer.
+
+אם המשתמשת היא ספרנית, מוצג גם סרגל הניהול
+האנכי, אלא אם התקבל hideSidebar בערך true.
 ---------------------------------------------------------
 */
 export default function PageShell({ children, hideSidebar = false }) {
   const { isLibrarian } = useContext(AuthContext);
-  const location = useLocation();
-
-  const shouldShowBackButton = !PAGES_WITHOUT_BACK_BUTTON.includes(
-    location.pathname,
-  );
 
   return (
     <div className="pageShell">
@@ -65,14 +45,10 @@ export default function PageShell({ children, hideSidebar = false }) {
         <Header />
 
         <div className="pageShellBody">
-          {/* מציג את הסרגל רק אם המשתמשת ספרנית וגם לא ביקשו להסתיר */}
+          {/* הצגת סרגל הניהול רק לספרנית ובהתאם להגדרת העמוד */}
           {isLibrarian && !hideSidebar && <LibrarianSidebar />}
 
-          <main className="pageShellContent">
-            
-
-            {children}
-          </main>
+          <main className="pageShellContent">{children}</main>
         </div>
 
         <Footer />
@@ -86,12 +62,10 @@ export default function PageShell({ children, hideSidebar = false }) {
 PageShell.propTypes
 
 תפקיד:
-מגדיר את סוגי הנתונים (PropTypes) עבור המעטפת וה-Props החדשים.
+מגדיר את סוגי הנתונים שהקומפוננטה מקבלת.
 ---------------------------------------------------------
 */
 PageShell.propTypes = {
   children: PropTypes.node.isRequired,
-  hideHeader: PropTypes.bool,
-  hideFooter: PropTypes.bool,
   hideSidebar: PropTypes.bool,
 };
