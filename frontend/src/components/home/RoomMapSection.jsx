@@ -1,43 +1,109 @@
 /*
-  RoomMapSection.jsx
-  ------------------
-  אזור מפת המקומות בדף הבית.
+=========================================================
+RoomMapSection.jsx
 
-  אחריות:
-  - להציג תקציר ויזואלי של מפת המקומות
-  - לאפשר מעבר לדף המפה המלא
+תיאור הקובץ:
+אזור תצוגה מקדימה של מפת המקומות בדף הבית.
+
+המפה מציגה את מצב המקומות לפי:
+- התאריך הנוכחי בישראל.
+- חלון הזמן הפעיל כרגע.
+
+אם הספרייה מחוץ לשעות ההזמנה, לא נשלח
+חלון זמן מלאכותי שעלול להציג מקומות כתפוסים.
+=========================================================
 */
 
 import { useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import RoomMap from "../dashboard/RoomMap";
+
 import Button from "../common/Button";
+import RoomMap from "../dashboard/RoomMap";
+
 import { AuthContext } from "../../context/AuthContext";
 
+import {
+  getLibraryDateValue,
+  getLibraryTimeValue,
+} from "../../utils/libraryDateTime";
+
+/*
+---------------------------------------------------------
+RESERVATION_TIME_SLOTS
+
+חלונות הזמן שבהם ניתן להזמין מקום.
+יש לשמור את הרשימה זהה לזו שבשרת.
+---------------------------------------------------------
+*/
+const RESERVATION_TIME_SLOTS = [
+  {
+    startTime: "08:00",
+    endTime: "10:00",
+  },
+  {
+    startTime: "10:00",
+    endTime: "12:00",
+  },
+  {
+    startTime: "12:00",
+    endTime: "14:00",
+  },
+  {
+    startTime: "14:00",
+    endTime: "16:00",
+  },
+  {
+    startTime: "16:00",
+    endTime: "18:00",
+  },
+];
+
+/*
+---------------------------------------------------------
+getCurrentReservationTimeSlot
+
+תפקיד:
+מחזירה את חלון ההזמנה הפעיל כרגע לפי שעון ישראל.
+
+לדוגמה:
+אם השעה 10:35 מוחזר 10:00 - 12:00.
+---------------------------------------------------------
+*/
+const getCurrentReservationTimeSlot = () => {
+  const currentTime = getLibraryTimeValue();
+
+  const activeSlot = RESERVATION_TIME_SLOTS.find(
+    (slot) => currentTime >= slot.startTime && currentTime < slot.endTime,
+  );
+
+  if (!activeSlot) {
+    return "";
+  }
+
+  return `${activeSlot.startTime} - ${activeSlot.endTime}`;
+};
+
+/*
+---------------------------------------------------------
+RoomMapSection
+---------------------------------------------------------
+*/
 export default function RoomMapSection() {
   const navigate = useNavigate();
-  const { isLibrarian } = useContext(AuthContext); // כאן נוכל להחליף ללוגיקה אמיתית שבודקת אם המשתמש הוא ספרנית
 
-  // 1. חישוב תאריך היום הנוכחי בפורמט YYYY-MM-DD
-  const today = new Date().toISOString().split("T")[0];
+  const { isLibrarian } = useContext(AuthContext);
 
-  // 2. חישוב שעת ברירת מחדל נוכחית (או התאמה לפורמט הטווחים שלך במערכת)
-  const currentHour = new Date().getHours();
-  // דוגמה לפורמט טווח שעות תואם (למשל השעה הנוכחית עד שעתיים קדימה, או טווח קבוע שרץ כברירת מחדל)
-  const currentMinutes = new Date().getMinutes();
+  const today = getLibraryDateValue();
 
-  // אפשר להתאים את מחרוזת השעה לפורמט שהמערכת שלך מצפה לו (למשל "08:00 - 10:00")
-  // אם תרצי טווח דינמי לפי השעה המדויקת של עכשיו:
-  const startTimeStr = `${String(currentHour).padStart(2, "0")}:${currentMinutes < 30 ? "00" : "30"}`;
-  const endTimeStr = `${String(currentHour + 2).padStart(2, "0")}:${currentMinutes < 30 ? "00" : "30"}`;
-  const defaultTimeSlot = `${startTimeStr} - ${endTimeStr}`;
+  const currentTimeSlot = getCurrentReservationTimeSlot();
 
   const handleMapNavigation = () => {
     if (isLibrarian) {
-      navigate("/admin/map"); // ספרנית הולכת לדף הניהול והטולבר
-    } else {
-      navigate("/map"); // סטודנט או אורח הולכים למפה הרגילה
+      navigate("/admin/map");
+      return;
     }
+
+    navigate("/map");
   };
 
   return (
@@ -49,7 +115,7 @@ export default function RoomMapSection() {
           <RoomMap
             showSelectionInfo={true}
             selectedDate={today}
-            selectedTime={defaultTimeSlot}
+            selectedTime={currentTimeSlot}
           />
 
           <div className="mapButtonBottom">

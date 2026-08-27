@@ -5,12 +5,9 @@ useMyReservations.js
 תיאור הקובץ:
 Custom Hook לניהול הזמנות המשתמש המחובר.
 
-ה-Hook אחראי על:
-- טעינת הזמנות המשתמש.
-- חלוקה להזמנות עתידיות ולהיסטוריה.
-- סינון הרשימה המוצגת.
-- ביטול הזמנה עתידית.
-- ניהול מצבי טעינה והודעות משוב.
+מדיניות הביטול:
+המשתמש יכול לבטל הזמנה פעילה רק לפני
+שעת תחילת ההזמנה לפי שעון ישראל.
 =========================================================
 */
 
@@ -22,25 +19,19 @@ import {
 } from "../services/reservationService";
 
 import {
-  getReservationEndDateTime,
+  getReservationStartDateTime,
   isCancelledStatus,
   splitReservationsByTime,
 } from "../utils/reservationUtils";
 
-/*
----------------------------------------------------------
-useMyReservations
+import { getLibraryDateTimeKey } from "../utils/libraryDateTime";
 
-תפקיד:
-מספק לדף My Reservations את הנתונים והפעולות
-הדרושים להצגת הזמנות המשתמש ולביטולן.
----------------------------------------------------------
-*/
 export default function useMyReservations() {
   const [reservations, setReservations] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState("upcoming");
 
   const [isLoading, setIsLoading] = useState(true);
+
   const [cancellingReservationId, setCancellingReservationId] = useState(null);
 
   const [errorMessage, setErrorMessage] = useState("");
@@ -49,10 +40,6 @@ export default function useMyReservations() {
   /*
   ---------------------------------------------------------
   fetchReservations
-
-  תפקיד:
-  טוענת מהשרת את ההזמנות השייכות למשתמש המחובר.
-  השרת מזהה את המשתמש באמצעות ה-session.
   ---------------------------------------------------------
   */
   const fetchReservations = useCallback(async () => {
@@ -79,28 +66,46 @@ export default function useMyReservations() {
     }
   }, []);
 
-  /*
-  ---------------------------------------------------------
-  טעינת ההזמנות
-
-  תפקיד:
-  מפעילה את שליפת ההזמנות כאשר הדף נטען.
-  ---------------------------------------------------------
-  */
   useEffect(() => {
     fetchReservations();
   }, [fetchReservations]);
 
   /*
   ---------------------------------------------------------
-  handleCancelReservation
+  canCancelReservation
 
   תפקיד:
-  מבקשת אישור מהמשתמש, שולחת בקשת ביטול
-  ומעדכנת את סטטוס ההזמנה ברשימה המקומית.
+  מאפשרת ביטול רק לפני שעת תחילת ההזמנה.
+  ---------------------------------------------------------
+  */
+  const canCancelReservation = (reservation) => {
+    const reservationStart = getReservationStartDateTime(reservation);
+
+    return Boolean(
+      reservationStart &&
+      reservationStart > getLibraryDateTimeKey() &&
+      !isCancelledStatus(reservation.status),
+    );
+  };
+
+  /*
+  ---------------------------------------------------------
+  handleCancelReservation
   ---------------------------------------------------------
   */
   const handleCancelReservation = async (reservationId) => {
+    const reservation = reservations.find(
+      (currentReservation) =>
+        currentReservation.reservationId === reservationId,
+    );
+
+    if (!reservation || !canCancelReservation(reservation)) {
+      setErrorMessage(
+        "This reservation can no longer be cancelled because its start time has arrived.",
+      );
+      return;
+    }
+
     const userConfirmed = window.confirm(
       "Are you sure you want to cancel this reservation?",
     );
@@ -117,13 +122,13 @@ export default function useMyReservations() {
       const response = await cancelReservationByUser(reservationId);
 
       setReservations((previousReservations) =>
-        previousReservations.map((reservation) =>
-          reservation.reservationId === reservationId
+        previousReservations.map((currentReservation) =>
+          currentReservation.reservationId === reservationId
             ? {
-                ...reservation,
+                ...currentReservation,
                 status: "cancelled",
               }
-            : reservation,
+            : currentReservation,
         ),
       );
 
@@ -138,6 +143,11 @@ export default function useMyReservations() {
       } else if (error.response?.status === 404) {
         setErrorMessage(
           error.response?.data?.message || "The reservation was not found.",
+        );
+      } else if (error.response?.status === 409) {
+        setErrorMessage(
+          error.response?.data?.message ||
+            "This reservation can no longer be cancelled.",
         );
       } else {
         setErrorMessage(
@@ -154,14 +164,27 @@ export default function useMyReservations() {
   ---------------------------------------------------------
   חלוקת ההזמנות
 
-  תפקיד:
-  מחשבת מחדש את הרשימות רק כאשר נתוני
-  ההזמנות משתנים.
+  החישוב מתעדכן גם פעם בדקה כדי שהזמנה שעברה
+  את שעת הסיום תעבור ל-History בלי רענון ידני.
   ---------------------------------------------------------
   */
+  const [currentDateTimeKey, setCurrentDateTimeKey] = useState(
+    getLibraryDateTimeKey(),
+  );
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setCurrentDateTimeKey(getLibraryDateTimeKey());
+    }, 60000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
+
   const { upcomingReservations, pastReservations } = useMemo(
-    () => splitReservationsByTime(reservations),
-    [reservations],
+    () => splitReservationsByTime(reservations, currentDateTimeKey),
+    [reservations, currentDateTimeKey],
   );
 
   const displayedReservations = useMemo(() => {
@@ -175,24 +198,6 @@ export default function useMyReservations() {
 
     return reservations;
   }, [pastReservations, reservations, selectedFilter, upcomingReservations]);
-
-  /*
-  ---------------------------------------------------------
-  canCancelReservation
-
-  תפקיד:
-  בודקת אם ההזמנה עדיין עתידית ולא בוטלה.
-  ---------------------------------------------------------
-  */
-  const canCancelReservation = (reservation) => {
-    const reservationEnd = getReservationEndDateTime(reservation);
-
-    return Boolean(
-      reservationEnd &&
-      reservationEnd >= new Date() &&
-      !isCancelledStatus(reservation.status),
-    );
-  };
 
   return {
     reservations,

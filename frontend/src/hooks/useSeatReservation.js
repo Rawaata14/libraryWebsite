@@ -5,14 +5,7 @@ useSeatReservation.js
 תיאור הקובץ:
 Custom Hook לניהול תהליך הזמנת מקום במפה.
 
-ה-Hook אחראי על:
-- ניהול התאריך והשעה שנבחרו.
-- טעינת שעות פנויות.
-- ניהול הכיסא שנבחר.
-- פתיחה וסגירה של חלון ההזמנה.
-- אימות נתוני ההזמנה.
-- יצירת הזמנה חדשה.
-- הצגת משוב הצלחה או שגיאה.
+כל חישובי התאריך מתבצעים לפי אזור הזמן של ישראל.
 =========================================================
 */
 
@@ -26,30 +19,16 @@ import {
   getAvailableReservationSlots,
 } from "../services/reservationService";
 
-/*
----------------------------------------------------------
-getTodayDateValue
+import {
+  getLibraryDateTimeKey,
+  getLibraryDateValue,
+} from "../utils/libraryDateTime";
 
-תפקיד:
-מחזירה את התאריך הנוכחי בפורמט YYYY-MM-DD.
----------------------------------------------------------
-*/
-const getTodayDateValue = () => new Date().toISOString().split("T")[0];
-
-/*
----------------------------------------------------------
-useSeatReservation
-
-תפקיד:
-מספק לדף המפה את הנתונים והפעולות הדרושים
-לבחירת מקום וליצירת הזמנה.
----------------------------------------------------------
-*/
 export default function useSeatReservation() {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
-  const [selectedDate, setSelectedDate] = useState(getTodayDateValue());
+  const [selectedDate, setSelectedDate] = useState(getLibraryDateValue());
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedSeat, setSelectedSeat] = useState(null);
@@ -57,15 +36,6 @@ export default function useSeatReservation() {
   const [mapRefreshKey, setMapRefreshKey] = useState(0);
   const [reservationFeedback, setReservationFeedback] = useState(null);
 
-  /*
-  -------------------------------------------------------
-  fetchAvailableSlots
-
-  תפקיד:
-  טוענת מהשרת את השעות הפנויות לתאריך שנבחר
-  ושומרת בחירה קיימת אם היא עדיין זמינה.
-  -------------------------------------------------------
-  */
   const fetchAvailableSlots = useCallback(async (date) => {
     try {
       const response = await getAvailableReservationSlots(date);
@@ -96,27 +66,10 @@ export default function useSeatReservation() {
     }
   }, []);
 
-  /*
-  -------------------------------------------------------
-  טעינת שעות פנויות
-
-  תפקיד:
-  מרעננת את השעות בכל פעם שהתאריך משתנה.
-  -------------------------------------------------------
-  */
   useEffect(() => {
     fetchAvailableSlots(selectedDate);
   }, [fetchAvailableSlots, selectedDate]);
 
-  /*
-  -------------------------------------------------------
-  handleSeatSelect
-
-  תפקיד:
-  שומרת כיסא פנוי שנבחר ופותחת את חלון
-  סיכום ההזמנה.
-  -------------------------------------------------------
-  */
   const handleSeatSelect = (seat) => {
     if (!seat || seat.status !== "available") {
       return;
@@ -126,14 +79,6 @@ export default function useSeatReservation() {
     setSelectedSeat(seat);
   };
 
-  /*
-  -------------------------------------------------------
-  closeReservationDialog
-
-  תפקיד:
-  סוגרת את חלון ההזמנה ומנקה את בחירת הכיסא.
-  -------------------------------------------------------
-  */
   const closeReservationDialog = useCallback(() => {
     if (isSubmitting) {
       return;
@@ -142,43 +87,22 @@ export default function useSeatReservation() {
     setSelectedSeat(null);
   }, [isSubmitting]);
 
-  /*
-  -------------------------------------------------------
-  handleDateChange
-
-  תפקיד:
-  מעדכנת את התאריך ומנקה את הכיסא שנבחר.
-  -------------------------------------------------------
-  */
   const handleDateChange = (date) => {
+    if (!date || date < getLibraryDateValue()) {
+      return;
+    }
+
     setSelectedDate(date);
     setSelectedSeat(null);
     setReservationFeedback(null);
   };
 
-  /*
-  -------------------------------------------------------
-  handleTimeChange
-
-  תפקיד:
-  מעדכנת את השעה ומנקה את הכיסא שנבחר.
-  -------------------------------------------------------
-  */
   const handleTimeChange = (time) => {
     setSelectedTime(time);
     setSelectedSeat(null);
     setReservationFeedback(null);
   };
 
-  /*
-  -------------------------------------------------------
-  handleConfirmReservation
-
-  תפקיד:
-  מאמתת את פרטי הבחירה ושולחת בקשה ליצירת
-  ההזמנה. לאחר הצלחה מרעננת את המפה.
-  -------------------------------------------------------
-  */
   const handleConfirmReservation = async () => {
     if (!user) {
       navigate("/login");
@@ -203,6 +127,18 @@ export default function useSeatReservation() {
       return;
     }
 
+    const selectedStartKey = `${selectedDate}T${String(startTime).substring(0, 5)}`;
+
+    if (selectedStartKey <= getLibraryDateTimeKey()) {
+      setReservationFeedback({
+        type: "error",
+        message: "A reservation must start later than the current time.",
+      });
+
+      await fetchAvailableSlots(selectedDate);
+      return;
+    }
+
     setIsSubmitting(true);
     setReservationFeedback(null);
 
@@ -220,15 +156,12 @@ export default function useSeatReservation() {
 
       setReservationFeedback({
         type: "success",
-        message: `Seat ${selectedSeat.id} was reserved for ${selectedDate}, ${selectedTime}.`,
+        message:
+          `Seat ${selectedSeat.id} was reserved for ` +
+          `${selectedDate}, ${selectedTime}.`,
       });
 
       setSelectedSeat(null);
-
-      /*
-      שינוי המפתח גורם למפה להיטען מחדש
-      ולהציג את סטטוס הכיסאות המעודכן.
-      */
       setMapRefreshKey((currentKey) => currentKey + 1);
 
       await fetchAvailableSlots(selectedDate);
@@ -248,7 +181,7 @@ export default function useSeatReservation() {
   };
 
   return {
-    minimumDate: getTodayDateValue(),
+    minimumDate: getLibraryDateValue(),
     selectedDate,
     availableSlots,
     selectedTime,

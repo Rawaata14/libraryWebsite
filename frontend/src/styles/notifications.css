@@ -1,0 +1,604 @@
+/*
+=========================================================
+notifications.css
+
+תיאור הקובץ:
+עיצוב דף ההתראות המשותף למשתמש ולספרנית.
+
+הקובץ כולל:
+- מבנה הדף.
+- כותרת ופעולות.
+- סיכום מספר ההתראות.
+- מסננים.
+- כרטיסי התראות.
+- מצבי טעינה, שגיאה ומצב ריק.
+- התאמה למסכים קטנים.
+=========================================================
+*/
+
+/*
+---------------------------------------------------------
+מבנה הדף
+---------------------------------------------------------
+*/
+.notificationsPage {
+  width: 100%;
+  max-width: 1100px;
+
+  margin: 22px auto 45px;
+  padding: 0 20px;
+}
+
+.notificationsCard {
+  padding: 26px;
+
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+
+  background: var(--glass-card);
+  color: #ffffff;
+
+  backdrop-filter: blur(7px);
+
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.24);
+}
+
+/*
+---------------------------------------------------------
+כותרת ופעולות
+---------------------------------------------------------
+*/
+.notificationsHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+
+  margin-bottom: 22px;
+}
+
+.notificationsHeader h1 {
+  margin: 0;
+
+  color: #fff6ee;
+
+  font-size: clamp(27px, 3vw, 38px);
+}
+
+.notificationsHeader p {
+  max-width: 620px;
+  margin: 7px 0 0;
+
+  color: #eedbd1;
+
+  font-size: 16px;
+  line-height: 1.55;
+}
+
+.notificationsHeaderActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 11px;
+  flex-wrap: wrap;
+}
+
+.notificationsRefreshButton,
+.notificationsReadAllButton {
+  min-height: 44px;
+  padding: 10px 16px;
+
+  border: 2px solid transparent;
+  border-radius: 10px;
+
+  font: inherit;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.notificationsRefreshButton {
+  border-color: #aa7a65;
+
+  background: #f6e9e1;
+  color: #4d2822;
+}
+
+.notificationsReadAllButton {
+  background: #7b3f35;
+  color: #ffffff;
+}
+
+.notificationsRefreshButton:hover:not(:disabled),
+.notificationsReadAllButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.notificationsRefreshButton:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.notificationsReadAllButton:hover:not(:disabled) {
+  background: #613027;
+}
+
+.notificationsRefreshButton:disabled,
+.notificationsReadAllButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.notificationsRefreshButton:focus-visible,
+.notificationsReadAllButton:focus-visible {
+  outline: 4px solid #ffffff;
+  outline-offset: 3px;
+}
+
+/*
+---------------------------------------------------------
+סיכום ההתראות
+---------------------------------------------------------
+*/
+.notificationsSummary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+
+  margin-bottom: 20px;
+}
+
+.notificationsSummary > div {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+
+  min-height: 82px;
+  padding: 16px 18px;
+
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 13px;
+
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.notificationsSummary strong {
+  min-width: 46px;
+
+  color: #ffce8c;
+
+  font-size: 31px;
+  line-height: 1;
+  text-align: center;
+}
+
+.notificationsSummary span {
+  color: #f6ebe4;
+
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/*
+---------------------------------------------------------
+מסנני ההתראות
+---------------------------------------------------------
+*/
+.notificationsFilters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  margin-bottom: 20px;
+  padding-bottom: 17px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.17);
+}
+
+.notificationFilterButton {
+  min-height: 42px;
+  padding: 9px 17px;
+
+  border: 2px solid #ad7f6d;
+  border-radius: 999px;
+
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+
+  font: inherit;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.notificationFilterButton:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.notificationFilterButtonActive {
+  border-color: #ffce8c;
+
+  background: #f3dfd3;
+  color: #4c2822;
+}
+
+.notificationFilterButton:focus-visible {
+  outline: 4px solid #ffffff;
+  outline-offset: 3px;
+}
+
+/*
+---------------------------------------------------------
+רשימת ההתראות
+---------------------------------------------------------
+*/
+.notificationsList {
+  display: grid;
+  gap: 14px;
+}
+
+/*
+---------------------------------------------------------
+כרטיס התראה
+---------------------------------------------------------
+*/
+.notificationItem {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 16px;
+
+  padding: 18px;
+
+  border: 2px solid #8c6558;
+  border-radius: 15px;
+
+  background: #f3e7df;
+  color: #40231f;
+
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.16);
+
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.notificationItem:hover {
+  transform: translateY(-1px);
+
+  box-shadow: 0 10px 23px rgba(0, 0, 0, 0.2);
+}
+
+.notificationItemUnread {
+  border-color: #c96c4e;
+
+  background: linear-gradient(135deg, #fff5ed 0%, #f6dfd1 100%);
+
+  box-shadow: 0 8px 22px rgba(181, 82, 51, 0.24);
+}
+
+.notificationItemIcon {
+  display: grid;
+  place-items: center;
+
+  width: 54px;
+  height: 54px;
+
+  border-radius: 50%;
+
+  background: #704039;
+  color: #ffffff;
+
+  font-size: 25px;
+
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.2);
+}
+
+/*
+---------------------------------------------------------
+תוכן ההתראה
+---------------------------------------------------------
+*/
+.notificationItemContent {
+  min-width: 0;
+}
+
+.notificationItemHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+
+  margin-bottom: 9px;
+}
+
+.notificationItemHeading > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.notificationItemHeading h2 {
+  margin: 0;
+
+  color: #4a2721;
+
+  font-size: 18px;
+}
+
+.notificationItemHeading time {
+  flex-shrink: 0;
+
+  color: #765a50;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.notificationItemContent > p {
+  margin: 0;
+
+  color: #563a33;
+
+  font-size: 16px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+/*
+---------------------------------------------------------
+תגית התראה חדשה
+---------------------------------------------------------
+*/
+.notificationNewBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 24px;
+  padding: 3px 9px;
+
+  border-radius: 999px;
+
+  background: #b43f31;
+  color: #ffffff;
+
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/*
+---------------------------------------------------------
+כפתור סימון כנקראה
+---------------------------------------------------------
+*/
+.notificationReadButton {
+  margin-top: 13px;
+  padding: 8px 13px;
+
+  border: 0;
+  border-radius: 8px;
+
+  background: #764038;
+  color: #ffffff;
+
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.notificationReadButton:hover:not(:disabled) {
+  background: #592c26;
+}
+
+.notificationReadButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.notificationReadButton:focus-visible {
+  outline: 4px solid #7c4439;
+  outline-offset: 3px;
+}
+
+/*
+---------------------------------------------------------
+משוב הצלחה ושגיאה
+---------------------------------------------------------
+*/
+.notificationsFeedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+
+  margin-bottom: 17px;
+  padding: 13px 15px;
+
+  border: 1px solid;
+  border-radius: 10px;
+}
+
+.notificationsFeedback p {
+  margin: 0;
+
+  line-height: 1.45;
+}
+
+.notificationsFeedback button {
+  flex-shrink: 0;
+
+  min-height: 34px;
+  padding: 5px 11px;
+
+  border: 1px solid currentColor;
+  border-radius: 7px;
+
+  background: transparent;
+  color: inherit;
+
+  font: inherit;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.notificationsFeedbackSuccess {
+  border-color: #5f9d67;
+
+  background: #e6f6e8;
+  color: #235f2c;
+}
+
+.notificationsFeedbackError {
+  border-color: #c66a64;
+
+  background: #ffe7e5;
+  color: #842c27;
+}
+
+/*
+---------------------------------------------------------
+מצבי טעינה ומצב ריק
+---------------------------------------------------------
+*/
+.notificationsState {
+  display: grid;
+  place-items: center;
+
+  min-height: 240px;
+  padding: 38px 20px;
+
+  border: 1px dashed rgba(255, 255, 255, 0.32);
+  border-radius: 14px;
+
+  background: rgba(255, 255, 255, 0.07);
+
+  color: #f7ebe4;
+  text-align: center;
+}
+
+.notificationsState h2 {
+  margin: 12px 0 6px;
+
+  color: #ffffff;
+}
+
+.notificationsState p {
+  max-width: 520px;
+  margin: 0;
+
+  color: #ead7ce;
+}
+
+.notificationsEmptyIcon {
+  font-size: 43px;
+}
+
+/*
+=========================================================
+התאמה לטאבלט
+=========================================================
+*/
+@media (max-width: 780px) {
+  .notificationsPage {
+    padding: 0 12px;
+  }
+
+  .notificationsCard {
+    padding: 20px 15px;
+  }
+
+  .notificationsHeader {
+    flex-direction: column;
+  }
+
+  .notificationsHeaderActions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .notificationsSummary {
+    grid-template-columns: 1fr;
+  }
+}
+
+/*
+=========================================================
+התאמה לטלפון
+=========================================================
+*/
+@media (max-width: 560px) {
+  .notificationsHeaderActions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .notificationsRefreshButton,
+  .notificationsReadAllButton {
+    width: 100%;
+  }
+
+  .notificationsFilters {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .notificationFilterButton {
+    width: 100%;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .notificationItem {
+    grid-template-columns: 44px 1fr;
+    gap: 12px;
+    padding: 15px 13px;
+  }
+
+  .notificationItemIcon {
+    width: 42px;
+    height: 42px;
+
+    font-size: 20px;
+  }
+
+  .notificationItemHeading {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .notificationItemHeading time {
+    white-space: normal;
+  }
+
+  .notificationReadButton {
+    width: 100%;
+  }
+}
+
+/*
+=========================================================
+הפחתת תנועה
+=========================================================
+*/
+@media (prefers-reduced-motion: reduce) {
+  .notificationsRefreshButton,
+  .notificationsReadAllButton,
+  .notificationFilterButton,
+  .notificationItem {
+    transition: none;
+  }
+}

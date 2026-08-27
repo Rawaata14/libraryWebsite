@@ -8,6 +8,7 @@ Header.jsx
 הקובץ כולל:
 - ניווט בין דפי המערכת.
 - תפריט רספונסיבי למסכים צרים.
+- הצגת פעמון ומספר התראות שלא נקראו.
 - הצגת שם המשתמש ותמונת הפרופיל.
 - תפריט פרופיל מותאם למשתמש ולספרנית.
 - התנתקות מהמערכת.
@@ -16,9 +17,13 @@ Header.jsx
 */
 
 import { useContext, useEffect, useRef, useState } from "react";
+
 import { NavLink, useLocation } from "react-router-dom";
 
 import { AuthContext } from "../../context/AuthContext";
+
+import { NotificationContext } from "../../context/NotificationContext";
+
 import { getProfileImageSrc } from "../../utils/profileImage";
 
 import "../../styles/header.css";
@@ -28,13 +33,15 @@ import "../../styles/header.css";
 Header
 
 תפקיד:
-מציגה את סרגל הניווט הראשי ואת תפריטי
-הניווט והפרופיל.
+מציגה את סרגל הניווט הראשי, מונה ההתראות
+ותפריטי הניווט והפרופיל.
 ---------------------------------------------------------
 */
 export default function Header() {
   const { user, isAuthenticated, isLibrarian, logout } =
     useContext(AuthContext);
+
+  const { unreadCount } = useContext(NotificationContext);
 
   const location = useLocation();
 
@@ -43,6 +50,7 @@ export default function Header() {
   const profileButtonRef = useRef(null);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   const displayName = user?.fullName || user?.name || "Library User";
@@ -52,6 +60,11 @@ export default function Header() {
 
   const profileLinkClassName = ({ isActive }) =>
     isActive ? "profileMenuItem activeProfileMenuItem" : "profileMenuItem";
+
+  const notificationLinkClassName = ({ isActive }) =>
+    isActive
+      ? "headerNotificationLink headerNotificationLinkActive"
+      : "headerNotificationLink";
 
   /*
   -------------------------------------------------------
@@ -65,7 +78,8 @@ export default function Header() {
 
   /*
   -------------------------------------------------------
-  סגירת התפריטים באמצעות Escape או לחיצה מחוץ ל-Header
+  סגירת התפריטים באמצעות Escape או לחיצה
+  מחוץ ל-Header
   -------------------------------------------------------
   */
   useEffect(() => {
@@ -80,12 +94,15 @@ export default function Header() {
 
       if (isProfileMenuOpen) {
         setIsProfileMenuOpen(false);
+
         profileButtonRef.current?.focus();
+
         return;
       }
 
       if (isMenuOpen) {
         setIsMenuOpen(false);
+
         menuButtonRef.current?.focus();
       }
     };
@@ -98,6 +115,7 @@ export default function Header() {
     };
 
     document.addEventListener("keydown", handleKeyDown);
+
     document.addEventListener("pointerdown", handlePointerDown);
 
     return () => {
@@ -110,22 +128,17 @@ export default function Header() {
   /*
   -------------------------------------------------------
   handleMainMenuToggle
-
-  תפקיד:
-  פותחת או סוגרת את תפריט הניווט הרספונסיבי.
   -------------------------------------------------------
   */
   const handleMainMenuToggle = () => {
     setIsMenuOpen((currentValue) => !currentValue);
+
     setIsProfileMenuOpen(false);
   };
 
   /*
   -------------------------------------------------------
   handleProfileMenuToggle
-
-  תפקיד:
-  פותחת או סוגרת את תפריט הפרופיל.
   -------------------------------------------------------
   */
   const handleProfileMenuToggle = () => {
@@ -135,16 +148,20 @@ export default function Header() {
   /*
   -------------------------------------------------------
   handleLogout
-
-  תפקיד:
-  סוגרת את כל התפריטים ומפעילה התנתקות.
   -------------------------------------------------------
   */
   const handleLogout = () => {
     setIsMenuOpen(false);
     setIsProfileMenuOpen(false);
+
     logout();
   };
+
+  /*
+  כמות ההתראות המוצגת בפעמון מוגבלת ל-99+
+  כדי למנוע שבירת העיצוב.
+  */
+  const unreadCountLabel = unreadCount > 99 ? "99+" : unreadCount;
 
   return (
     <header ref={headerRef} className="topbar">
@@ -161,7 +178,6 @@ export default function Header() {
       כפתור פתיחת התפריט במסכים צרים
       ===================================================
       */}
-
       <button
         ref={menuButtonRef}
         type="button"
@@ -170,7 +186,7 @@ export default function Header() {
           isMenuOpen ? "Close navigation menu" : "Open navigation menu"
         }
         aria-expanded={isMenuOpen}
-        aria-controls="main-navigation-menu"
+        aria-controls={"main-navigation-menu"}
         onClick={handleMainMenuToggle}
       >
         <span aria-hidden="true">{isMenuOpen ? "×" : "☰"}</span>
@@ -181,7 +197,6 @@ export default function Header() {
       תפריט הניווט ופעולות המשתמש
       ===================================================
       */}
-
       <div
         id="main-navigation-menu"
         className={`headerMenu ${isMenuOpen ? "headerMenuOpen" : ""}`}
@@ -226,108 +241,154 @@ export default function Header() {
               Login / Sign Up
             </NavLink>
           ) : (
-            <div className="headerProfileMenu">
+            <>
               {/*
               =============================================
-              כפתור פתיחת תפריט הפרופיל
+              קישור לדף ההתראות
+
+              מוצג גם לקורא וגם לספרנית.
               =============================================
               */}
-
-              <button
-                ref={profileButtonRef}
-                type="button"
-                className="headerProfileMenuButton"
-                aria-label={`Open profile menu for ${displayName}`}
-                aria-haspopup="menu"
-                aria-expanded={isProfileMenuOpen}
-                aria-controls="header-profile-menu"
-                onClick={handleProfileMenuToggle}
+              <NavLink
+                to="/notifications"
+                className={notificationLinkClassName}
+                aria-label={
+                  unreadCount > 0
+                    ? `${unreadCount} unread notifications`
+                    : "Notifications"
+                }
+                title="Notifications"
               >
-                <span className="headerUserName">{displayName}</span>
-
-                <img
-                  src={getProfileImageSrc(user)}
-                  alt=""
-                  aria-hidden="true"
-                  className="headerProfileImage"
-                />
-
-                <span
-                  className={`profileMenuChevron ${
-                    isProfileMenuOpen ? "profileMenuChevronOpen" : ""
-                  }`}
-                  aria-hidden="true"
-                >
-                  ▾
+                <span className="headerNotificationIcon" aria-hidden="true">
+                  🔔
                 </span>
-              </button>
 
-              {/*
-              =============================================
-              רשימת פעולות הפרופיל
-              =============================================
-              */}
+                <span className="headerNotificationText">Notifications</span>
 
-              {isProfileMenuOpen && (
-                <div
-                  id="header-profile-menu"
-                  className="profileDropdownMenu"
-                  role="menu"
-                  aria-label="Profile actions"
+                {unreadCount > 0 && (
+                  <span className="headerNotificationBadge" aria-hidden="true">
+                    {unreadCountLabel}
+                  </span>
+                )}
+              </NavLink>
+
+              <div className="headerProfileMenu">
+                {/*
+                ===========================================
+                כפתור פתיחת תפריט הפרופיל
+                ===========================================
+                */}
+                <button
+                  ref={profileButtonRef}
+                  type="button"
+                  className={"headerProfileMenuButton"}
+                  aria-label={`Open profile menu for ${displayName}`}
+                  aria-haspopup="menu"
+                  aria-expanded={isProfileMenuOpen}
+                  aria-controls={"header-profile-menu"}
+                  onClick={handleProfileMenuToggle}
                 >
-                  <div className="profileDropdownIdentity">
-                    <strong>{displayName}</strong>
+                  <span className="headerUserName">{displayName}</span>
 
-                    {user?.email && <span>{user.email}</span>}
+                  <img
+                    src={getProfileImageSrc(user)}
+                    alt=""
+                    aria-hidden="true"
+                    className={"headerProfileImage"}
+                  />
 
-                    <small>{isLibrarian ? "Librarian" : "Library User"}</small>
+                  <span
+                    className={`profileMenuChevron ${
+                      isProfileMenuOpen ? "profileMenuChevronOpen" : ""
+                    }`}
+                    aria-hidden="true"
+                  >
+                    ▾
+                  </span>
+                </button>
+
+                {/*
+                ===========================================
+                רשימת פעולות הפרופיל
+                ===========================================
+                */}
+                {isProfileMenuOpen && (
+                  <div
+                    id="header-profile-menu"
+                    className={"profileDropdownMenu"}
+                    role="menu"
+                    aria-label={"Profile actions"}
+                  >
+                    <div className={"profileDropdownIdentity"}>
+                      <strong>{displayName}</strong>
+
+                      {user?.email && <span>{user.email}</span>}
+
+                      <small>
+                        {isLibrarian ? "Librarian" : "Library User"}
+                      </small>
+                    </div>
+
+                    <div className={"profileDropdownDivider"} />
+
+                    <NavLink
+                      to="/profile"
+                      className={profileLinkClassName}
+                      role="menuitem"
+                    >
+                      <span aria-hidden="true">👤</span>
+                      My Profile
+                    </NavLink>
+
+                    <NavLink
+                      to="/notifications"
+                      className={profileLinkClassName}
+                      role="menuitem"
+                    >
+                      <span aria-hidden="true">🔔</span>
+                      Notifications
+                      {unreadCount > 0 && (
+                        <span className={"profileNotificationCount"}>
+                          {unreadCountLabel}
+                        </span>
+                      )}
+                    </NavLink>
+
+                    {isLibrarian ? (
+                      <NavLink
+                        to="/admin/librarian"
+                        className={profileLinkClassName}
+                        role="menuitem"
+                      >
+                        <span aria-hidden="true">📊</span>
+                        Librarian Dashboard
+                      </NavLink>
+                    ) : (
+                      <NavLink
+                        to="/my-reservations"
+                        className={profileLinkClassName}
+                        role="menuitem"
+                      >
+                        <span aria-hidden="true">📅</span>
+                        My Reservations
+                      </NavLink>
+                    )}
+
+                    <div className={"profileDropdownDivider"} />
+
+                    <button
+                      type="button"
+                      className={"profileMenuItem profileMenuLogout"}
+                      role="menuitem"
+                      onClick={handleLogout}
+                    >
+                      <span aria-hidden="true">↪</span>
+                      Logout
+                    </button>
                   </div>
-
-                  <div className="profileDropdownDivider" />
-
-                  <NavLink
-                    to="/profile"
-                    className={profileLinkClassName}
-                    role="menuitem"
-                  >
-                    <span aria-hidden="true">👤</span>
-                    My Profile
-                  </NavLink>
-
-                  {isLibrarian ? (
-                    <NavLink
-                      to="/admin/librarian"
-                      className={profileLinkClassName}
-                      role="menuitem"
-                    >
-                      <span aria-hidden="true">📊</span>
-                      Librarian Dashboard
-                    </NavLink>
-                  ) : (
-                    <NavLink
-                      to="/my-reservations"
-                      className={profileLinkClassName}
-                      role="menuitem"
-                    >
-                      <span aria-hidden="true">📅</span>
-                      My Reservations
-                    </NavLink>
-                  )}
-
-                  <div className="profileDropdownDivider" />
-
-                  <button
-                    type="button"
-                    className="profileMenuItem profileMenuLogout"
-                    role="menuitem"
-                    onClick={handleLogout}
-                  >
-                    <span aria-hidden="true">↪</span>
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       </div>

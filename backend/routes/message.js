@@ -7,10 +7,12 @@ Routes עבור מערכת ההודעות והשיחות.
 
 הקובץ אחראי על:
 - פתיחת שיחה חדשה על ידי משתמש או אורח.
-- שליפת כל השיחות עבור הספרן.
+- יצירת התראה לספרניות על הודעה נכנסת.
+- שליפת כל השיחות עבור הספרנית.
 - שליפת שיחות המשתמש המחובר.
 - שליפת שיחה מסוימת.
-- שליחת תשובות בין משתמש לספרן.
+- שליחת תשובות בין משתמש לספרנית.
+- יצירת התראה למשתמש על תשובת ספרנית.
 - סימון הודעות כנקראו.
 - בדיקות התחברות, הרשאות ובעלות על שיחות.
 =========================================================
@@ -22,6 +24,9 @@ const { randomUUID } = require("crypto");
 const router = express.Router();
 
 const messageQueries = require("../database/queries/messageQueries");
+
+const notificationQueries = require("../database/queries/notificationQueries");
+
 const { requireAuth, requireLibrarian } = require("../middleware/auth");
 
 /*
@@ -62,6 +67,34 @@ function getSessionUserName(user) {
 
 /*
 ---------------------------------------------------------
+notifyActiveLibrarians
+
+תפקיד:
+שולחת התראה לכל הספרניות הפעילות.
+
+כישלון ביצירת ההתראה אינו מבטל הודעה שכבר
+נשמרה בהצלחה.
+---------------------------------------------------------
+*/
+async function notifyActiveLibrarians(message, type) {
+  const notificationResult =
+    await notificationQueries.addNotificationToActiveLibrarians(message, type);
+
+  if (!notificationResult.success) {
+    console.error(
+      "Message was saved, but librarian notification creation failed.",
+    );
+
+    return;
+  }
+
+  if (notificationResult.notifiedLibrarians === 0) {
+    console.warn("Message was saved, but no active librarians were found.");
+  }
+}
+
+/*
+---------------------------------------------------------
 POST /messages
 
 תפקיד:
@@ -72,11 +105,15 @@ POST /messages
 
 אורח:
 השם והאימייל נלקחים מהטופס.
+
+לאחר שמירת ההודעה נוצרת התראה לכל
+הספרניות הפעילות.
 ---------------------------------------------------------
 */
 router.post("/", async (req, res) => {
   try {
     const subject = normalizeText(req.body.subject);
+
     const messageText = normalizeText(req.body.messageText);
 
     if (!subject || !messageText) {
@@ -103,8 +140,8 @@ router.post("/", async (req, res) => {
     const sessionUser = req.session?.user || null;
 
     /*
-    ספרן אינו צריך לפתוח פנייה לעצמו דרך Contact.
-    תשובות ספרן נשלחות דרך Route התשובות.
+    ספרנית אינה צריכה לפתוח פנייה לעצמה דרך
+    טופס Contact.
     */
     if (sessionUser?.role === "librarian") {
       return res.status(400).json({
@@ -120,17 +157,35 @@ router.post("/", async (req, res) => {
 
     if (sessionUser) {
       userId = sessionUser.userId;
+
       senderName = getSessionUserName(sessionUser);
+
       senderEmail = normalizeText(sessionUser.email);
+
       senderRole = "reader";
     } else {
       senderName = normalizeText(req.body.senderName);
+
       senderEmail = normalizeText(req.body.senderEmail);
 
       if (!senderName || !senderEmail) {
         return res.status(400).json({
           success: false,
           message: "Name and email are required for guests",
+        });
+      }
+
+      if (senderName.length > 100) {
+        return res.status(400).json({
+          success: false,
+          message: "Name must contain no more than 100 characters",
+        });
+      }
+
+      if (senderEmail.length > 100) {
+        return res.status(400).json({
+          success: false,
+          message: "Email must contain no more than 100 characters",
         });
       }
 
@@ -166,6 +221,24 @@ router.post("/", async (req, res) => {
       return res.status(400).json(result);
     }
 
+    /*
+    -------------------------------------------------------
+    יצירת התראה לספרניות
+
+    סוג ההתראה שונה בין משתמש רשום לאורח,
+    כדי שניתן יהיה להבחין ביניהם בדף ההתראות.
+    -------------------------------------------------------
+    */
+    const notificationType =
+      senderRole === "guest" ? "new_guest_message" : "new_reader_message";
+
+    const notificationMessage =
+      senderRole === "guest"
+        ? `New guest inquiry from ${senderName}: ${subject}`
+        : `New message from ${senderName}: ${subject}`;
+
+    await notifyActiveLibrarians(notificationMessage, notificationType);
+
     return res.status(201).json(result);
   } catch (error) {
     console.error("Error creating message conversation:", error);
@@ -182,7 +255,7 @@ router.post("/", async (req, res) => {
 GET /messages
 
 תפקיד:
-מחזיר את כל ההודעות לספרן בלבד.
+מחזיר את כל ההודעות לספרנית בלבד.
 ---------------------------------------------------------
 */
 router.get("/", requireLibrarian, async (req, res) => {
@@ -239,8 +312,8 @@ GET /messages/:conversationId
 תפקיד:
 מחזיר את ההודעות בשיחה מסוימת.
 
-ספרן:
-יכול לפתוח כל שיחה.
+ספרנית:
+יכולה לפתוח כל שיחה.
 
 משתמש:
 יכול לפתוח רק שיחה ששייכת לו.
@@ -249,6 +322,7 @@ GET /messages/:conversationId
 router.get("/:conversationId", requireAuth, async (req, res) => {
   try {
     const { conversationId } = req.params;
+
     const sessionUser = req.session.user;
 
     if (sessionUser.role !== "librarian") {
@@ -292,21 +366,23 @@ POST /messages/:conversationId/reply
 תפקיד:
 מוסיף תשובה לשיחה קיימת.
 
-ספרן:
-יכול להשיב לשיחה של משתמש רשום.
+ספרנית:
+יכולה להשיב לשיחה של משתמש רשום.
+לאחר התשובה המשתמש מקבל התראה.
 
 משתמש:
 יכול להשיב רק לשיחה השייכת לו.
+לאחר התשובה הספרניות מקבלות התראה.
 
-הערה:
-בשלב זה לא ניתן להשיב לאורח מתוך האתר,
-מפני שלאורח אין חשבון שבו ניתן להציג את התשובה.
+לא ניתן להשיב לאורח מתוך האתר ללא שירות אימייל.
 ---------------------------------------------------------
 */
 router.post("/:conversationId/reply", requireAuth, async (req, res) => {
   try {
     const { conversationId } = req.params;
+
     const sessionUser = req.session.user;
+
     const messageText = normalizeText(req.body.messageText);
 
     if (!messageText) {
@@ -376,6 +452,38 @@ router.post("/:conversationId/reply", requireAuth, async (req, res) => {
       return res.status(400).json(result);
     }
 
+    /*
+      -----------------------------------------------------
+      יצירת התראה לאחר תשובה
+
+      תשובת ספרנית:
+      נשלחת התראה למשתמש בעל השיחה.
+
+      תשובת משתמש:
+      נשלחת התראה לכל הספרניות הפעילות.
+      -----------------------------------------------------
+      */
+    if (isLibrarian) {
+      const notificationResult = await notificationQueries.addNotification(
+        conversation.userId,
+        `New reply from the library: ${conversation.subject}`,
+        "librarian_reply",
+      );
+
+      if (!notificationResult.success) {
+        console.error(
+          "Reply was saved, but user notification creation failed.",
+        );
+      }
+    } else {
+      const senderName = getSessionUserName(sessionUser);
+
+      await notifyActiveLibrarians(
+        `New reply from ${senderName}: ${conversation.subject}`,
+        "reader_message_reply",
+      );
+    }
+
     return res.status(201).json(result);
   } catch (error) {
     console.error("Error replying to conversation:", error);
@@ -394,8 +502,8 @@ PUT /messages/:conversationId/read
 תפקיד:
 מסמן כנקראו את ההודעות שנשלחו למשתמש הנוכחי.
 
-ספרן:
-מסמן הודעות שנשלחו ל-librarian.
+ספרנית:
+מסמנת הודעות שנשלחו ל-librarian.
 
 משתמש:
 מסמן הודעות שנשלחו ל-reader, ורק בשיחה שלו.
@@ -404,7 +512,9 @@ PUT /messages/:conversationId/read
 router.put("/:conversationId/read", requireAuth, async (req, res) => {
   try {
     const { conversationId } = req.params;
+
     const sessionUser = req.session.user;
+
     const isLibrarian = sessionUser.role === "librarian";
 
     if (!isLibrarian) {
