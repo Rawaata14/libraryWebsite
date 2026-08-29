@@ -371,8 +371,8 @@ async function getAllReservations() {
       INNER JOIN seat AS s
         ON sr.seatId = s.seatId
       ORDER BY
-        sr.reservationDate ASC,
-        sr.startTime ASC
+        sr.reservationDate DESC,
+        sr.startTime DESC
     `;
 
     const reservations = await doQuery(sql);
