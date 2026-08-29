@@ -187,13 +187,15 @@ export default function Header() {
         className={`headerMenu ${isMenuOpen ? "headerMenuOpen" : ""}`}
       >
         <nav className="navLinks" aria-label="Main navigation">
-          <NavLink to="/" className={navClassName}>
-            Home
-          </NavLink>
+          {!isLibrarian && (
+            <NavLink to="/" className={navClassName}>
+              Home
+            </NavLink>
+          )}
 
           {isLibrarian && (
             <NavLink to="/admin/librarian" className={navClassName}>
-              Dashboard
+              Home
             </NavLink>
           )}
 
@@ -210,6 +212,12 @@ export default function Header() {
           >
             Books
           </NavLink>
+
+          {isLibrarian && (
+            <NavLink to="/" className={navClassName}>
+              Home View
+            </NavLink>
+          )}
 
           <NavLink to="/events" className={navClassName}>
             Events

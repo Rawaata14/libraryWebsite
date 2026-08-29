@@ -88,16 +88,30 @@ router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
         `),
 
       doQuery(`SELECT 
-            loanId,
-            bookId,
-            userId,
-            loanDate,
-            dueDate,
-            status
-          FROM loan
-          WHERE LOWER(status) = 'active'
-          ORDER BY loanDate DESC
-          LIMIT 10`),
+          l.loanId,
+          l.bookId,
+          l.userId,
+          l.dueDate,
+          l.status,
+          b.title AS bookTitle,
+          b.total_quantity,
+          MIN(TIME_FORMAT(sr.startTime, '%H:%i')) AS startTime,
+          MIN(TIME_FORMAT(sr.endTime, '%H:%i')) AS endTime,
+          (b.total_quantity - (
+              SELECT COUNT(*) 
+              FROM loan active_l 
+              WHERE active_l.bookId = b.bookId 
+                AND LOWER(active_l.status) = 'active'
+                AND DATE(active_l.loanDate) = CURDATE()
+          )) AS availableQuantity
+        FROM loan l
+        JOIN book b ON l.bookId = b.bookId
+        LEFT JOIN seat_reservation sr ON l.userId = sr.userId AND sr.reservationDate = CURDATE()
+        WHERE LOWER(l.status) = 'active'
+          AND DATE(l.loanDate) = CURDATE()
+        GROUP BY l.loanId, l.bookId, l.userId, l.dueDate, l.status, b.title, b.total_quantity
+        ORDER BY l.loanDate DESC
+        LIMIT 10`),
 
       doQuery(`
           SELECT COUNT(*) AS count

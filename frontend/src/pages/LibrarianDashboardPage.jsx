@@ -137,35 +137,53 @@ export default function LibrarianDashboardPage() {
               <h2>Active Loans</h2>
 
               <div className="card-content">
-                {stats.activeLoansList && stats.activeLoansList.length > 0 ? (
-                  <div className="reservations-table-container">
-                    <table className="reservations-mini-table">
-                      <caption className="visuallyHidden">
-                        Active book loans list
-                      </caption>
-                      <thead>
-                        <tr>
-                          <th scope="col">Loan ID</th>
-                          <th scope="col">Book ID</th>
-                          <th scope="col">User ID</th>
-                          <th scope="col">Due Date</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {stats.activeLoansList.map((loan) => (
+                <div className="reservations-table-container">
+                  <table className="reservations-mini-table">
+                    <caption className="visuallyHidden">
+                      Active book loans list
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">Book Title</th>
+                        <th scope="col">Time Slot</th>
+                        <th scope="col">Available Now</th>
+                        <th scope="col">User ID</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stats.activeLoansList &&
+                      stats.activeLoansList.length > 0 ? (
+                        stats.activeLoansList.map((loan) => (
                           <tr key={loan.loanId}>
-                            <td>{loan.loanId}</td>
-                            <td>{loan.bookId}</td>
+                            <td>{loan.bookTitle || loan.book?.title}</td>
+                            <td>
+                              <span className="time-text">
+                                {loan.startTime && loan.endTime
+                                  ? `${loan.startTime} - ${loan.endTime}`
+                                  : "-"}
+                              </span>
+                            </td>
+                            <td>
+                              {loan.availableQuantity ??
+                                loan.book?.available_quantity ??
+                                "-"}
+                            </td>
                             <td>{loan.userId}</td>
-                            <td>{formatReservationDate(loan.dueDate)}</td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p>No active loans.</p>
-                )}
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan="4"
+                            style={{ textAlign: "center", padding: "1rem" }}
+                          >
+                            No active book loans for today.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
 
                 <p
                   className="todayReservationsTotal"
