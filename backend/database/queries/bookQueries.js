@@ -175,7 +175,7 @@ async function getAllBooks() {
     const sql = `
       SELECT *
       FROM book
-      ORDER BY title ASC
+      ORDER BY category ASC, title ASC
     `;
 
     return await doQuery(sql);
