@@ -39,6 +39,9 @@ const PORT = Number(process.env.PORT) || 8000;
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5000";
 const SESSION_SECRET = process.env.SESSION_SECRET;
 
+const { checkAndSendExpirationReminders } = require("./utils/reminderService");
+
+
 /*
 ---------------------------------------------------------
 בדיקת SESSION_SECRET
@@ -206,6 +209,10 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+setInterval(() => {
+  checkAndSendExpirationReminders();
+}, 60000);
 
 startServer();
 

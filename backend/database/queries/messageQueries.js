@@ -327,6 +327,26 @@ async function markMessageAsRead(messageId, recipientRole) {
   };
 }
 
+/*
+---------------------------------------------------------
+getUserEmailForNotification
+
+תפקיד:
+שולף את כתובת המייל ושם הסטודנט לפי מזהה משתמש,
+כדי שנוכל לשלוח אליו מייל כשהספרנית עונה.
+---------------------------------------------------------
+*/
+async function getUserEmailForNotification(userId) {
+  try {
+    const sql = `SELECT email, fullName FROM user WHERE userId = ?`;
+    const rows = await doQuery(sql, [userId]);
+    return rows[0] || null;
+  } catch (error) {
+    console.error("Error in getUserEmailForNotification:", error);
+    return null;
+  }
+}
+
 module.exports = {
   addMessage,
   getAllMessages,
@@ -336,4 +356,5 @@ module.exports = {
   conversationBelongsToUser,
   markConversationAsRead,
   markMessageAsRead,
+  getUserEmailForNotification,
 };

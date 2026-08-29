@@ -10,18 +10,17 @@ Routes לניהול הזמנות מקומות.
 - שליפת הזמנות.
 - ביטול על ידי משתמש.
 - ביטול חריג על ידי ספרנית.
-- שליחת הודעה לבעל הזמנה.
+- שליחת הודעה לבעל הזמנה ושליחת מייל אליו.
 - שליפת שעות זמינות.
 =========================================================
 */
 
 const express = require("express");
-
 const router = express.Router();
 
 const reservationQueries = require("../database/queries/reservationQueries");
-
 const notificationQueries = require("../database/queries/notificationQueries");
+const transporter = require("../utils/mailer");
 
 /*
 ---------------------------------------------------------
@@ -53,19 +52,12 @@ router.post("/reserve-seat", async (req, res) => {
       status: "occupied",
     });
 
-    /*
-      תאריך או שעה לא תקינים, או ניסיון
-      לבצע הזמנה בעבר.
-    */
     if (result.invalidReservation) {
       return res.status(400).json({
         message: result.message || "Invalid reservation date or time",
       });
     }
 
-    /*
-      הכיסא כבר תפוס בטווח שנבחר.
-    */
     if (result.conflict) {
       return res.status(409).json({
         message:
@@ -80,12 +72,6 @@ router.post("/reserve-seat", async (req, res) => {
       });
     }
 
-    /*
-      אישור למשתמש על יצירת ההזמנה.
-
-      הספרניות אינן מקבלות התראה על כל
-      הזמנה חדשה, בהתאם למדיניות שנבחרה.
-    */
     const notificationResult = await notificationQueries.addNotification(
       req.session.user.userId,
       `Reservation created successfully for seat ${seatId} on ${date}`,
@@ -155,9 +141,6 @@ router.get("/get-reservations", async (req, res) => {
 /*
 ---------------------------------------------------------
 PATCH /reservations/:reservationId/cancel
-
-מדיניות:
-משתמש יכול לבטל רק לפני שעת תחילת ההזמנה.
 ---------------------------------------------------------
 */
 router.patch("/:reservationId/cancel", async (req, res) => {
@@ -193,9 +176,6 @@ router.patch("/:reservationId/cancel", async (req, res) => {
       });
     }
 
-    /*
-        שעת תחילת ההזמנה כבר הגיעה.
-      */
     if (result.cancellationClosed) {
       return res.status(409).json({
         message:
@@ -209,9 +189,6 @@ router.patch("/:reservationId/cancel", async (req, res) => {
       });
     }
 
-    /*
-        אישור ביטול למשתמש.
-      */
     const notificationResult = await notificationQueries.addNotification(
       req.session.user.userId,
       `Reservation number ${reservationId} was cancelled successfully`,
@@ -224,15 +201,6 @@ router.patch("/:reservationId/cancel", async (req, res) => {
       );
     }
 
-    /*
-        הספרניות מקבלות התראה רק אם:
-
-        - הביטול בוצע על ידי משתמש רגיל.
-        - ההזמנה שבוטלה היא של היום בישראל.
-
-        result.data.isToday חושב בשכבת השאילתות
-        לפי Asia/Jerusalem.
-      */
     if (req.session.user.role !== "librarian" && result.data?.isToday) {
       const librarianNotificationResult =
         await notificationQueries.addTodayCancellationNotificationToLibrarians(
@@ -264,9 +232,6 @@ router.patch("/:reservationId/cancel", async (req, res) => {
 /*
 ---------------------------------------------------------
 PATCH /reservations/:reservationId/librarian-cancel
-
-הספרנית יכולה לבצע ביטול חריג גם לאחר
-שעת תחילת ההזמנה.
 ---------------------------------------------------------
 */
 router.patch("/:reservationId/librarian-cancel", async (req, res) => {
@@ -284,7 +249,6 @@ router.patch("/:reservationId/librarian-cancel", async (req, res) => {
     }
 
     const reservationId = Number(req.params.reservationId);
-
     const { reason } = req.body;
 
     if (!Number.isInteger(reservationId) || reservationId <= 0) {
@@ -328,11 +292,6 @@ router.patch("/:reservationId/librarian-cancel", async (req, res) => {
       });
     }
 
-    /*
-        המשתמש מקבל את סיבת הביטול.
-        הספרנית אינה מקבלת התראה על פעולה
-        שהיא ביצעה בעצמה.
-      */
     const notificationResult = await notificationQueries.addNotification(
       result.data.userId,
       `Your reservation for seat ${result.data.seatId} was cancelled by the librarian. Reason: ${trimmedReason}`,
@@ -351,118 +310,6 @@ router.patch("/:reservationId/librarian-cancel", async (req, res) => {
     });
   } catch (error) {
     console.error("Error in librarian reservation cancellation:", error);
-
-    return res.status(500).json({
-      message: "Internal server error",
-    });
-  }
-});
-
-/*
----------------------------------------------------------
-POST /reservations/:reservationId/message
-
-מאפשר לספרנית לשלוח הודעה לבעל ההזמנה.
----------------------------------------------------------
-*/
-router.post("/:reservationId/message", async (req, res) => {
-  try {
-    if (!req.session.user) {
-      return res.status(401).json({
-        message: "Unauthorized",
-      });
-    }
-
-    if (req.session.user.role !== "librarian") {
-      return res.status(403).json({
-        message: "Access denied",
-      });
-    }
-
-    const reservationId = Number(req.params.reservationId);
-
-    const { subject, message } = req.body;
-
-    if (!Number.isInteger(reservationId) || reservationId <= 0) {
-      return res.status(400).json({
-        message: "Invalid reservation ID",
-      });
-    }
-
-    const trimmedSubject = String(subject || "").trim();
-
-    const trimmedMessage = String(message || "").trim();
-
-    if (!trimmedSubject) {
-      return res.status(400).json({
-        message: "Message subject is required",
-      });
-    }
-
-    if (!trimmedMessage) {
-      return res.status(400).json({
-        message: "Message content is required",
-      });
-    }
-
-    if (trimmedSubject.length > 100) {
-      return res.status(400).json({
-        message: "Message subject cannot exceed 100 characters",
-      });
-    }
-
-    if (trimmedMessage.length > 500) {
-      return res.status(400).json({
-        message: "Message cannot exceed 500 characters",
-      });
-    }
-
-    /*
-        אין לסמוך על userId שמגיע מה-Frontend.
-        בעל ההזמנה נשלף מהמסד.
-      */
-    const reservationResult =
-      await reservationQueries.getReservationById(reservationId);
-
-    if (reservationResult.notFound) {
-      return res.status(404).json({
-        message: reservationResult.message || "Reservation not found",
-      });
-    }
-
-    if (!reservationResult.success) {
-      return res.status(500).json({
-        message:
-          reservationResult.message || "Failed to load reservation details",
-      });
-    }
-
-    const reservation = reservationResult.data;
-
-    const notificationMessage =
-      `${trimmedSubject}: ${trimmedMessage} ` +
-      `(Reservation #${reservationId}, ` +
-      `Seat ${reservation.seatId})`;
-
-    const notificationResult = await notificationQueries.addNotification(
-      reservation.userId,
-      notificationMessage,
-      "librarian_message",
-    );
-
-    if (!notificationResult.success) {
-      return res.status(500).json({
-        message: "Failed to send message",
-      });
-    }
-
-    return res.status(201).json({
-      message: "Message sent successfully",
-      reservationId,
-      userId: reservation.userId,
-    });
-  } catch (error) {
-    console.error("Error sending reservation message:", error);
 
     return res.status(500).json({
       message: "Internal server error",
@@ -513,4 +360,134 @@ router.get("/available-slots", async (req, res) => {
   }
 });
 
+/*
+---------------------------------------------------------
+POST /reservations/:reservationId/message
+(שליחת הודעה לבעל ההזמנה + שליחת מייל דרך transporter)
+---------------------------------------------------------
+*/
+router.post("/:reservationId/message", async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
+
+    if (req.session.user.role !== "librarian") {
+      return res.status(403).json({
+        message: "Access denied",
+      });
+    }
+
+    const reservationId = Number(req.params.reservationId);
+    const { subject, message } = req.body;
+
+    if (!Number.isInteger(reservationId) || reservationId <= 0) {
+      return res.status(400).json({
+        message: "Invalid reservation ID",
+      });
+    }
+
+    const trimmedSubject = String(subject || "").trim();
+    const trimmedMessage = String(message || "").trim();
+
+    if (!trimmedSubject) {
+      return res.status(400).json({
+        message: "Message subject is required",
+      });
+    }
+
+    if (!trimmedMessage) {
+      return res.status(400).json({
+        message: "Message content is required",
+      });
+    }
+
+    if (trimmedSubject.length > 100) {
+      return res.status(400).json({
+        message: "Message subject cannot exceed 100 characters",
+      });
+    }
+
+    if (trimmedMessage.length > 500) {
+      return res.status(400).json({
+        message: "Message cannot exceed 500 characters",
+      });
+    }
+
+    const reservationResult =
+      await reservationQueries.getReservationById(reservationId);
+
+    if (reservationResult.notFound) {
+      return res.status(404).json({
+        message: reservationResult.message || "Reservation not found",
+      });
+    }
+
+    if (!reservationResult.success) {
+      return res.status(500).json({
+        message:
+          reservationResult.message || "Failed to load reservation details",
+      });
+    }
+
+    const reservation = reservationResult.data;
+
+    // 1. שמירת ההתראה בתוך המערכת
+    const notificationMessage =
+      `${trimmedSubject}: ${trimmedMessage} ` +
+      `(Reservation #${reservationId}, ` +
+      `Seat ${reservation.seatId})`;
+
+    const notificationResult = await notificationQueries.addNotification(
+      reservation.userId,
+      notificationMessage,
+      "librarian_message",
+    );
+
+    if (!notificationResult.success) {
+      return res.status(500).json({
+        message: "Failed to send message",
+      });
+    }
+
+    // 2. שליחת מייל לסטודנט באמצעות ה-transporter הקיים
+    if (reservation.userEmail) {
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: reservation.userEmail,
+        subject: `הודעה מהספרייה: ${trimmedSubject}`,
+        html: `
+          <div dir="rtl" style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h2 style="color: #2c3e50;">הודעה חדשה מהספרנית</h2>
+            <p>התקבלה הודעה לגבי ההזמנה שלך (כיסא מספר <b>${reservation.seatId}</b>, הזמנה #${reservationId}):</p>
+            <blockquote style="background: #f9f9f9; padding: 12px; border-right: 4px solid #2c3e50; margin: 10px 0;">
+              <b>${trimmedSubject}</b><br>
+              ${trimmedMessage}
+            </blockquote>
+            <br>
+            <p>בברכה,<br><b>מערכת הספרייה</b></p>
+          </div>
+        `,
+      };
+
+      await transporter.sendMail(mailOptions);
+    }
+
+    return res.status(200).json({
+      message: "Message sent successfully",
+      reservationId,
+      userId: reservation.userId,
+    });
+  } catch (error) {
+    console.error("Error sending reservation message:", error);
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+});
+
+// ייצוא גם של ה-router וגם של פונקציית התזכורת (כדי שתוכל להפעיל אותה ב-Cron מחוץ לקובץ)
 module.exports = router;

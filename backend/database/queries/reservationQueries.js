@@ -708,6 +708,34 @@ async function getReservationById(reservationId) {
   }
 }
 
+/**
+ * שולף את כל ההזמנות הפעילות שהשעה שלהן מסתיימת בעוד 15 דקות בדיוק,
+ * כולל פרטי המשתמש והמייל שלו לצורך שליחת התראה.
+ */
+const getReservationsEndingIn15Minutes = async () => {
+  try {
+    const sql = `
+      SELECT 
+        r.reservationId,
+        r.userId,
+        r.seatId,
+        u.email AS userEmail,
+        u.fullName
+      FROM seat_reservation r
+      JOIN user u ON r.userId = u.userId
+      WHERE r.status = 'occupied'
+        AND r.reservationDate = CURDATE()
+        AND TIME_FORMAT(r.endTime, '%H:%i') = TIME_FORMAT(DATE_ADD(NOW(), INTERVAL 15 MINUTE), '%H:%i')
+    `;
+
+    const rows = await doQuery(sql);
+    return { success: true, data: rows };
+  } catch (error) {
+    console.error("Error fetching reservations ending soon:", error);
+    return { success: false, error: error.message };
+  }
+};
+
 /*
 ---------------------------------------------------------
 getAllTimeSlotsAvailability
@@ -808,4 +836,5 @@ module.exports = {
   cancelReservation,
   cancelReservationByLibrarian,
   getAllTimeSlotsAvailability,
+  getReservationsEndingIn15Minutes,
 };
