@@ -1,38 +1,43 @@
 /*
-  routes.jsx
-  ----------
+=========================================================
+routes.jsx
 
-  קובץ ניהול הניווט של המערכת.
+תיאור הקובץ:
+קובץ ניהול הניווט של המערכת.
 
-  אחריות:
-  - הגדרת כל הנתיבים במקום אחד.
-  - הגנה על דפים לפי מצב התחברות והרשאות.
-  - הפניית נתיבים לא קיימים לדף הבית.
+אחריות:
+- הגדרת כל הנתיבים במקום אחד.
+- הגנה על דפים לפי מצב התחברות והרשאות.
+- הפניית נתיבים לא קיימים לדף הבית.
+=========================================================
 */
 
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
-import HomePage from "../pages/HomePage";
-import MapPage from "../pages/MapPage";
+import AboutPage from "../pages/AboutPage";
+import AddBookPage from "../pages/AddBookPage";
+import AdminMapPage from "../pages/AdminMapPage";
 import BooksPage from "../pages/BooksPage";
 import EventsPage from "../pages/EventsPage";
-import AboutPage from "../pages/AboutPage";
-import LoginPage from "../pages/LoginPage";
-import RegisterPage from "../pages/RegisterPage";
-import ReserveBookPage from "../pages/ReserveBookPage";
-import AddBookPage from "../pages/AddBookPage";
-import ProfilePage from "../pages/ProfilePage";
-import AdminMapPage from "../pages/AdminMapPage";
-import MessagesPage from "../pages/MessagesPage";
-import UsersManagementPage from "../pages/UsersManagementPage";
-import ReportsPage from "../pages/ReportsPage";
-import MyReservationsPage from "../pages/MyReservationsPage";
-import ManageReservationsPage from "../pages/ManageReservationsPage";
-import MyMessagesPage from "../pages/MyMessagesPage";
+import HomePage from "../pages/HomePage";
 import LibrarianDashboardPage from "../pages/LibrarianDashboardPage";
-import ProtectedRoute from "../components/common/ProtectedRoute";
+import LoginPage from "../pages/LoginPage";
+import ManageReservationsPage from "../pages/ManageReservationsPage";
+import MapPage from "../pages/MapPage";
+import MessagesPage from "../pages/MessagesPage";
+import MyMessagesPage from "../pages/MyMessagesPage";
+import MyReservationsPage from "../pages/MyReservationsPage";
+import NotificationsPage from "../pages/NotificationsPage";
+import ProfilePage from "../pages/ProfilePage";
+import RegisterPage from "../pages/RegisterPage";
+import ReportsPage from "../pages/ReportsPage";
+import ReserveBookPage from "../pages/ReserveBookPage";
+import UsersManagementPage from "../pages/UsersManagementPage";
+
 import GuestRoute from "../components/common/GuestRoute";
+import ProtectedRoute from "../components/common/ProtectedRoute";
 import RoleRoute from "../components/common/RoleRoute";
+
 import PageShell from "../components/layout/PageShell";
 
 /*
@@ -40,12 +45,11 @@ import PageShell from "../components/layout/PageShell";
 LIBRARIAN_ROLES
 
 תפקיד:
-מרכז את רשימת התפקידים המורשים
-לגשת לדפי ניהול הספרייה.
+מרכז את רשימת התפקידים המורשים לגשת
+לדפי ניהול הספרייה.
 ---------------------------------------------------------
 */
 const LIBRARIAN_ROLES = ["librarian"];
-
 
 /*
 ---------------------------------------------------------
@@ -63,7 +67,8 @@ const READER_ROLES = ["reader"];
 AppRoutes
 
 תפקיד:
-מגדיר את כל נתיבי המערכת ואת הרשאות הגישה לכל עמוד.
+מגדיר את כל נתיבי המערכת ואת הרשאות הגישה
+לכל עמוד.
 ---------------------------------------------------------
 */
 export default function AppRoutes() {
@@ -102,7 +107,7 @@ export default function AppRoutes() {
           }
         />
 
-        {/* ===== דפים למשתמשים מחוברים ===== */}
+        {/* ===== דפים לכל משתמש מחובר ===== */}
 
         <Route
           path="/reserve-book/:id"
@@ -124,6 +129,21 @@ export default function AppRoutes() {
           }
         />
 
+        {/*
+        דף ההתראות משותף לקורא ולספרנית.
+
+        השרת מחזיר רק את ההתראות השייכות
+        למשתמש המחובר לפי ה-Session.
+        */}
+        <Route
+          path="/notifications"
+          element={
+            <ProtectedRoute>
+              <NotificationsPage />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/my-reservations"
           element={
@@ -132,6 +152,8 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
+        {/* ===== דפים לקוראים בלבד ===== */}
 
         <Route
           path="/my-messages"
@@ -142,7 +164,7 @@ export default function AppRoutes() {
           }
         />
 
-        {/* ===== דפים לספרן בלבד ===== */}
+        {/* ===== דפים לספרנית בלבד ===== */}
 
         <Route
           path="/admin/librarian"

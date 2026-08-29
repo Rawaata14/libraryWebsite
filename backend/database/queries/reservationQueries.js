@@ -1,17 +1,214 @@
+/*
+=========================================================
+reservationQueries.js
+
+תיאור הקובץ:
+שאילתות לניהול הזמנות מקומות בספרייה.
+
+כללי זמן:
+- חישובי "היום" ו-"עכשיו" נעשים לפי שעון ישראל.
+- לא ניתן ליצור הזמנה בעבר.
+- הזמנה להיום חייבת להתחיל בעתיד.
+- משתמש יכול לבטל רק לפני שעת ההתחלה.
+- ספרנית יכולה לבצע ביטול חריג בכל שלב.
+=========================================================
+*/
+
 const doQuery = require("../query");
+
+const LIBRARY_TIME_ZONE = "Asia/Jerusalem";
+
+const RESERVATION_TIME_SLOTS = [
+  "08:00 - 10:00",
+  "10:00 - 12:00",
+  "12:00 - 14:00",
+  "14:00 - 16:00",
+  "16:00 - 18:00",
+];
+
+/*
+---------------------------------------------------------
+getLibraryDateTime
+
+תפקיד:
+מחזירה תאריך ושעה נוכחיים לפי שעון ישראל.
+---------------------------------------------------------
+*/
+function getLibraryDateTime() {
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: LIBRARY_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+
+  const parts = formatter.formatToParts(new Date()).reduce((result, part) => {
+    if (part.type !== "literal") {
+      result[part.type] = part.value;
+    }
+
+    return result;
+  }, {});
+
+  const date = `${parts.year}-${parts.month}-${parts.day}`;
+
+  const time = `${parts.hour}:${parts.minute}`;
+
+  return {
+    date,
+    time,
+    dateTimeKey: `${date}T${time}`,
+  };
+}
+
+/*
+---------------------------------------------------------
+normalizeDate
+
+תפקיד:
+מחזירה תאריך בפורמט YYYY-MM-DD.
+---------------------------------------------------------
+*/
+function normalizeDate(value) {
+  if (!value) {
+    return "";
+  }
+
+  const match = String(value)
+    .trim()
+    .match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : "";
+}
+
+/*
+---------------------------------------------------------
+normalizeTime
+
+תפקיד:
+מחזירה שעה בפורמט HH:MM.
+---------------------------------------------------------
+*/
+function normalizeTime(value) {
+  if (!value) {
+    return "";
+  }
+
+  const match = String(value)
+    .trim()
+    .match(/^(\d{2}):(\d{2})/);
+
+  return match ? `${match[1]}:${match[2]}` : "";
+}
+
+/*
+---------------------------------------------------------
+isValidDate
+
+תפקיד:
+בודקת שמבנה התאריך תקין ושזהו תאריך אמיתי.
+---------------------------------------------------------
+*/
+function isValidDate(value) {
+  const normalizedDate = normalizeDate(value);
+
+  if (!normalizedDate || normalizedDate !== String(value).trim()) {
+    return false;
+  }
+
+  const [year, month, day] = normalizedDate.split("-").map(Number);
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+/*
+---------------------------------------------------------
+isValidTime
+
+תפקיד:
+בודקת שמבנה השעה תקין.
+---------------------------------------------------------
+*/
+function isValidTime(value) {
+  const normalizedTime = normalizeTime(value);
+
+  if (!normalizedTime) {
+    return false;
+  }
+
+  const [hours, minutes] = normalizedTime.split(":").map(Number);
+
+  return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59;
+}
+
+/*
+---------------------------------------------------------
+validateReservationTime
+
+תפקיד:
+מאמתת תאריך, שעות ומונעת הזמנה בעבר.
+---------------------------------------------------------
+*/
+function validateReservationTime(reservationDate, startTime, endTime) {
+  if (
+    !isValidDate(reservationDate) ||
+    !isValidTime(startTime) ||
+    !isValidTime(endTime)
+  ) {
+    return {
+      success: false,
+      invalidReservation: true,
+      message: "Invalid reservation date or time",
+    };
+  }
+
+  const normalizedStartTime = normalizeTime(startTime);
+
+  const normalizedEndTime = normalizeTime(endTime);
+
+  if (normalizedStartTime >= normalizedEndTime) {
+    return {
+      success: false,
+      invalidReservation: true,
+      message: "Start time must be earlier than end time",
+    };
+  }
+
+  const libraryNow = getLibraryDateTime();
+
+  const reservationStartKey = `${reservationDate}T${normalizedStartTime}`;
+
+  if (reservationStartKey <= libraryNow.dateTimeKey) {
+    return {
+      success: false,
+      invalidReservation: true,
+      message: "The reservation must start later than the current time",
+    };
+  }
+
+  return {
+    success: true,
+    reservationDate,
+    startTime: normalizedStartTime,
+    endTime: normalizedEndTime,
+  };
+}
 
 /*
 ---------------------------------------------------------
 checkReservationOverlap
 
 תפקיד:
-בודקת אם קיימת הזמנה פעילה לאותו כיסא, באותו תאריך,
-שטווח השעות שלה חופף לטווח השעות המבוקש.
-
-הערה:
-שני טווחים חופפים כאשר:
-שעת ההתחלה החדשה קטנה משעת הסיום הקיימת,
-ושעת הסיום החדשה גדולה משעת ההתחלה הקיימת.
+בודקת אם קיימת הזמנה פעילה חופפת.
 ---------------------------------------------------------
 */
 async function checkReservationOverlap(
@@ -21,18 +218,21 @@ async function checkReservationOverlap(
   endTime,
 ) {
   try {
-    const checkOverlapSQL = `
+    const sql = `
       SELECT reservationId
       FROM seat_reservation
       WHERE seatId = ?
         AND reservationDate = ?
-        AND status <> 'cancelled'
+        AND LOWER(status) NOT IN (
+          'cancelled',
+          'canceled'
+        )
         AND startTime < ?
         AND endTime > ?
       LIMIT 1
     `;
 
-    const reservations = await doQuery(checkOverlapSQL, [
+    const reservations = await doQuery(sql, [
       seatId,
       reservationDate,
       endTime,
@@ -58,8 +258,7 @@ async function checkReservationOverlap(
 reserveSeat
 
 תפקיד:
-יוצרת הזמנת מקום חדשה לאחר בדיקה שאין הזמנה חופפת
-לאותו כיסא, באותו תאריך ובאותו טווח שעות.
+יוצרת הזמנה לאחר אימות הזמן ובדיקת חפיפה.
 ---------------------------------------------------------
 */
 async function reserveSeat(reservationDetails) {
@@ -67,11 +266,21 @@ async function reserveSeat(reservationDetails) {
     reservationDetails;
 
   try {
-    const overlapResult = await checkReservationOverlap(
-      seatId,
+    const validation = validateReservationTime(
       reservationDate,
       startTime,
       endTime,
+    );
+
+    if (!validation.success) {
+      return validation;
+    }
+
+    const overlapResult = await checkReservationOverlap(
+      seatId,
+      validation.reservationDate,
+      validation.startTime,
+      validation.endTime,
     );
 
     if (!overlapResult.success) {
@@ -86,29 +295,25 @@ async function reserveSeat(reservationDetails) {
       };
     }
 
-    const insertReservationSQL = `
+    const insertSQL = `
       INSERT INTO seat_reservation
-        (userId, seatId, reservationDate, startTime, endTime, status)
+        (
+          userId,
+          seatId,
+          reservationDate,
+          startTime,
+          endTime,
+          status
+        )
       VALUES (?, ?, ?, ?, ?, ?)
     `;
 
-    
-    // const updateSeatStatusSQL = `
-    //   UPDATE seat
-    //   SET status = ?
-    //   WHERE seatId = ?
-    // `;
-    // const updateSeatResult = await doQuery(updateSeatStatusSQL, [
-    //   status,
-    //   seatId,
-    // ]);
-
-    const result = await doQuery(insertReservationSQL, [
+    const result = await doQuery(insertSQL, [
       userId,
       seatId,
-      reservationDate,
-      startTime,
-      endTime,
+      validation.reservationDate,
+      validation.startTime,
+      validation.endTime,
       status,
     ]);
 
@@ -131,50 +336,46 @@ async function reserveSeat(reservationDetails) {
 getAllReservations
 
 תפקיד:
-מחזירה לספרן את כל הזמנות המקומות במערכת.
-
-הפונקציה מבצעת JOIN בין:
-- טבלת הזמנות המקומות.
-- טבלת המשתמשים.
-- טבלת המקומות.
-
-כך הספרן מקבל גם את שם המשתמש, האימייל
-ופרטי האזור של המקום, ולא רק מזהים מספריים.
+מחזירה לספרנית את כל ההזמנות.
+DATE_FORMAT מונע המרה אוטומטית של DATE ל-UTC.
 ---------------------------------------------------------
 */
 async function getAllReservations() {
   try {
-    const getReservationsSQL = `
+    const sql = `
       SELECT
         sr.reservationId,
         sr.userId,
         sr.seatId,
-        sr.reservationDate,
-        sr.startTime,
-        sr.endTime,
+        DATE_FORMAT(
+          sr.reservationDate,
+          '%Y-%m-%d'
+        ) AS reservationDate,
+        TIME_FORMAT(
+          sr.startTime,
+          '%H:%i:%s'
+        ) AS startTime,
+        TIME_FORMAT(
+          sr.endTime,
+          '%H:%i:%s'
+        ) AS endTime,
         sr.status,
-
         u.fullName,
         u.email,
         u.phone,
-
         s.location,
         s.type AS seatType
-
       FROM seat_reservation AS sr
-
       INNER JOIN user AS u
         ON sr.userId = u.userId
-
       INNER JOIN seat AS s
         ON sr.seatId = s.seatId
-
       ORDER BY
         sr.reservationDate ASC,
         sr.startTime ASC
     `;
 
-    const reservations = await doQuery(getReservationsSQL);
+    const reservations = await doQuery(sql);
 
     return {
       success: true,
@@ -195,22 +396,34 @@ async function getAllReservations() {
 getReservationsByUser
 
 תפקיד:
-שליפת כל ההזמנות של המשתמש המחובר בלבד.
-
-קלט:
-userId של המשתמש המחובר.
-
-פלט:
-מחזיר את כל ההזמנות של המשתמש.
+מחזירה רק את הזמנות המשתמש המחובר.
 ---------------------------------------------------------
 */
 async function getReservationsByUser(userId) {
   try {
     const sql = `
-      SELECT *
+      SELECT
+        reservationId,
+        userId,
+        seatId,
+        DATE_FORMAT(
+          reservationDate,
+          '%Y-%m-%d'
+        ) AS reservationDate,
+        TIME_FORMAT(
+          startTime,
+          '%H:%i:%s'
+        ) AS startTime,
+        TIME_FORMAT(
+          endTime,
+          '%H:%i:%s'
+        ) AS endTime,
+        status
       FROM seat_reservation
       WHERE userId = ?
-      ORDER BY reservationDate DESC, startTime ASC
+      ORDER BY
+        reservationDate DESC,
+        startTime ASC
     `;
 
     const reservations = await doQuery(sql, [userId]);
@@ -234,41 +447,88 @@ async function getReservationsByUser(userId) {
 cancelReservation
 
 תפקיד:
-מבטלת הזמנת מקום באמצעות שינוי הסטטוס שלה
-ל-cancelled, ומשחררת את הכיסא חזרה לפנוי.
+מבטלת הזמנה של משתמש רק אם שעת ההתחלה
+עדיין לא הגיעה לפי שעון ישראל.
 ---------------------------------------------------------
 */
 async function cancelReservation(reservationId, userId) {
   try {
-    // 1. קודם כל שולפים את ה-seatId כדי לדעת איזה כיסא לשחרר
-    const findSeatSQL = `
-      SELECT seatId 
-      FROM seat_reservation 
-      WHERE reservationId = ? 
-        AND userId = ? 
-        AND status <> 'cancelled'
+    const findSQL = `
+      SELECT
+        reservationId,
+        seatId,
+        DATE_FORMAT(
+          reservationDate,
+          '%Y-%m-%d'
+        ) AS reservationDate,
+        TIME_FORMAT(
+          startTime,
+          '%H:%i:%s'
+        ) AS startTime,
+        status
+      FROM seat_reservation
+      WHERE reservationId = ?
+        AND userId = ?
+      LIMIT 1
     `;
-    const reservations = await doQuery(findSeatSQL, [reservationId, userId]);
 
-    if (!reservations || reservations.length === 0) {
+    const reservations = await doQuery(findSQL, [reservationId, userId]);
+
+    if (reservations.length === 0) {
       return {
         success: false,
         notFound: true,
-        message: "Reservation not found or cannot be cancelled",
+        message: "Reservation not found",
       };
     }
 
-    const seatId = reservations[0].seatId;
-    
-    // 2. עדכון סטטוס ההזמנה ל-'cancelled'
-    const cancelReservationSQL = `
+    const reservation = reservations[0];
+
+    if (
+      ["cancelled", "canceled"].includes(
+        String(reservation.status).toLowerCase(),
+      )
+    ) {
+      return {
+        success: false,
+        alreadyCancelled: true,
+        message: "Reservation is already cancelled",
+      };
+    }
+
+    const reservationDate = normalizeDate(reservation.reservationDate);
+
+    const reservationStartTime = normalizeTime(reservation.startTime);
+
+    const reservationStartKey = `${reservationDate}T${reservationStartTime}`;
+
+    const libraryNow = getLibraryDateTime();
+
+    if (
+      !reservationDate ||
+      !reservationStartTime ||
+      reservationStartKey <= libraryNow.dateTimeKey
+    ) {
+      return {
+        success: false,
+        cancellationClosed: true,
+        message:
+          "This reservation can no longer be cancelled because its start time has arrived",
+      };
+    }
+
+    const cancelSQL = `
       UPDATE seat_reservation
       SET status = 'cancelled'
       WHERE reservationId = ?
         AND userId = ?
+        AND LOWER(status) NOT IN (
+          'cancelled',
+          'canceled'
+        )
     `;
 
-    const result = await doQuery(cancelReservationSQL, [reservationId, userId]);
+    const result = await doQuery(cancelSQL, [reservationId, userId]);
 
     if (result.affectedRows === 0) {
       return {
@@ -278,18 +538,22 @@ async function cancelReservation(reservationId, userId) {
       };
     }
 
-    // 3. עדכון סטטוס הכיסא בחזרה ל-'available' (כדי שיהפוך לירוק במפה!)
-    //const updateSeatStatusSQL = `
-    //  UPDATE seat
-    //  SET status = 'available'
-    //  WHERE seatId = ?
-    //`;
+    /*
+      אין לעדכן כאן את status של הכיסא.
 
-    //await doQuery(updateSeatStatusSQL, [seatId]);
-
+      זמינות הכיסא מחושבת לפי ההזמנות הפעילות
+      לתאריך ולשעה, בעוד status בטבלת seat משמש
+      גם לחסימה מנהלית של מקום.
+    */
     return {
       success: true,
-      data: result,
+      data: {
+        reservationId,
+        seatId: reservation.seatId,
+        reservationDate,
+        startTime: reservationStartTime,
+        isToday: reservationDate === libraryNow.date,
+      },
     };
   } catch (error) {
     console.error("Error while cancelling reservation:", error);
@@ -306,15 +570,17 @@ async function cancelReservation(reservationId, userId) {
 cancelReservationByLibrarian
 
 תפקיד:
-מאפשרת לספרן לבטל הזמנה במקרה חריג
-ומשחררת את הכיסא חזרה לפנוי.
+מאפשרת לספרנית לבצע ביטול חריג בכל שלב.
 ---------------------------------------------------------
 */
 async function cancelReservationByLibrarian(reservationId) {
   try {
-    // 1. שולפים את פרטי ההזמנה (כולל seatId ו-userId)
     const getReservationSQL = `
-      SELECT reservationId, userId, seatId, status
+      SELECT
+        reservationId,
+        userId,
+        seatId,
+        status
       FROM seat_reservation
       WHERE reservationId = ?
       LIMIT 1
@@ -332,7 +598,11 @@ async function cancelReservationByLibrarian(reservationId) {
 
     const reservation = reservations[0];
 
-    if (reservation.status === "cancelled") {
+    if (
+      ["cancelled", "canceled"].includes(
+        String(reservation.status).toLowerCase(),
+      )
+    ) {
       return {
         success: false,
         alreadyCancelled: true,
@@ -340,14 +610,17 @@ async function cancelReservationByLibrarian(reservationId) {
       };
     }
 
-    // 2. ביטול ההזמנה
-    const cancelReservationSQL = `
+    const cancelSQL = `
       UPDATE seat_reservation
       SET status = 'cancelled'
       WHERE reservationId = ?
+        AND LOWER(status) NOT IN (
+          'cancelled',
+          'canceled'
+        )
     `;
 
-    const result = await doQuery(cancelReservationSQL, [reservationId]);
+    const result = await doQuery(cancelSQL, [reservationId]);
 
     if (result.affectedRows === 0) {
       return {
@@ -356,15 +629,10 @@ async function cancelReservationByLibrarian(reservationId) {
       };
     }
 
-    // 3. שחרור הכיסא בחזרה לפנוי גם בביטול של ספרן!
-    const updateSeatStatusSQL = `
-      UPDATE seat
-      SET status = 'available'
-      WHERE seatId = ?
-    `;
-
-    await doQuery(updateSeatStatusSQL, [reservation.seatId]);
-
+    /*
+      גם בביטול ספרנית אין לשנות את seat.status,
+      כדי לא לבטל בטעות חסימה מנהלית של הכיסא.
+    */
     return {
       success: true,
       data: {
@@ -388,10 +656,7 @@ async function cancelReservationByLibrarian(reservationId) {
 getReservationById
 
 תפקיד:
-שולפת הזמנה אחת לפי reservationId.
-
-השימוש העיקרי:
-איתור בעל ההזמנה לפני שליחת הודעה על ידי הספרן.
+שולפת הזמנה אחת לפי המזהה.
 ---------------------------------------------------------
 */
 async function getReservationById(reservationId) {
@@ -401,9 +666,18 @@ async function getReservationById(reservationId) {
         reservationId,
         userId,
         seatId,
-        reservationDate,
-        startTime,
-        endTime,
+        DATE_FORMAT(
+          reservationDate,
+          '%Y-%m-%d'
+        ) AS reservationDate,
+        TIME_FORMAT(
+          startTime,
+          '%H:%i:%s'
+        ) AS startTime,
+        TIME_FORMAT(
+          endTime,
+          '%H:%i:%s'
+        ) AS endTime,
         status
       FROM seat_reservation
       WHERE reservationId = ?
@@ -439,83 +713,86 @@ async function getReservationById(reservationId) {
 getAllTimeSlotsAvailability
 
 תפקיד:
-מקבלת תאריך ומחזירה רשימה של משבצות זמן (Time Slots)
-שבהן יש לפחות כיסא אחד פנוי במערכת,
-ולא עברו עדיין (אם מדובר בהיום).
-
-כך הסטודנט רואה אך ורק שעות רלוונטיות שניתן להזמין בהן.
+מחזירה את חלונות הזמן שעדיין ניתנים להזמנה
+ושבהם קיים לפחות מקום פנוי.
 ---------------------------------------------------------
 */
-
 async function getAllTimeSlotsAvailability(date) {
   try {
-    const availableTimeSlots = [
-      "08:00 - 10:00",
-      "10:00 - 12:00",
-      "12:00 - 14:00",
-      "14:00 - 16:00",
-      "16:00 - 18:00",
-    ];
-
-    // 1. ספירת סך כל הכיסאות שקיימים במערכת
-    const totalSeatsResult = await doQuery(
-      `SELECT COUNT(*) as count FROM seat`,
-    );
-    const totalSeats = totalSeatsResult[0].count;
-
-    // אם אין כיסאות בכלל במערכת
-    if (totalSeats === 0) {
-      return { success: true, data: [] };
+    if (!isValidDate(date)) {
+      return {
+        success: false,
+        invalidDate: true,
+        message: "Invalid reservation date",
+      };
     }
 
-    // 2. שליפת כל ההזמנות שקיימות באותו תאריך (ושאינן מבוטלות)
+    const libraryNow = getLibraryDateTime();
+
+    if (date < libraryNow.date) {
+      return {
+        success: true,
+        data: [],
+      };
+    }
+
+    const totalSeatsResult = await doQuery(`
+      SELECT COUNT(*) AS count
+      FROM seat
+      WHERE LOWER(status) <> 'blocked'
+    `);
+
+    const totalSeats = Number(totalSeatsResult[0]?.count) || 0;
+
+    if (totalSeats === 0) {
+      return {
+        success: true,
+        data: [],
+      };
+    }
+
     const sql = `
-      SELECT startTime, seatId 
+      SELECT
+        TIME_FORMAT(
+          startTime,
+          '%H:%i'
+        ) AS startTime,
+        seatId
       FROM seat_reservation
-      WHERE reservationDate = ? 
-        AND status <> 'cancelled'
+      WHERE reservationDate = ?
+        AND LOWER(status) NOT IN (
+          'cancelled',
+          'canceled'
+        )
     `;
+
     const reservations = await doQuery(sql, [date]);
 
-    // 3. זמן נוכחי בשרת לצורך סינון שעות שכבר עברו היום
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const todayStr = `${year}-${month}-${day}`;
+    const validSlots = RESERVATION_TIME_SLOTS.filter((slot) => {
+      const startTime = slot.split(" - ")[0];
 
-    const currentHourMinutes = now.getHours() * 60 + now.getMinutes();
-
-    // 4. סינון השעות
-    const validSlots = availableTimeSlots.filter((slot) => {
-      const startTimeStr = slot.split(" - ")[0]; // למשל "08:00"
-
-      // א. אם התאריך הנבחר הוא היום - נבדוק אם השעה כבר עברה
-      if (date === todayStr) {
-        const [hours, minutes] = startTimeStr.split(":").map(Number);
-        if (hours * 60 + minutes <= currentHourMinutes) {
-          return false; // השעה כבר עברה, לא להציג
-        }
-      }
-
-      // ב. סופרים כמה כיסאות ייחודיים תפוסים בשעה הספציפית הזו
-      const bookedSeatsAtThisTime = new Set(
-        reservations
-          .filter((res) => res.startTime === startTimeStr)
-          .map((res) => res.seatId),
-      );
-
-      // ג. אם מספר הכיסאות התפוסים שווה לסך כל הכיסאות -> כולם תפוסים! לא להציג את השעה.
-      if (bookedSeatsAtThisTime.size >= totalSeats) {
+      if (date === libraryNow.date && startTime <= libraryNow.time) {
         return false;
       }
 
-      return true; // יש לפחות מקום אחד פנוי בשעה הזו, השעה תוצג לסטודנט.
+      const bookedSeats = new Set(
+        reservations
+          .filter(
+            (reservation) => normalizeTime(reservation.startTime) === startTime,
+          )
+          .map((reservation) => reservation.seatId),
+      );
+
+      return bookedSeats.size < totalSeats;
     });
 
-    return { success: true, data: validSlots };
+    return {
+      success: true,
+      data: validSlots,
+    };
   } catch (error) {
     console.error("Error fetching available time slots:", error);
+
     return {
       success: false,
       message: "Failed to fetch available time slots",

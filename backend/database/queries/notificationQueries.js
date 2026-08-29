@@ -3,13 +3,14 @@
 notificationQueries.js
 
 תיאור הקובץ:
-שאילתות לניהול התראות המשתמשים במערכת.
+שאילתות לניהול התראות במערכת.
 
 הקובץ כולל:
-- יצירת התראה חדשה.
-- שליפת התראות של משתמש מסוים.
-- סימון התראה אחת כנקראה.
-- סימון כל התראות המשתמש כנקראו.
+- יצירת התראה למשתמש מסוים.
+- יצירת התראה לכל הספרניות הפעילות.
+- התראה לספרניות על ביטול הזמנה של אותו יום.
+- שליפת התראות.
+- סימון התראות כנקראו.
 =========================================================
 */
 
@@ -20,19 +21,19 @@ const doQuery = require("../query");
 addNotification
 
 תפקיד:
-יוצרת התראה חדשה עבור משתמש מסוים.
-
-פרמטרים:
-- userId: מזהה המשתמש שמקבל את ההתראה.
-- message: תוכן ההתראה.
-- type: סוג ההתראה.
+יוצרת התראה עבור משתמש מסוים.
 ---------------------------------------------------------
 */
 async function addNotification(userId, message, type) {
   try {
     const sql = `
       INSERT INTO notification
-        (userId, message, type, isRead)
+        (
+          userId,
+          message,
+          type,
+          isRead
+        )
       VALUES (?, ?, ?, 0)
     `;
 
@@ -54,12 +55,161 @@ async function addNotification(userId, message, type) {
 
 /*
 ---------------------------------------------------------
+addNotificationToActiveLibrarians
+
+תפקיד:
+יוצרת התראה זהה עבור כל הספרניות הפעילות.
+
+השימושים כוללים:
+- הודעה חדשה ממשתמש רשום.
+- הודעה חדשה מאורח.
+- תשובה חדשה של משתמש בשיחה.
+---------------------------------------------------------
+*/
+async function addNotificationToActiveLibrarians(message, type) {
+  try {
+    const sql = `
+      INSERT INTO notification
+        (
+          userId,
+          message,
+          type,
+          isRead
+        )
+      SELECT
+        userId,
+        ?,
+        ?,
+        0
+      FROM user
+      WHERE LOWER(role) = 'librarian'
+        AND LOWER(status) = 'active'
+    `;
+
+    const result = await doQuery(sql, [message, type]);
+
+    return {
+      success: true,
+      createdNotifications: result.affectedRows,
+    };
+  } catch (error) {
+    console.error("Error notifying active librarians:", error);
+
+    return {
+      success: false,
+      message: "Failed to notify active librarians",
+    };
+  }
+}
+
+/*
+---------------------------------------------------------
+addTodayCancellationNotificationToLibrarians
+
+תפקיד:
+יוצרת התראה לכל הספרניות הפעילות כאשר משתמש
+מבטל הזמנה המתקיימת היום.
+
+הפרמטר reservationDate מתקבל מהשרת לאחר שכבר
+חושב לפי Asia/Jerusalem.
+
+כך אין תלות ב-CURDATE של MySQL, שעלול לפעול
+לפי UTC ולהחזיר יום שונה סמוך לחצות.
+---------------------------------------------------------
+*/
+async function addTodayCancellationNotificationToLibrarians(
+  reservationId,
+  cancellingUserId,
+  reservationDate,
+) {
+  try {
+    if (!reservationDate) {
+      return {
+        success: false,
+        message: "Reservation date is required for librarian notification",
+      };
+    }
+
+    const sql = `
+      INSERT INTO notification
+        (
+          userId,
+          message,
+          type,
+          isRead
+        )
+      SELECT
+        librarian.userId,
+
+        CONCAT(
+          'Same-day reservation #',
+          reservation.reservationId,
+          ' for seat ',
+          reservation.seatId,
+          ' was cancelled by ',
+          COALESCE(
+            cancellingUser.fullName,
+            'a reader'
+          ),
+          '. Time: ',
+          TIME_FORMAT(
+            reservation.startTime,
+            '%H:%i'
+          ),
+          ' - ',
+          TIME_FORMAT(
+            reservation.endTime,
+            '%H:%i'
+          )
+        ),
+
+        'same_day_reservation_cancelled',
+        0
+
+      FROM seat_reservation AS reservation
+
+      INNER JOIN user AS cancellingUser
+        ON cancellingUser.userId =
+          reservation.userId
+
+      CROSS JOIN user AS librarian
+
+      WHERE reservation.reservationId = ?
+        AND reservation.userId = ?
+        AND reservation.reservationDate = ?
+        AND LOWER(librarian.role) =
+          'librarian'
+        AND LOWER(librarian.status) =
+          'active'
+    `;
+
+    const result = await doQuery(sql, [
+      reservationId,
+      cancellingUserId,
+      reservationDate,
+    ]);
+
+    return {
+      success: true,
+      createdNotifications: result.affectedRows,
+    };
+  } catch (error) {
+    console.error("Error creating same-day cancellation notifications:", error);
+
+    return {
+      success: false,
+      message: "Failed to notify librarians about the cancellation",
+    };
+  }
+}
+
+/*
+---------------------------------------------------------
 getNotificationsByUser
 
 תפקיד:
-שולפת את כל ההתראות השייכות למשתמש המחובר.
-
-ההתראות מוחזרות מהחדשה לישנה.
+שולפת את כל ההתראות של משתמש מסוים,
+מהחדשה לישנה.
 ---------------------------------------------------------
 */
 async function getNotificationsByUser(userId) {
@@ -74,7 +224,9 @@ async function getNotificationsByUser(userId) {
         isRead
       FROM notification
       WHERE userId = ?
-      ORDER BY sentDate DESC, notificationId DESC
+      ORDER BY
+        sentDate DESC,
+        notificationId DESC
     `;
 
     const notifications = await doQuery(sql, [userId]);
@@ -101,8 +253,8 @@ markNotificationAsRead
 תפקיד:
 מסמנת התראה אחת כנקראה.
 
-בדיקת userId מבטיחה שמשתמש אינו יכול
-לסמן התראה השייכת למשתמש אחר.
+userId מונע ממשתמש לסמן התראה
+השייכת למשתמש אחר.
 ---------------------------------------------------------
 */
 async function markNotificationAsRead(notificationId, userId) {
@@ -143,7 +295,7 @@ async function markNotificationAsRead(notificationId, userId) {
 markAllNotificationsAsRead
 
 תפקיד:
-מסמנת את כל ההתראות של המשתמש כנקראו.
+מסמנת את כל ההתראות שלא נקראו אצל המשתמש.
 ---------------------------------------------------------
 */
 async function markAllNotificationsAsRead(userId) {
@@ -174,6 +326,8 @@ async function markAllNotificationsAsRead(userId) {
 
 module.exports = {
   addNotification,
+  addNotificationToActiveLibrarians,
+  addTodayCancellationNotificationToLibrarians,
   getNotificationsByUser,
   markNotificationAsRead,
   markAllNotificationsAsRead,

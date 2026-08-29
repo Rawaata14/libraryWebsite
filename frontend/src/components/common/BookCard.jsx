@@ -3,13 +3,15 @@
 BookCard.jsx
 
 תיאור הקובץ:
-קומפוננטה להצגת ספר בודד.
+קומפוננטה משותפת להצגת ספר בודד.
 
 אחריות:
 - הצגת תמונת הספר.
 - הצגת שם הספר, המחבר והקטגוריה.
 - הצגת זמינות הספר.
-- הפעלת פעולות הזמנה, עריכה ומחיקה.
+- הפעלת הזמנת ספר.
+- הצגת פעולות עריכה ומחיקה לספרנית רק כאשר
+  התקבלו פעולות מתאימות מהקומפוננטה ההורה.
 =========================================================
 */
 
@@ -57,13 +59,24 @@ BookCard
 
 תפקיד:
 מציגה כרטיס של ספר ומאפשרת לבצע פעולות בהתאם
-להרשאות המשתמש.
+להרשאות המשתמש ולפעולות שהתקבלו מההורה.
+
+isDeleting:
+מציין שפעולת המחיקה מתבצעת כרגע ומונע לחיצות
+כפולות על כפתור המחיקה.
 ---------------------------------------------------------
 */
-export default function BookCard({ book, onReserve, onEdit, onDelete }) {
+export default function BookCard({
+  book,
+  onReserve,
+  onEdit,
+  onDelete,
+  isDeleting = false,
+}) {
   const { isLibrarian } = useContext(AuthContext);
 
   const bookImageSrc = getBookImageSrc(book.book_image_name);
+
   const isAvailable = Number(book.available_quantity) > 0;
 
   return (
@@ -74,29 +87,54 @@ export default function BookCard({ book, onReserve, onEdit, onDelete }) {
 
       <div className="bookCardBody">
         <div className="bookCategory">
-          {book.category} ·{" "}
+          {book.category || "General"} ·{" "}
           <span className={isAvailable ? "available" : "unavailable"}>
             {isAvailable ? "Available" : "Out of Stock"}
           </span>
         </div>
 
         <h3>{book.title}</h3>
+
         <p>{book.author}</p>
 
-        <Button variant="success" onClick={onReserve} disabled={!isAvailable}>
-          {isAvailable ? "Reserve" : "Not Available"}
-        </Button>
+        {onReserve && (
+          <Button
+            variant="success"
+            onClick={onReserve}
+            disabled={!isAvailable}
+            aria-label={`Reserve ${book.title}`}
+          >
+            {isAvailable ? "Reserve" : "Not Available"}
+          </Button>
+        )}
 
-        {isLibrarian && (
-          <>
-            <Button variant="secondary" onClick={() => onEdit?.(book)}>
-              Edit
-            </Button>
+        {/*
+        כפתור העריכה מוצג רק לספרנית ורק אם
+        הקומפוננטה ההורה העבירה פעולת onEdit.
+        */}
+        {isLibrarian && onEdit && (
+          <Button
+            variant="secondary"
+            onClick={() => onEdit(book)}
+            aria-label={`Edit ${book.title}`}
+          >
+            Edit
+          </Button>
+        )}
 
-            <Button variant="danger" onClick={() => onDelete?.(book)}>
-              Delete
-            </Button>
-          </>
+        {/*
+        כפתור המחיקה מוצג רק לספרנית ורק אם
+        הקומפוננטה ההורה העבירה פעולת onDelete.
+        */}
+        {isLibrarian && onDelete && (
+          <Button
+            variant="danger"
+            onClick={() => onDelete(book)}
+            disabled={isDeleting}
+            aria-label={`Delete ${book.title}`}
+          >
+            {isDeleting ? "Deleting..." : "Delete"}
+          </Button>
         )}
       </div>
     </article>
@@ -108,7 +146,8 @@ export default function BookCard({ book, onReserve, onEdit, onDelete }) {
 BookCard.propTypes
 
 תפקיד:
-מגדיר את נתוני הספר ואת הפעולות שהכרטיס מקבל.
+מגדיר את מבנה הספר ואת סוגי הפעולות שהכרטיס
+יכול לקבל מהקומפוננטה ההורה.
 ---------------------------------------------------------
 */
 BookCard.propTypes = {
@@ -116,4 +155,5 @@ BookCard.propTypes = {
   onReserve: PropTypes.func,
   onEdit: PropTypes.func,
   onDelete: PropTypes.func,
+  isDeleting: PropTypes.bool,
 };

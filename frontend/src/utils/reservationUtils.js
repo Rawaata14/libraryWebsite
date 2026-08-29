@@ -5,46 +5,36 @@ reservationUtils.js
 תיאור הקובץ:
 פונקציות עזר עבור ניהול ותצוגת הזמנות המקומות.
 
-הקובץ כולל:
-- עיצוב תאריך ושעה.
-- עיצוב שם אזור.
-- המרת סטטוס לטקסט ידידותי.
-- התאמת סטטוס למחלקת CSS.
-- בדיקה אם הזמנה בוטלה.
-- סינון רשימת הזמנות.
-- חישוב מספר הזמנות פעילות.
-- חישוב מספר הזמנות שבוטלו.
-
-הפונקציות בקובץ הן פונקציות טהורות:
-הן אינן פונות לשרת ואינן תלויות ב-React.
+תאריכי ההזמנות מטופלים כערכי לוח שנה ולא מומרים
+ל-UTC, כדי למנוע מעבר שגוי ליום הקודם.
 =========================================================
 */
+
+import {
+  getLibraryDateTimeKey,
+  getReservationDateTimeKey,
+  normalizeReservationDate,
+  normalizeReservationTime,
+} from "./libraryDateTime";
 
 /*
 ---------------------------------------------------------
 formatReservationDate
 
 תפקיד:
-ממירה תאריך שמתקבל מהשרת לפורמט:
-DD/MM/YYYY.
+ממירה תאריך לפורמט DD/MM/YYYY בלי לשנות אזור זמן.
 ---------------------------------------------------------
 */
 export const formatReservationDate = (dateValue) => {
-  if (!dateValue) {
-    return "-";
+  const normalizedDate = normalizeReservationDate(dateValue);
+
+  if (!normalizedDate) {
+    return dateValue ? String(dateValue) : "-";
   }
 
-  const date = new Date(dateValue);
+  const [year, month, day] = normalizedDate.split("-");
 
-  if (Number.isNaN(date.getTime())) {
-    return String(dateValue);
-  }
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
+  return `${day}/${month}/${year}`;
 };
 
 /*
@@ -52,28 +42,18 @@ export const formatReservationDate = (dateValue) => {
 formatReservationTime
 
 תפקיד:
-מקצרת שעה שמתקבלת מהמסד
-לפורמט HH:MM.
+מחזירה שעה בפורמט HH:MM.
 ---------------------------------------------------------
 */
-export const formatReservationTime = (timeValue) => {
-  if (!timeValue) {
-    return "-";
-  }
-
-  return String(timeValue).substring(0, 5);
-};
+export const formatReservationTime = (timeValue) =>
+  normalizeReservationTime(timeValue) || "-";
 
 /*
 ---------------------------------------------------------
 formatLocation
 
 תפקיד:
-ממירה ערך מיקום ממסד הנתונים
-לטקסט ידידותי לתצוגה.
-
-דוגמה:
-reading-area -> Reading Area
+ממירה ערך מיקום לטקסט ידידותי.
 ---------------------------------------------------------
 */
 export const formatLocation = (location) => {
@@ -91,10 +71,6 @@ export const formatLocation = (location) => {
 /*
 ---------------------------------------------------------
 getStatusLabel
-
-תפקיד:
-מחזירה את הטקסט שיוצג למשתמש
-עבור סטטוס ההזמנה.
 ---------------------------------------------------------
 */
 export const getStatusLabel = (status) => {
@@ -121,10 +97,6 @@ export const getStatusLabel = (status) => {
 /*
 ---------------------------------------------------------
 getStatusClass
-
-תפקיד:
-מחזירה מחלקת CSS המתאימה
-לסטטוס ההזמנה.
 ---------------------------------------------------------
 */
 export const getStatusClass = (status) => {
@@ -151,10 +123,6 @@ export const getStatusClass = (status) => {
 /*
 ---------------------------------------------------------
 isCancelledStatus
-
-תפקיד:
-בודקת אם סטטוס ההזמנה מייצג
-הזמנה שבוטלה.
 ---------------------------------------------------------
 */
 export const isCancelledStatus = (status) =>
@@ -165,20 +133,7 @@ export const isCancelledStatus = (status) =>
 filterReservations
 
 תפקיד:
-מסננת רשימת הזמנות לפי:
-- טקסט חיפוש.
-- סטטוס.
-
-החיפוש כולל:
-- שם משתמש.
-- אימייל.
-- טלפון.
-- מספר כיסא.
-- אזור.
-- סוג המקום.
-- מזהה הזמנה.
-
-הפונקציה אינה משנה את הרשימה המקורית.
+מסננת הזמנות לפי טקסט חיפוש וסטטוס.
 ---------------------------------------------------------
 */
 export const filterReservations = (reservations, searchText, statusFilter) => {
@@ -189,10 +144,6 @@ export const filterReservations = (reservations, searchText, statusFilter) => {
   return reservations.filter((reservation) => {
     const normalizedStatus = reservation.status?.toLowerCase();
 
-    /*
-      occupied ו-confirmed מייצגים בממשק
-      את אותו סטטוס: Confirmed.
-    */
     const matchesStatus =
       statusFilter === "all" ||
       (statusFilter === "occupied" &&
@@ -222,12 +173,6 @@ export const filterReservations = (reservations, searchText, statusFilter) => {
 /*
 ---------------------------------------------------------
 countActiveReservations
-
-תפקיד:
-מחזירה את מספר ההזמנות הפעילות.
-
-occupied ו-confirmed נחשבים
-לסטטוס פעיל.
 ---------------------------------------------------------
 */
 export const countActiveReservations = (reservations) =>
@@ -238,149 +183,112 @@ export const countActiveReservations = (reservations) =>
 /*
 ---------------------------------------------------------
 countCancelledReservations
-
-תפקיד:
-מחזירה את מספר ההזמנות שבוטלו.
 ---------------------------------------------------------
 */
 export const countCancelledReservations = (reservations) =>
   reservations.filter((reservation) => isCancelledStatus(reservation.status))
     .length;
 
+/*
+---------------------------------------------------------
+getReservationStartDateTime
+
+תפקיד:
+מחזירה מפתח השוואה של מועד תחילת ההזמנה:
+YYYY-MM-DDTHH:MM.
+---------------------------------------------------------
+*/
+export const getReservationStartDateTime = (reservation) =>
+  getReservationDateTimeKey(reservation, "startTime");
 
 /*
 ---------------------------------------------------------
 getReservationEndDateTime
 
 תפקיד:
-יוצרת אובייקט תאריך מלא המייצג את מועד
-סיום ההזמנה.
+מחזירה מפתח השוואה של מועד סיום ההזמנה:
+YYYY-MM-DDTHH:MM.
 
-הערך משמש לקביעה אם ההזמנה עתידית
-או שייכת להיסטוריה.
+השם נשמר כדי לא לשבור קבצים שכבר משתמשים בפונקציה.
 ---------------------------------------------------------
 */
-export const getReservationEndDateTime = (reservation) => {
-  if (
-    !reservation.reservationDate ||
-    !reservation.endTime
-  ) {
-    return null;
-  }
-
-  const reservationDate = new Date(
-    reservation.reservationDate,
-  );
-
-  if (Number.isNaN(reservationDate.getTime())) {
-    return null;
-  }
-
-  const year = reservationDate.getFullYear();
-  const month = String(
-    reservationDate.getMonth() + 1,
-  ).padStart(2, "0");
-  const day = String(
-    reservationDate.getDate(),
-  ).padStart(2, "0");
-  const formattedTime = String(
-    reservation.endTime,
-  ).substring(0, 8);
-
-  const endDateTime = new Date(
-    `${year}-${month}-${day}T${formattedTime}`,
-  );
-
-  if (Number.isNaN(endDateTime.getTime())) {
-    return null;
-  }
-
-  return endDateTime;
-};
+export const getReservationEndDateTime = (reservation) =>
+  getReservationDateTimeKey(reservation, "endTime");
 
 /*
 ---------------------------------------------------------
 splitReservationsByTime
 
 תפקיד:
-מחלקת את ההזמנות לשתי רשימות:
-- הזמנות עתידיות ופעילות.
-- הזמנות שהסתיימו או בוטלו.
+מחלקת הזמנות ל-Upcoming ול-History.
 
-כל רשימה ממוינת לפי הזמן המתאים לתצוגה.
+הזמנה פעילה נשארת ב-Upcoming עד שעת הסיום.
+הזמנה שבוטלה מופיעה בהיסטוריה.
 ---------------------------------------------------------
 */
 export const splitReservationsByTime = (
   reservations,
-  currentDate = new Date(),
+  currentDateTimeKey = getLibraryDateTimeKey(),
 ) => {
   const upcomingReservations = reservations
     .filter((reservation) => {
-      const reservationEnd =
-        getReservationEndDateTime(reservation);
+      const reservationEnd = getReservationEndDateTime(reservation);
 
-      return (
+      return Boolean(
         reservationEnd &&
-        reservationEnd >= currentDate &&
-        !isCancelledStatus(reservation.status)
+        reservationEnd >= currentDateTimeKey &&
+        !isCancelledStatus(reservation.status),
       );
     })
     .sort((firstReservation, secondReservation) => {
-      const firstDate =
-        getReservationEndDateTime(firstReservation);
-      const secondDate =
-        getReservationEndDateTime(secondReservation);
+      const firstDate = getReservationStartDateTime(firstReservation);
 
-      return firstDate - secondDate;
+      const secondDate = getReservationStartDateTime(secondReservation);
+
+      return firstDate.localeCompare(secondDate);
     });
 
   const pastReservations = reservations
     .filter((reservation) => {
-      const reservationEnd =
-        getReservationEndDateTime(reservation);
+      const reservationEnd = getReservationEndDateTime(reservation);
 
       return (
         !reservationEnd ||
-        reservationEnd < currentDate ||
+        reservationEnd < currentDateTimeKey ||
         isCancelledStatus(reservation.status)
       );
     })
     .sort((firstReservation, secondReservation) => {
-      const firstDate =
-        getReservationEndDateTime(firstReservation);
-      const secondDate =
-        getReservationEndDateTime(secondReservation);
+      const firstDate = getReservationEndDateTime(firstReservation);
 
-      return (
-        (secondDate?.getTime() || 0) -
-        (firstDate?.getTime() || 0)
-      );
+      const secondDate = getReservationEndDateTime(secondReservation);
+
+      return secondDate.localeCompare(firstDate);
     });
 
   return {
     upcomingReservations,
     pastReservations,
   };
-};   
+};
 
 /*
 ---------------------------------------------------------
 countTodayReservations
 
 תפקיד:
-מחזירה את מספר ההזמנות הפעילות להיום בלבד.
+סופרת הזמנות פעילות שהתאריך שלהן הוא היום.
 ---------------------------------------------------------
 */
-export const countTodayReservations = (reservations, todayStr) => {
-  return reservations.filter((reservation) => {
-    const isToday =
-      reservation.date?.startsWith(todayStr) ||
-      reservation.reservationDate?.startsWith(todayStr);
+export const countTodayReservations = (reservations, todayStr) =>
+  reservations.filter((reservation) => {
+    const reservationDate = normalizeReservationDate(
+      reservation.reservationDate || reservation.date,
+    );
 
     const isActive = ["occupied", "confirmed"].includes(
       reservation.status?.toLowerCase(),
     );
 
-    return isToday && isActive;
+    return reservationDate === todayStr && isActive;
   }).length;
-};

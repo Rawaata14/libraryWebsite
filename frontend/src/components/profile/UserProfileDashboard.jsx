@@ -11,13 +11,20 @@ UserProfileDashboard.jsx
 - מספר התראות שלא נקראו.
 - רשימת ההזמנות העתידיות.
 - קישורים לפעולות נפוצות.
+
+מונה ההתראות מתקבל מ-NotificationContext,
+כדי שיתעדכן מיד לאחר קריאת התראה.
 =========================================================
 */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
+
 import { useNavigate } from "react-router-dom";
 
+import { NotificationContext } from "../../context/NotificationContext";
+
 import { getUserDashboardStats } from "../../services/dashboardService";
+
 import {
   formatReservationDate,
   formatReservationTime,
@@ -35,15 +42,17 @@ UserProfileDashboard
 export default function UserProfileDashboard() {
   const navigate = useNavigate();
 
+  const { unreadCount } = useContext(NotificationContext);
+
   const [stats, setStats] = useState({
     borrowedBooks: 0,
     activeReservations: 0,
-    unreadNotifications: 0,
   });
 
   const [upcomingReservations, setUpcomingReservations] = useState([]);
 
   const [isLoading, setIsLoading] = useState(true);
+
   const [loadError, setLoadError] = useState("");
 
   /*
@@ -51,8 +60,11 @@ export default function UserProfileDashboard() {
   fetchDashboardStats
 
   תפקיד:
-  טוען מהשרת את הסטטיסטיקות ואת ההזמנות העתידיות
-  של המשתמש המחובר.
+  טוען מהשרת את הסטטיסטיקות ואת ההזמנות
+  העתידיות של המשתמש המחובר.
+
+  ההתראות אינן נטענות כאן. הן מתקבלות דרך
+  NotificationContext המשותף לכל האפליקציה.
   ---------------------------------------------------------
   */
   const fetchDashboardStats = useCallback(async () => {
@@ -72,8 +84,8 @@ export default function UserProfileDashboard() {
 
       setStats({
         borrowedBooks: Number(dashboardStats.borrowedBooks) || 0,
+
         activeReservations: Number(dashboardStats.activeReservations) || 0,
-        unreadNotifications: Number(dashboardStats.unreadNotifications) || 0,
       });
 
       setUpcomingReservations(
@@ -87,7 +99,6 @@ export default function UserProfileDashboard() {
       setStats({
         borrowedBooks: 0,
         activeReservations: 0,
-        unreadNotifications: 0,
       });
 
       setUpcomingReservations([]);
@@ -103,9 +114,6 @@ export default function UserProfileDashboard() {
   /*
   ---------------------------------------------------------
   טעינת נתוני הדשבורד
-
-  תפקיד:
-  טוען את נתוני המשתמש כאשר הקומפוננטה עולה.
   ---------------------------------------------------------
   */
   useEffect(() => {
@@ -126,10 +134,18 @@ export default function UserProfileDashboard() {
         </div>
       )}
 
-      {/* ===== סיכום המשתמש ===== */}
-
-      <section className="dashboardBlock">
-        <h3 className="dashboardBlockTitle">My Summary</h3>
+      {/*
+      ===================================================
+      סיכום המשתמש
+      ===================================================
+      */}
+      <section
+        className="dashboardBlock"
+        aria-labelledby={"user-summary-title"}
+      >
+        <h3 id="user-summary-title" className="dashboardBlockTitle">
+          My Summary
+        </h3>
 
         <div className="dashboardStatsGrid">
           <div className="dashboardStatCard">
@@ -139,6 +155,7 @@ export default function UserProfileDashboard() {
 
             <div>
               <h4>{stats.borrowedBooks}</h4>
+
               <p>Borrowed Books</p>
             </div>
           </div>
@@ -150,27 +167,50 @@ export default function UserProfileDashboard() {
 
             <div>
               <h4>{stats.activeReservations}</h4>
+
               <p>Active Reservations</p>
             </div>
           </div>
 
-          <div className="dashboardStatCard">
+          {/*
+          כרטיס ההתראות הוא כפתור שמוביל לדף
+          ההתראות המלא.
+          */}
+          <button
+            type="button"
+            className={"dashboardStatCard dashboardStatButton"}
+            onClick={() => navigate("/notifications")}
+            aria-label={
+              unreadCount > 0
+                ? `View ${unreadCount} unread notifications`
+                : "View notifications"
+            }
+          >
             <span className="dashboardStatIcon" aria-hidden="true">
               🔔
             </span>
 
             <div>
-              <h4>{stats.unreadNotifications}</h4>
+              <h4>{unreadCount}</h4>
+
               <p>Unread Notifications</p>
             </div>
-          </div>
+          </button>
         </div>
       </section>
 
-      {/* ===== ההזמנות הקרובות ===== */}
-
-      <section className="dashboardBlock">
-        <h3 className="dashboardBlockTitle">Upcoming Reservations</h3>
+      {/*
+      ===================================================
+      ההזמנות הקרובות
+      ===================================================
+      */}
+      <section
+        className="dashboardBlock"
+        aria-labelledby={"upcoming-reservations-title"}
+      >
+        <h3 id="upcoming-reservations-title" className="dashboardBlockTitle">
+          Upcoming Reservations
+        </h3>
 
         <div className="userReservationsList">
           {isLoading ? (
@@ -181,16 +221,20 @@ export default function UserProfileDashboard() {
             upcomingReservations.map((reservation) => (
               <div
                 key={reservation.reservationId}
-                className="userReservationItem"
+                className={"userReservationItem"}
               >
                 <div>
                   <strong>Seat {reservation.seatId}</strong>
 
                   <p>
                     {formatReservationDate(reservation.reservationDate)}
+
                     {" | "}
+
                     {formatReservationTime(reservation.startTime)}
+
                     {" - "}
+
                     {formatReservationTime(reservation.endTime)}
                   </p>
                 </div>
@@ -208,46 +252,68 @@ export default function UserProfileDashboard() {
         </div>
       </section>
 
-      {/* ===== פעולות מהירות ===== */}
-
-      <section className="dashboardBlock">
-        <h3 className="dashboardBlockTitle">Quick Actions</h3>
+      {/*
+      ===================================================
+      פעולות מהירות
+      ===================================================
+      */}
+      <section
+        className="dashboardBlock"
+        aria-labelledby={"user-quick-actions-title"}
+      >
+        <h3 id="user-quick-actions-title" className="dashboardBlockTitle">
+          Quick Actions
+        </h3>
 
         <div className="profileGrid">
           <button
             type="button"
-            className="profileBox profileActionButton"
+            className={"profileBox profileActionButton"}
             onClick={() => navigate("/map")}
           >
             <h3>🪑 Study Rooms</h3>
+
             <p>Reserve a study seat or room</p>
           </button>
 
           <button
             type="button"
-            className="profileBox profileActionButton"
+            className={"profileBox profileActionButton"}
             onClick={() => navigate("/books")}
           >
             <h3>📖 Books</h3>
+
             <p>Browse and reserve books</p>
           </button>
 
           <button
             type="button"
-            className="profileBox profileActionButton"
+            className={"profileBox profileActionButton"}
             onClick={() => navigate("/my-reservations")}
           >
             <h3>📅 My Reservations</h3>
+
             <p>View your active reservations</p>
           </button>
 
           <button
             type="button"
-            className="profileBox profileActionButton"
+            className={"profileBox profileActionButton"}
             onClick={() => navigate("/my-messages")}
           >
             <h3>✉️ My Messages</h3>
+
             <p>View messages and replies from the library</p>
+          </button>
+
+          <button
+            type="button"
+            className={"profileBox profileActionButton"}
+            onClick={() => navigate("/notifications")}
+          >
+            <h3>🔔 Notifications</h3>
+
+            <p>View library updates and unread notifications</p>
           </button>
         </div>
       </section>

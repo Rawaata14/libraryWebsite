@@ -5,12 +5,7 @@ useManageReservations.js
 תיאור הקובץ:
 Custom Hook המרכז את מצב ולוגיקת דף ניהול ההזמנות.
 
-ה-Hook אחראי על:
-- טעינת ההזמנות.
-- חיפוש וסינון.
-- ביטול הזמנה על ידי ספרן.
-- שליחת הודעה לבעל הזמנה.
-- ניהול הודעות הצלחה ושגיאה.
+כל חישובי "היום" מתבצעים לפי שעון ישראל.
 =========================================================
 */
 
@@ -25,19 +20,12 @@ import {
 import {
   countActiveReservations,
   countCancelledReservations,
-  filterReservations,
   countTodayReservations,
+  filterReservations,
 } from "../utils/reservationUtils";
 
-/*
----------------------------------------------------------
-useManageReservations
+import { getLibraryDateValue } from "../utils/libraryDateTime";
 
-תפקיד:
-מספק לדף ניהול ההזמנות את הנתונים והפעולות
-הדרושים להצגת ההזמנות ולניהולן.
----------------------------------------------------------
-*/
 export default function useManageReservations() {
   const [reservations, setReservations] = useState([]);
   const [searchText, setSearchText] = useState("");
@@ -48,20 +36,22 @@ export default function useManageReservations() {
   const [successMessage, setSuccessMessage] = useState("");
 
   const [selectedReservation, setSelectedReservation] = useState(null);
+
   const [cancellationReason, setCancellationReason] = useState("");
+
   const [isCancelling, setIsCancelling] = useState(false);
 
   const [messageReservation, setMessageReservation] = useState(null);
+
   const [messageSubject, setMessageSubject] = useState("");
+
   const [messageContent, setMessageContent] = useState("");
+
   const [isSendingMessage, setIsSendingMessage] = useState(false);
 
   /*
   ---------------------------------------------------------
   clearFeedbackMessages
-
-  תפקיד:
-  מנקה הודעות קודמות לפני התחלת פעולה חדשה.
   ---------------------------------------------------------
   */
   const clearFeedbackMessages = useCallback(() => {
@@ -72,9 +62,6 @@ export default function useManageReservations() {
   /*
   ---------------------------------------------------------
   fetchReservations
-
-  תפקיד:
-  טוענת את ההזמנות שהמשתמש המחובר מורשה לראות.
   ---------------------------------------------------------
   */
   const fetchReservations = useCallback(async () => {
@@ -103,14 +90,6 @@ export default function useManageReservations() {
     }
   }, []);
 
-  /*
-  ---------------------------------------------------------
-  טעינת ההזמנות
-
-  תפקיד:
-  מפעילה את שליפת ההזמנות כאשר הדף נטען.
-  ---------------------------------------------------------
-  */
   useEffect(() => {
     fetchReservations();
   }, [fetchReservations]);
@@ -118,9 +97,6 @@ export default function useManageReservations() {
   /*
   ---------------------------------------------------------
   openCancellationDialog
-
-  תפקיד:
-  פותחת את חלון הביטול עבור ההזמנה שנבחרה.
   ---------------------------------------------------------
   */
   const openCancellationDialog = (reservation) => {
@@ -132,9 +108,6 @@ export default function useManageReservations() {
   /*
   ---------------------------------------------------------
   closeCancellationDialog
-
-  תפקיד:
-  סוגרת את חלון הביטול אם בקשת ביטול אינה מתבצעת.
   ---------------------------------------------------------
   */
   const closeCancellationDialog = () => {
@@ -149,10 +122,6 @@ export default function useManageReservations() {
   /*
   ---------------------------------------------------------
   handleLibrarianCancellation
-
-  תפקיד:
-  מאמתת את סיבת הביטול, שולחת אותה לשרת
-  ומעדכנת את ההזמנה ברשימה המקומית.
   ---------------------------------------------------------
   */
   const handleLibrarianCancellation = async () => {
@@ -223,9 +192,6 @@ export default function useManageReservations() {
   /*
   ---------------------------------------------------------
   openMessageDialog
-
-  תפקיד:
-  פותחת את חלון ההודעה עבור ההזמנה שנבחרה.
   ---------------------------------------------------------
   */
   const openMessageDialog = (reservation) => {
@@ -238,9 +204,6 @@ export default function useManageReservations() {
   /*
   ---------------------------------------------------------
   closeMessageDialog
-
-  תפקיד:
-  סוגרת את חלון ההודעה אם השליחה אינה מתבצעת.
   ---------------------------------------------------------
   */
   const closeMessageDialog = () => {
@@ -256,9 +219,6 @@ export default function useManageReservations() {
   /*
   ---------------------------------------------------------
   handleSendReservationMessage
-
-  תפקיד:
-  מאמתת את תוכן ההודעה ושולחת אותה לבעל ההזמנה.
   ---------------------------------------------------------
   */
   const handleSendReservationMessage = async () => {
@@ -267,6 +227,7 @@ export default function useManageReservations() {
     }
 
     const trimmedSubject = messageSubject.trim();
+
     const trimmedMessage = messageContent.trim();
 
     if (!trimmedSubject) {
@@ -325,10 +286,14 @@ export default function useManageReservations() {
 
   const cancelledReservationsCount = countCancelledReservations(reservations);
 
-  const todayReservationsCount = useMemo(() => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    return countTodayReservations(reservations, todayStr);
-  }, [reservations]);
+  /*
+  ספירת ההזמנות של היום לפי התאריך בישראל,
+  ולא לפי UTC.
+  */
+  const todayReservationsCount = useMemo(
+    () => countTodayReservations(reservations, getLibraryDateValue()),
+    [reservations],
+  );
 
   return {
     reservations,

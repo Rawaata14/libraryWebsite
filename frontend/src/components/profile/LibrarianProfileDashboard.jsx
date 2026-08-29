@@ -7,15 +7,23 @@ LibrarianProfileDashboard.jsx
 
 הקובץ כולל:
 - הצגת נתוני הספרייה המרכזיים.
+- הצגת מספר ההתראות שלא נקראו.
 - הצגת הפעילות היומית האחרונה.
 - קישורים נגישים לדפי הניהול.
 
-כל הנתונים מתקבלים דרך:
+נתוני הספרייה מתקבלים דרך:
 useLibrarianDashboard
+
+מונה ההתראות מתקבל דרך:
+NotificationContext
 =========================================================
 */
 
-import { NavLink } from "react-router-dom";
+import { useContext } from "react";
+
+import { NavLink, useNavigate } from "react-router-dom";
+
+import { NotificationContext } from "../../context/NotificationContext";
 
 import useLibrarianDashboard from "../../hooks/useLibrarianDashboard";
 
@@ -25,13 +33,22 @@ LibrarianProfileDashboard
 
 תפקיד:
 מציגה לספרנית מרכז בקרה בפרופיל באמצעות
-מקור הנתונים המשותף של הדשבורד.
+מקור נתוני הדאשבורד ומקור ההתראות המשותף.
 ---------------------------------------------------------
 */
 export default function LibrarianProfileDashboard() {
+  const navigate = useNavigate();
+
+  const { unreadCount } = useContext(NotificationContext);
+
   const { stats, isLoading, errorMessage, fetchDashboardStats } =
     useLibrarianDashboard();
 
+  /*
+  ---------------------------------------------------------
+  מצב טעינה
+  ---------------------------------------------------------
+  */
   if (isLoading) {
     return (
       <div className="profileSection">
@@ -42,6 +59,11 @@ export default function LibrarianProfileDashboard() {
     );
   }
 
+  /*
+  ---------------------------------------------------------
+  מצב שגיאה
+  ---------------------------------------------------------
+  */
   if (errorMessage) {
     return (
       <div className="profileSection">
@@ -65,7 +87,7 @@ export default function LibrarianProfileDashboard() {
 
         <button
           type="button"
-          className="profileDashboardRefreshButton"
+          className={"profileDashboardRefreshButton"}
           onClick={fetchDashboardStats}
         >
           Refresh Data
@@ -77,10 +99,9 @@ export default function LibrarianProfileDashboard() {
       נתונים חשובים
       ===================================================
       */}
-
       <section
         className="dashboardBlock"
-        aria-labelledby="important-updates-title"
+        aria-labelledby={"important-updates-title"}
       >
         <h3 id="important-updates-title" className="dashboardBlockTitle">
           Important Updates
@@ -93,6 +114,7 @@ export default function LibrarianProfileDashboard() {
 
           <div>
             <h4>{stats.todayReservations}</h4>
+
             <p>Today&apos;s Reservations</p>
           </div>
         </div>
@@ -105,6 +127,7 @@ export default function LibrarianProfileDashboard() {
 
             <div>
               <h4>{stats.activeLoans}</h4>
+
               <p>Active Loans</p>
             </div>
           </div>
@@ -116,6 +139,7 @@ export default function LibrarianProfileDashboard() {
 
             <div>
               <h4>{stats.overdueBooks}</h4>
+
               <p>Overdue Books</p>
             </div>
           </div>
@@ -127,6 +151,7 @@ export default function LibrarianProfileDashboard() {
 
             <div>
               <h4>{stats.unreadMessages}</h4>
+
               <p>Unread Messages</p>
             </div>
           </div>
@@ -138,9 +163,35 @@ export default function LibrarianProfileDashboard() {
 
             <div>
               <h4>{stats.blockedSeats}</h4>
+
               <p>Blocked Seats</p>
             </div>
           </div>
+
+          {/*
+          כרטיס ההתראות הוא כפתור ומוביל לדף
+          ההתראות המשותף.
+          */}
+          <button
+            type="button"
+            className={"dashboardStatCard dashboardStatButton"}
+            onClick={() => navigate("/notifications")}
+            aria-label={
+              unreadCount > 0
+                ? `View ${unreadCount} unread notifications`
+                : "View notifications"
+            }
+          >
+            <span className="dashboardStatIcon" aria-hidden="true">
+              🔔
+            </span>
+
+            <div>
+              <h4>{unreadCount}</h4>
+
+              <p>Unread Notifications</p>
+            </div>
+          </button>
         </div>
       </section>
 
@@ -149,10 +200,9 @@ export default function LibrarianProfileDashboard() {
       פעילות היום
       ===================================================
       */}
-
       <section
         className="dashboardBlock"
-        aria-labelledby="today-activity-title"
+        aria-labelledby={"today-activity-title"}
       >
         <h3 id="today-activity-title" className="dashboardBlockTitle">
           Today&apos;s Activity
@@ -163,9 +213,10 @@ export default function LibrarianProfileDashboard() {
             stats.todayActivity.map((activity, index) => (
               <div
                 key={`${activity}-${index}`}
-                className="dashboardActivityItem"
+                className={"dashboardActivityItem"}
               >
                 <span aria-hidden="true">•</span>
+
                 <p>{activity}</p>
               </div>
             ))
@@ -180,10 +231,9 @@ export default function LibrarianProfileDashboard() {
       קישורי ניהול מהירים
       ===================================================
       */}
-
       <section
         className="dashboardBlock"
-        aria-labelledby="quick-management-title"
+        aria-labelledby={"quick-management-title"}
       >
         <h3 id="quick-management-title" className="dashboardBlockTitle">
           Quick Management
@@ -191,33 +241,45 @@ export default function LibrarianProfileDashboard() {
 
         <NavLink className="profileBox" to="/admin/reservations">
           <h3>📅 Manage Reservations</h3>
+
           <p>View reservations and handle exceptional cancellations</p>
         </NavLink>
 
-        <div className="profileGrid librarianProfileGrid">
+        <div className={"profileGrid librarianProfileGrid"}>
           <NavLink className="profileBox" to="/admin/books">
             <h3>📖 Manage Books</h3>
+
             <p>View, add, edit and remove books</p>
           </NavLink>
 
           <NavLink className="profileBox" to="/admin/map">
             <h3>🪑 Manage Seats</h3>
+
             <p>Control library map and seating areas</p>
           </NavLink>
 
           <NavLink className="profileBox" to="/admin/users">
             <h3>👥 Users Management</h3>
+
             <p>Manage readers and librarians</p>
           </NavLink>
 
           <NavLink className="profileBox" to="/reports">
             <h3>📊 Reports</h3>
+
             <p>View library statistics and reports</p>
           </NavLink>
 
           <NavLink className="profileBox" to="/messages">
             <h3>✉️ Messages</h3>
+
             <p>View messages from users</p>
+          </NavLink>
+
+          <NavLink className="profileBox" to="/notifications">
+            <h3>🔔 Notifications</h3>
+
+            <p>View library updates and unread notifications</p>
           </NavLink>
         </div>
       </section>
