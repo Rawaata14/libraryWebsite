@@ -19,15 +19,15 @@ manage-reservations.css
 .manageReservationsPage {
   width: 100%;
   min-height: 75vh;
-  padding: 55px 5%;
+  padding: 35px 2%;
   position: relative;
 }
 
 .manageReservationsCard {
-  width: min(1200px, 100%);
+  width: 100%;
+  max-width: 100%;
   margin: 0 auto;
   padding: 30px;
-
   color: #ffffff;
   background: rgba(35, 18, 12, 0.95);
   border: 2px solid rgba(164, 107, 86, 0.75);
@@ -203,14 +203,13 @@ manage-reservations.css
 
 .reservationsManagementTable {
   width: 100%;
-  min-width: 980px;
-
+  min-width: 900px;
   border-collapse: collapse;
 }
 
 .reservationsManagementTable th,
 .reservationsManagementTable td {
-  padding: 16px 14px;
+  padding: 14px 8px;
   text-align: left;
 
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
@@ -255,7 +254,7 @@ manage-reservations.css
   border-radius: 999px;
 
   font-size: 0.88rem;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .managementStatus.confirmed {
@@ -279,7 +278,7 @@ manage-reservations.css
 }
 
 .librarianCancelButton {
-  padding: 8px 14px;
+  padding: 5px 8px;
 
   border: 1px solid rgba(244, 67, 54, 0.55);
   border-radius: 9px;
@@ -287,7 +286,7 @@ manage-reservations.css
   color: #ff928b;
   background: rgba(244, 67, 54, 0.12);
 
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -505,7 +504,7 @@ manage-reservations.css
 }
 
 .sendReservationMessageButton {
-  padding: 8px 12px;
+  padding: 5px 8px;
 
   border: 1px solid rgba(33, 150, 243, 0.5);
   border-radius: 9px;
@@ -513,7 +512,7 @@ manage-reservations.css
   color: #86caff;
   background: rgba(33, 150, 243, 0.12);
 
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
 }
 

@@ -80,13 +80,6 @@ export default function ManageReservationsPage() {
     <PageShell>
       <PageBanner title="Manage Reservations" />
       <main className="manageReservationsPage">
-        <button
-          type="button"
-          className="backButton1"
-          onClick={() => navigate(-1)}
-        >
-          ←
-        </button>
         <section className="manageReservationsCard">
           {/*
           =================================================

@@ -10,8 +10,8 @@ librarian-sidebar.css
 .librarianSidebar {
   position: sticky;
   top: 16px;
-  flex: 0 0 270px;
-  width: 270px;
+  flex: 0 0 240px;
+  width: 220px;
   max-height: calc(100vh - 32px);
   padding: 20px;
   overflow-y: auto;

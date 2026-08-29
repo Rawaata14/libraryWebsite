@@ -27,7 +27,7 @@ layout.css
   max-width: 100%;
 
   margin: 0;
-  padding: 0 12px;
+  padding: 0 2px;
 }
 
 /*
@@ -90,7 +90,7 @@ pageShellBody
 .pageShellBody {
   display: flex;
   align-items: flex-start;
-  gap: 20px;
+  gap: 1px;
   flex: 1;
 
   width: 100%;
