@@ -10,26 +10,44 @@ Routes לניהול הזמנות מקומות.
 - שליפת הזמנות.
 - ביטול על ידי משתמש.
 - ביטול חריג על ידי ספרנית.
-- שליחת הודעה לבעל הזמנה ושליחת מייל אליו.
-- שליפת שעות זמינות.
+- שילוב רשימת ההמתנה למקומות.
+- החזרת ספרים למלאי לאחר ביטול מקום.
+- שליחת הודעה והתראה לבעל הזמנה.
+- שליחת מייל דרך שירות המייל המרכזי.
+- שליפת שעות הזמנה אפשריות.
 =========================================================
 */
 
 const express = require("express");
-const router = express.Router();
 
 const reservationQueries = require("../database/queries/reservationQueries");
+
 const notificationQueries = require("../database/queries/notificationQueries");
-const transporter = require("../utils/mailer");
+
+const waitingListService = require("../services/waitingListService");
+
+const { sendLibraryEmail } = require("../utils/mailer");
+
+const router = express.Router();
 
 /*
 ---------------------------------------------------------
 POST /reservations/reserve-seat
+
+תפקיד:
+יוצרת הזמנת מקום עבור המשתמש המחובר.
+
+אם קיימת הצעה פעילה מרשימת ההמתנה:
+- רק המשתמש שקיבל את ההצעה רשאי להזמין.
+- לאחר יצירת ההזמנה ההצעה מסומנת כמומשה.
+
+אם אין הצעה פעילה:
+הזמנת המקום מתבצעת בדרך הרגילה.
 ---------------------------------------------------------
 */
 router.post("/reserve-seat", async (req, res) => {
   try {
-    if (!req.session.user) {
+    if (!req.session?.user) {
       return res.status(401).json({
         message: "Unauthorized",
       });
@@ -43,6 +61,39 @@ router.post("/reserve-seat", async (req, res) => {
       });
     }
 
+    /*
+    -------------------------------------------------------
+    בדיקת גישה להצעת רשימת ההמתנה
+
+    אם קיימת הצעה פעילה עבור המקום וטווח הזמן,
+    משתמש אחר אינו יכול להזמין אותו לפני פקיעת
+    ההצעה.
+    -------------------------------------------------------
+    */
+    const offerAccess = await waitingListService.validateSeatOfferAccess(
+      seatId,
+      req.session.user.userId,
+      date,
+      startTime,
+      endTime,
+    );
+
+    if (!offerAccess.success) {
+      return res.status(offerAccess.status || 409).json({
+        message:
+          offerAccess.message ||
+          "This seat is currently offered to another user.",
+      });
+    }
+
+    /*
+    -------------------------------------------------------
+    יצירת הזמנת המקום
+
+    reserveSeat מבצעת מחדש בדיקת תאריך, שעה
+    וחפיפה לפני שמירת ההזמנה.
+    -------------------------------------------------------
+    */
     const result = await reservationQueries.reserveSeat({
       userId: req.session.user.userId,
       seatId,
@@ -72,6 +123,14 @@ router.post("/reserve-seat", async (req, res) => {
       });
     }
 
+    /*
+    -------------------------------------------------------
+    יצירת התראה למשתמש
+
+    כשל ביצירת ההתראה אינו מבטל הזמנה שכבר
+    נשמרה בהצלחה במסד הנתונים.
+    -------------------------------------------------------
+    */
     const notificationResult = await notificationQueries.addNotification(
       req.session.user.userId,
       `Reservation created successfully for seat ${seatId} on ${date}`,
@@ -82,6 +141,25 @@ router.post("/reserve-seat", async (req, res) => {
       console.error(
         "Reservation was created, but notification creation failed.",
       );
+    }
+
+    /*
+    -------------------------------------------------------
+    השלמת הצעת רשימת ההמתנה
+
+    ההצעה מסומנת כמומשה רק לאחר שהזמנת המקום
+    נוצרה בהצלחה.
+    -------------------------------------------------------
+    */
+    if (offerAccess.waitingId) {
+      try {
+        await waitingListService.completeOffer("seat", offerAccess.waitingId);
+      } catch (waitingListError) {
+        console.error(
+          "Seat was reserved, but completing the waiting-list offer failed:",
+          waitingListError,
+        );
+      }
     }
 
     return res.status(201).json({
@@ -100,11 +178,16 @@ router.post("/reserve-seat", async (req, res) => {
 /*
 ---------------------------------------------------------
 GET /reservations/get-reservations
+
+תפקיד:
+מחזירה הזמנות לפי תפקיד המשתמש:
+- ספרנית מקבלת את כל ההזמנות.
+- משתמש רגיל מקבל רק את ההזמנות שלו.
 ---------------------------------------------------------
 */
 router.get("/get-reservations", async (req, res) => {
   try {
-    if (!req.session.user) {
+    if (!req.session?.user) {
       return res.status(401).json({
         message: "Unauthorized",
       });
@@ -141,11 +224,20 @@ router.get("/get-reservations", async (req, res) => {
 /*
 ---------------------------------------------------------
 PATCH /reservations/:reservationId/cancel
+
+תפקיד:
+מבטלת הזמנה השייכת למשתמש המחובר.
+
+לאחר ביטול מוצלח:
+- המשתמש מקבל התראה.
+- אם זה ביטול לאותו יום, הספרניות מקבלות התראה.
+- המקום מוצע למשתמש הבא ברשימת ההמתנה.
+- הספרים הקשורים להזמנה חוזרים למלאי.
 ---------------------------------------------------------
 */
 router.patch("/:reservationId/cancel", async (req, res) => {
   try {
-    if (!req.session.user) {
+    if (!req.session?.user) {
       return res.status(401).json({
         message: "Unauthorized",
       });
@@ -189,6 +281,11 @@ router.patch("/:reservationId/cancel", async (req, res) => {
       });
     }
 
+    /*
+      -------------------------------------------------------
+      יצירת התראה למשתמש שביטל את ההזמנה
+      -------------------------------------------------------
+      */
     const notificationResult = await notificationQueries.addNotification(
       req.session.user.userId,
       `Reservation number ${reservationId} was cancelled successfully`,
@@ -201,6 +298,14 @@ router.patch("/:reservationId/cancel", async (req, res) => {
       );
     }
 
+    /*
+      -------------------------------------------------------
+      התראה לספרניות על ביטול באותו יום
+
+      התראה זו נוצרת רק עבור ביטול שביצע משתמש
+      רגיל ורק אם ההזמנה הייתה לאותו יום.
+      -------------------------------------------------------
+      */
     if (req.session.user.role !== "librarian" && result.data?.isToday) {
       const librarianNotificationResult =
         await notificationQueries.addTodayCancellationNotificationToLibrarians(
@@ -214,6 +319,45 @@ router.patch("/:reservationId/cancel", async (req, res) => {
           "Reservation was cancelled, but same-day librarian notification creation failed.",
         );
       }
+    }
+
+    /*
+      -------------------------------------------------------
+      הצעת המקום למשתמש הבא
+
+      הפעולה נמצאת ב-try נפרד כדי שכשל בהצעת
+      המקום לא ימנע את החזרת הספרים למלאי.
+      -------------------------------------------------------
+      */
+    try {
+      await waitingListService.offerNextSeat(
+        result.data.seatId,
+        result.data.reservationDate,
+        result.data.startTime,
+        result.data.endTime,
+      );
+    } catch (waitingListError) {
+      console.error(
+        "Reservation was cancelled, but offering the seat to the next user failed:",
+        waitingListError,
+      );
+    }
+
+    /*
+      -------------------------------------------------------
+      החזרת הספרים הקשורים להזמנה
+
+      לאחר החזרת הספרים למלאי, כל ספר שהתפנה
+      מוצע למשתמש הבא שממתין לו.
+      -------------------------------------------------------
+      */
+    try {
+      await waitingListService.releaseReservationBooksAndOffer(reservationId);
+    } catch (waitingListError) {
+      console.error(
+        "Reservation was cancelled, but releasing the reserved books failed:",
+        waitingListError,
+      );
     }
 
     return res.status(200).json({
@@ -232,11 +376,19 @@ router.patch("/:reservationId/cancel", async (req, res) => {
 /*
 ---------------------------------------------------------
 PATCH /reservations/:reservationId/librarian-cancel
+
+תפקיד:
+מאפשרת לספרנית לבטל הזמנה תוך ציון סיבה.
+
+לאחר הביטול:
+- המשתמש מקבל התראה.
+- המקום מוצע למשתמש הבא ברשימת ההמתנה.
+- הספרים הקשורים להזמנה חוזרים למלאי.
 ---------------------------------------------------------
 */
 router.patch("/:reservationId/librarian-cancel", async (req, res) => {
   try {
-    if (!req.session.user) {
+    if (!req.session?.user) {
       return res.status(401).json({
         message: "Unauthorized",
       });
@@ -249,6 +401,7 @@ router.patch("/:reservationId/librarian-cancel", async (req, res) => {
     }
 
     const reservationId = Number(req.params.reservationId);
+
     const { reason } = req.body;
 
     if (!Number.isInteger(reservationId) || reservationId <= 0) {
@@ -292,6 +445,11 @@ router.patch("/:reservationId/librarian-cancel", async (req, res) => {
       });
     }
 
+    /*
+      -------------------------------------------------------
+      התראה למשתמש הכוללת את סיבת הביטול
+      -------------------------------------------------------
+      */
     const notificationResult = await notificationQueries.addNotification(
       result.data.userId,
       `Your reservation for seat ${result.data.seatId} was cancelled by the librarian. Reason: ${trimmedReason}`,
@@ -301,6 +459,42 @@ router.patch("/:reservationId/librarian-cancel", async (req, res) => {
     if (!notificationResult?.success) {
       console.error(
         "Reservation was cancelled, but notification creation failed.",
+      );
+    }
+
+    /*
+      -------------------------------------------------------
+      הצעת המקום למשתמש הבא ברשימת ההמתנה
+      -------------------------------------------------------
+      */
+    try {
+      await waitingListService.offerNextSeat(
+        result.data.seatId,
+        result.data.reservationDate,
+        result.data.startTime,
+        result.data.endTime,
+      );
+    } catch (waitingListError) {
+      console.error(
+        "Librarian cancellation succeeded, but offering the seat to the next user failed:",
+        waitingListError,
+      );
+    }
+
+    /*
+      -------------------------------------------------------
+      החזרת הספרים הקשורים להזמנה למלאי
+
+      פעולה זו נפרדת מהצעת המקום, כדי שכשל
+      בפעולה אחת לא ימנע את הפעולה השנייה.
+      -------------------------------------------------------
+      */
+    try {
+      await waitingListService.releaseReservationBooksAndOffer(reservationId);
+    } catch (waitingListError) {
+      console.error(
+        "Librarian cancellation succeeded, but releasing the reserved books failed:",
+        waitingListError,
       );
     }
 
@@ -320,6 +514,12 @@ router.patch("/:reservationId/librarian-cancel", async (req, res) => {
 /*
 ---------------------------------------------------------
 GET /reservations/available-slots
+
+תפקיד:
+מחזירה את חלונות הזמן שניתן לבחור עבור התאריך.
+
+חלון מלא עדיין עשוי להופיע, כדי שהמשתמש יוכל
+לבחור מקום תפוס ולהצטרף לרשימת ההמתנה.
 ---------------------------------------------------------
 */
 router.get("/available-slots", async (req, res) => {
@@ -363,12 +563,21 @@ router.get("/available-slots", async (req, res) => {
 /*
 ---------------------------------------------------------
 POST /reservations/:reservationId/message
-(שליחת הודעה לבעל ההזמנה + שליחת מייל דרך transporter)
+
+תפקיד:
+מאפשרת לספרנית לשלוח הודעה לבעל הזמנה.
+
+הפעולה:
+1. שומרת התראה בתוך המערכת.
+2. מנסה לשלוח מייל דרך שירות המייל המרכזי.
+
+אם פרטי המייל עדיין אינם מוגדרים:
+ההתראה בתוך המערכת נשמרת והשרת אינו קורס.
 ---------------------------------------------------------
 */
 router.post("/:reservationId/message", async (req, res) => {
   try {
-    if (!req.session.user) {
+    if (!req.session?.user) {
       return res.status(401).json({
         message: "Unauthorized",
       });
@@ -381,6 +590,7 @@ router.post("/:reservationId/message", async (req, res) => {
     }
 
     const reservationId = Number(req.params.reservationId);
+
     const { subject, message } = req.body;
 
     if (!Number.isInteger(reservationId) || reservationId <= 0) {
@@ -390,6 +600,7 @@ router.post("/:reservationId/message", async (req, res) => {
     }
 
     const trimmedSubject = String(subject || "").trim();
+
     const trimmedMessage = String(message || "").trim();
 
     if (!trimmedSubject) {
@@ -434,7 +645,11 @@ router.post("/:reservationId/message", async (req, res) => {
 
     const reservation = reservationResult.data;
 
-    // 1. שמירת ההתראה בתוך המערכת
+    /*
+      -------------------------------------------------------
+      שמירת ההתראה בתוך המערכת
+      -------------------------------------------------------
+      */
     const notificationMessage =
       `${trimmedSubject}: ${trimmedMessage} ` +
       `(Reservation #${reservationId}, ` +
@@ -452,27 +667,71 @@ router.post("/:reservationId/message", async (req, res) => {
       });
     }
 
-    // 2. שליחת מייל לסטודנט באמצעות ה-transporter הקיים
+    /*
+      -------------------------------------------------------
+      שליחת מייל למשתמש
+
+      המייל נשלח רק אם getReservationById החזירה
+      את כתובת המייל של בעל ההזמנה.
+
+      כשל במייל אינו מוחק את ההתראה שנשמרה.
+      -------------------------------------------------------
+      */
     if (reservation.userEmail) {
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: reservation.userEmail,
         subject: `הודעה מהספרייה: ${trimmedSubject}`,
         html: `
-          <div dir="rtl" style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <h2 style="color: #2c3e50;">הודעה חדשה מהספרנית</h2>
-            <p>התקבלה הודעה לגבי ההזמנה שלך (כיסא מספר <b>${reservation.seatId}</b>, הזמנה #${reservationId}):</p>
-            <blockquote style="background: #f9f9f9; padding: 12px; border-right: 4px solid #2c3e50; margin: 10px 0;">
-              <b>${trimmedSubject}</b><br>
-              ${trimmedMessage}
-            </blockquote>
-            <br>
-            <p>בברכה,<br><b>מערכת הספרייה</b></p>
-          </div>
-        `,
+            <div
+              dir="rtl"
+              style="
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+              "
+            >
+              <h2 style="color: #2c3e50;">
+                הודעה חדשה מהספרנית
+              </h2>
+
+              <p>
+                התקבלה הודעה לגבי ההזמנה שלך
+                (כיסא מספר
+                <b>${reservation.seatId}</b>,
+                הזמנה #${reservationId}):
+              </p>
+
+              <blockquote
+                style="
+                  background: #f9f9f9;
+                  padding: 12px;
+                  border-right: 4px solid #2c3e50;
+                  margin: 10px 0;
+                "
+              >
+                <b>${trimmedSubject}</b>
+                <br>
+                ${trimmedMessage}
+              </blockquote>
+
+              <p>
+                בברכה,
+                <br>
+                <b>מערכת הספרייה</b>
+              </p>
+            </div>
+          `,
       };
 
-      await transporter.sendMail(mailOptions);
+      const emailResult = await sendLibraryEmail(mailOptions);
+
+      if (!emailResult.success) {
+        console.error(
+          "The in-app message was saved, but the email was not sent:",
+          emailResult.message || emailResult.error,
+        );
+      }
     }
 
     return res.status(200).json({
@@ -489,5 +748,9 @@ router.post("/:reservationId/message", async (req, res) => {
   }
 });
 
-// ייצוא גם של ה-router וגם של פונקציית התזכורת (כדי שתוכל להפעיל אותה ב-Cron מחוץ לקובץ)
+/*
+---------------------------------------------------------
+ייצוא הנתיבים
+---------------------------------------------------------
+*/
 module.exports = router;

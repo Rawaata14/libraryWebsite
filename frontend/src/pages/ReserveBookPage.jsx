@@ -3,21 +3,27 @@
 ReserveBookPage.jsx
 
 תיאור הקובץ:
-דף שריון ספר במסגרת הזמנת כיסא.
+דף שריון ספר או הצטרפות לרשימת המתנה.
 
 המשתמש:
 - רואה את פרטי הספר.
-- בוחר אחת מהזמנות הכיסא התקפות שלו.
-- רואה את תאריך ושעות השימוש בספר.
-- משריין את הספר לאותה הזמנה.
+- רואה אם הספר זמין.
+- בוחר אחת מהזמנות המקום התקפות שלו.
+- משריין ספר זמין לאותה הזמנה.
+- מצטרף לרשימת המתנה אם אין עותק זמין.
+
+הספר מיועד לשימוש בתוך הספרייה בלבד ולכן
+נדרשת הזמנת מקום תקפה גם לצורך המתנה.
 =========================================================
 */
 
 import { useNavigate } from "react-router-dom";
 
-import PageShell from "../components/layout/PageShell";
-import PageBanner from "../components/layout/PageBanner";
 import Button from "../components/common/Button";
+
+import PageBanner from "../components/layout/PageBanner";
+
+import PageShell from "../components/layout/PageShell";
 
 import { useBookReservation } from "../hooks/useBookReservation";
 
@@ -54,7 +60,8 @@ function getBookImageSource(bookImageName) {
 ReserveBookPage
 
 תפקיד:
-מציג את תהליך שריון הספר.
+מציגה את תהליך שריון הספר או ההצטרפות
+לרשימת ההמתנה בהתאם לזמינות הספר.
 ---------------------------------------------------------
 */
 export default function ReserveBookPage() {
@@ -66,6 +73,7 @@ export default function ReserveBookPage() {
     eligibleReservations,
     selectedReservation,
     selectedReservationId,
+    isBookAvailable,
     isPageLoading,
     isLoading,
     error,
@@ -74,10 +82,19 @@ export default function ReserveBookPage() {
     handleReserveBook,
   } = useBookReservation();
 
+  const pageTitle = isBookAvailable
+    ? "Reserve a Book"
+    : "Join Book Waiting List";
+
+  /*
+  ---------------------------------------------------------
+  מצב טעינת הדף
+  ---------------------------------------------------------
+  */
   if (isPageLoading) {
     return (
       <PageShell>
-        <PageBanner title="Reserve a Book" />
+        <PageBanner title="Book Reservation" />
 
         <div className="reservePage">
           <div
@@ -94,7 +111,7 @@ export default function ReserveBookPage() {
 
   return (
     <PageShell>
-      <PageBanner title="Reserve a Book" />
+      <PageBanner title={pageTitle} />
 
       <div className="reservePage">
         <div className="reserveContainer">
@@ -119,6 +136,17 @@ export default function ReserveBookPage() {
                   aria-live="polite"
                 >
                   {successMessage}
+
+                  {!isBookAvailable && (
+                    <div>
+                      <Button
+                        variant="secondary"
+                        onClick={() => navigate("/my-waiting-lists")}
+                      >
+                        View My Waiting Lists
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -147,6 +175,15 @@ export default function ReserveBookPage() {
                   <p>
                     <strong>Available Copies:</strong> {book.available_quantity}
                   </p>
+
+                  <p>
+                    <strong>Status:</strong>{" "}
+                    <span
+                      className={isBookAvailable ? "available" : "unavailable"}
+                    >
+                      {isBookAvailable ? "Available" : "Waiting List Available"}
+                    </span>
+                  </p>
                 </section>
 
                 <section
@@ -154,7 +191,9 @@ export default function ReserveBookPage() {
                   aria-labelledby="reservation-details-title"
                 >
                   <h2 id="reservation-details-title">
-                    Seat Reservation Details
+                    {isBookAvailable
+                      ? "Seat Reservation Details"
+                      : "Select Your Library Visit"}
                   </h2>
 
                   <p>
@@ -165,14 +204,23 @@ export default function ReserveBookPage() {
                     <strong>Email:</strong> {user?.email || "-"}
                   </p>
 
+                  {!isBookAvailable && (
+                    <div className="reserveNote">
+                      This book is currently out of stock. Select an upcoming
+                      seat reservation to join the waiting list. If a copy
+                      becomes available, you will receive a notification and a
+                      limited-time offer.
+                    </div>
+                  )}
+
                   {eligibleReservations.length === 0 ? (
                     <div className="reserveNoReservations">
                       <h3>A Seat Reservation Is Required</h3>
 
                       <p>
-                        You must reserve a seat before reserving this book. The
-                        book may only be used during your selected seat
-                        reservation.
+                        {isBookAvailable
+                          ? "You must reserve a seat before reserving this book. The book may only be used during your selected seat reservation."
+                          : "You must have an upcoming seat reservation before joining this book waiting list. The book may only be used inside the library."}
                       </p>
 
                       <Button
@@ -203,11 +251,13 @@ export default function ReserveBookPage() {
                               key={reservation.reservationId}
                               value={reservation.reservationId}
                             >
-                              Seat {reservation.seatId} —{" "}
+                              Seat {reservation.seatId}
+                              {" — "}
                               {formatReservationDate(
                                 reservation.reservationDate,
-                              )}{" "}
-                              — {formatReservationTime(reservation.startTime)}
+                              )}
+                              {" — "}
+                              {formatReservationTime(reservation.startTime)}
                               {" - "}
                               {formatReservationTime(reservation.endTime)}
                             </option>
@@ -222,11 +272,13 @@ export default function ReserveBookPage() {
                           <dl>
                             <div>
                               <dt>Seat</dt>
+
                               <dd>{selectedReservation.seatId}</dd>
                             </div>
 
                             <div>
                               <dt>Area</dt>
+
                               <dd>
                                 {formatLocation(selectedReservation.location)}
                               </dd>
@@ -234,6 +286,7 @@ export default function ReserveBookPage() {
 
                             <div>
                               <dt>Date</dt>
+
                               <dd>
                                 {formatReservationDate(
                                   selectedReservation.reservationDate,
@@ -243,6 +296,7 @@ export default function ReserveBookPage() {
 
                             <div>
                               <dt>Book Collection</dt>
+
                               <dd>
                                 {formatReservationTime(
                                   selectedReservation.startTime,
@@ -252,6 +306,7 @@ export default function ReserveBookPage() {
 
                             <div>
                               <dt>Book Return</dt>
+
                               <dd>
                                 {formatReservationTime(
                                   selectedReservation.endTime,
@@ -263,27 +318,28 @@ export default function ReserveBookPage() {
                       )}
 
                       <div className="reserveNote">
-                        The book must be collected and returned during the
-                        selected seat reservation.
+                        {isBookAvailable
+                          ? "The book must be collected and returned during the selected seat reservation."
+                          : "The waiting-list entry is linked to this visit. If the visit is cancelled, the related book waiting-list entry will also be cancelled."}
                       </div>
 
                       <div className="reserveActions">
                         <Button
-                          variant="primary"
+                          variant={isBookAvailable ? "primary" : "secondary"}
                           onClick={handleReserveBook}
-                          disabled={
-                            isLoading ||
-                            Boolean(successMessage) ||
-                            Number(book.available_quantity) <= 0
-                          }
+                          disabled={isLoading || Boolean(successMessage)}
                         >
                           {isLoading
-                            ? "Reserving..."
+                            ? isBookAvailable
+                              ? "Reserving..."
+                              : "Joining..."
                             : successMessage
-                              ? "Book Reserved"
-                              : Number(book.available_quantity) <= 0
-                                ? "Unavailable"
-                                : "Reserve Book"}
+                              ? isBookAvailable
+                                ? "Book Reserved"
+                                : "Waiting List Joined"
+                              : isBookAvailable
+                                ? "Reserve Book"
+                                : "Join Waiting List"}
                         </Button>
                       </div>
                     </>

@@ -9,17 +9,23 @@ BookCard.jsx
 - הצגת תמונת הספר.
 - הצגת שם הספר, המחבר והקטגוריה.
 - הצגת זמינות הספר.
-- הפעלת הזמנת ספר.
+- מעבר להזמנת ספר זמין.
+- מעבר להצטרפות לרשימת המתנה לספר שאינו זמין.
 - הצגת פעולות עריכה ומחיקה לספרנית רק כאשר
   התקבלו פעולות מתאימות מהקומפוננטה ההורה.
 =========================================================
 */
 
 import { useContext } from "react";
+
 import PropTypes from "prop-types";
+
 import Button from "./Button";
+
 import { AuthContext } from "../../context/AuthContext";
+
 import { buildApiUrl } from "../../config/api";
+
 import { bookPropType } from "../../propTypes/bookPropTypes";
 
 /*
@@ -59,11 +65,25 @@ BookCard
 
 תפקיד:
 מציגה כרטיס של ספר ומאפשרת לבצע פעולות בהתאם
-להרשאות המשתמש ולפעולות שהתקבלו מההורה.
+להרשאות המשתמש ולזמינות הספר.
+
+עבור משתמש רגיל:
+- ספר זמין מציג Reserve.
+- ספר שאינו זמין מציג Join Waiting List.
+
+שני הכפתורים מעבירים לדף הספר:
+- בספר זמין המשתמש בוחר הזמנת מקום ושומר ספר.
+- בספר לא זמין המשתמש בוחר הזמנת מקום ומצטרף
+  לרשימת ההמתנה.
+
+עבור ספרנית:
+- פעולת ההזמנה אינה מוצגת.
+- פעולות עריכה ומחיקה מוצגות כאשר התקבלו
+  מהקומפוננטה ההורה.
 
 isDeleting:
-מציין שפעולת המחיקה מתבצעת כרגע ומונע לחיצות
-כפולות על כפתור המחיקה.
+מציין שפעולת המחיקה מתבצעת כרגע ומונע
+לחיצות כפולות על כפתור המחיקה.
 ---------------------------------------------------------
 */
 export default function BookCard({
@@ -87,7 +107,9 @@ export default function BookCard({
 
       <div className="bookCardBody">
         <div className="bookCategory">
-          {book.category || "General"} ·{" "}
+          {book.category || "General"}
+          {" · "}
+
           <span className={isAvailable ? "available" : "unavailable"}>
             {isAvailable ? "Available" : "Out of Stock"}
           </span>
@@ -97,14 +119,24 @@ export default function BookCard({
 
         <p>{book.author}</p>
 
-        {onReserve && (
+        {/*
+        פעולת המשתמש מוצגת רק לקורא.
+
+        הכפתור נשאר פעיל גם כאשר הספר אינו
+        זמין, משום שבמקרה כזה הוא מוביל
+        להצטרפות לרשימת ההמתנה.
+        */}
+        {!isLibrarian && onReserve && (
           <Button
-            variant="success"
+            variant={isAvailable ? "success" : "secondary"}
             onClick={onReserve}
-            disabled={!isAvailable}
-            aria-label={`Reserve ${book.title}`}
+            aria-label={
+              isAvailable
+                ? `Reserve ${book.title}`
+                : `Join the waiting list for ${book.title}`
+            }
           >
-            {isAvailable ? "Reserve" : "Not Available"}
+            {isAvailable ? "Reserve" : "Join Waiting List"}
           </Button>
         )}
 

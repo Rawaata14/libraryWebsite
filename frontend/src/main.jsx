@@ -14,6 +14,7 @@ main.jsx
 */
 
 import React from "react";
+
 import ReactDOM from "react-dom/client";
 
 import App from "./App/app";
@@ -31,7 +32,10 @@ import { NotificationProvider } from "./context/NotificationContext";
 ---------------------------------------------------------
 קובצי עיצוב כלליים
 
-סדר הטעינה חשוב.
+סדר הטעינה חשוב:
+- משתנים נטענים ראשונים.
+- עיצוב כללי ומבנה נטענים לאחר מכן.
+- עיצוב של דפים ורכיבים ייעודיים נטען בסוף.
 ---------------------------------------------------------
 */
 import "./styles/variables.css";
@@ -52,6 +56,11 @@ import "./styles/reserve-book.css";
 import "./styles/about.css";
 import "./styles/events.css";
 import "./styles/notifications.css";
+
+/*
+עיצוב דפי רשימות ההמתנה של המשתמש והספרנית.
+*/
+import "./styles/waiting-lists.css";
 
 /*
 ---------------------------------------------------------

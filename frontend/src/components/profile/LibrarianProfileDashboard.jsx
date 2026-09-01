@@ -252,6 +252,22 @@ export default function LibrarianProfileDashboard() {
             <p>View, add, edit and remove books</p>
           </NavLink>
 
+          {/*
+            קישור לניהול רשימות ההמתנה.
+
+            הדף מציג לספרנית:
+            - ממתינים לספרים.
+            - ממתינים למקומות.
+            - מיקום כל משתמש בתור.
+            - הצעות פעילות.
+            - הצעות שהושלמו או שפג תוקפן.
+          */}
+          <NavLink className="profileBox" to="/admin/waiting-lists">
+            <h3>⏳ Manage Waiting Lists</h3>
+
+            <p>Monitor book and seat queues and active offers</p>
+          </NavLink>
+
           <NavLink className="profileBox" to="/admin/map">
             <h3>🪑 Manage Seats</h3>
 

@@ -16,8 +16,6 @@ useManageReservations
 =========================================================
 */
 
-import { useNavigate } from "react-router-dom";
-
 import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
 
@@ -41,7 +39,6 @@ ManageReservationsPage
 ---------------------------------------------------------
 */
 export default function ManageReservationsPage() {
-  const navigate = useNavigate();
 
   const {
     reservations,

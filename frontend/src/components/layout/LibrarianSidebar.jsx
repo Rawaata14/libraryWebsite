@@ -96,6 +96,20 @@ export default function LibrarianSidebar() {
           📅 Manage Reservations
         </NavLink>
 
+        {/*
+          קישור לניהול רשימות ההמתנה של ספרים
+          ושל מקומות ישיבה.
+
+          הספרנית יכולה לראות:
+          - מי ממתין.
+          - מיקום בתור.
+          - מצב ההמתנה.
+          - הצעות פעילות והצעות שפג תוקפן.
+        */}
+        <NavLink to="/admin/waiting-lists" className={navClassName}>
+          ⏳ Manage Waiting Lists
+        </NavLink>
+
         <NavLink to="/admin/books" className={navClassName}>
           📖 Manage Books
         </NavLink>

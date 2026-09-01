@@ -180,15 +180,31 @@ export default function LibraryMap({
           const isReservableItem = RESERVABLE_ITEM_TYPES.includes(item.type);
 
           /*
-          -------------------------------------------------
-          בדיקת אפשרות בחירת הפריט
+-------------------------------------------------
+בדיקת אפשרות בחירת הפריט
 
-          ספרנית יכולה לבחור כל פריט.
-          משתמש יכול לבחור רק מושב פנוי שניתן להזמנה.
-          -------------------------------------------------
-          */
+ספרנית:
+יכולה לבחור כל פריט לצורך עריכה וניהול.
+
+משתמש:
+יכול לבחור כל פריט שמייצג מקום ישיבה, כל עוד
+המקום אינו חסום מנהלית.
+
+מצב available:
+פותח תהליך הזמנה רגיל.
+
+מצב occupied, reserved או unavailable:
+פותח תהליך הצטרפות לרשימת המתנה.
+
+מצב blocked:
+אינו ניתן להזמנה או להמתנה.
+-------------------------------------------------
+*/
+          const normalizedItemStatus = String(item.status || "").toLowerCase();
+
           const isItemClickable =
-            isLibrarian || (isReservableItem && item.status === "available");
+            isLibrarian ||
+            (isReservableItem && normalizedItemStatus !== "blocked");
 
           return (
             <div

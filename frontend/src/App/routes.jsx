@@ -8,6 +8,7 @@ routes.jsx
 אחריות:
 - הגדרת כל הנתיבים במקום אחד.
 - הגנה על דפים לפי מצב התחברות והרשאות.
+- הוספת נתיבי רשימות ההמתנה.
 - הפניית נתיבים לא קיימים לדף הבית.
 =========================================================
 */
@@ -20,22 +21,35 @@ import AdminMapPage from "../pages/AdminMapPage";
 import BooksPage from "../pages/BooksPage";
 import EventsPage from "../pages/EventsPage";
 import HomePage from "../pages/HomePage";
+
 import LibrarianDashboardPage from "../pages/LibrarianDashboardPage";
+
 import LoginPage from "../pages/LoginPage";
+
 import ManageReservationsPage from "../pages/ManageReservationsPage";
+
+import ManageWaitingListsPage from "../pages/ManageWaitingListsPage";
+
 import MapPage from "../pages/MapPage";
 import MessagesPage from "../pages/MessagesPage";
 import MyMessagesPage from "../pages/MyMessagesPage";
+
 import MyReservationsPage from "../pages/MyReservationsPage";
+
+import MyWaitingListsPage from "../pages/MyWaitingListsPage";
+
 import NotificationsPage from "../pages/NotificationsPage";
 import ProfilePage from "../pages/ProfilePage";
 import RegisterPage from "../pages/RegisterPage";
 import ReportsPage from "../pages/ReportsPage";
 import ReserveBookPage from "../pages/ReserveBookPage";
+
 import UsersManagementPage from "../pages/UsersManagementPage";
 
 import GuestRoute from "../components/common/GuestRoute";
+
 import ProtectedRoute from "../components/common/ProtectedRoute";
+
 import RoleRoute from "../components/common/RoleRoute";
 
 import PageShell from "../components/layout/PageShell";
@@ -153,6 +167,21 @@ export default function AppRoutes() {
           }
         />
 
+        {/*
+        דף רשימות ההמתנה האישיות.
+
+        השרת מזהה את המשתמש באמצעות ה-Session
+        ומחזיר רק את ההמתנות השייכות לו.
+        */}
+        <Route
+          path="/my-waiting-lists"
+          element={
+            <ProtectedRoute>
+              <MyWaitingListsPage />
+            </ProtectedRoute>
+          }
+        />
+
         {/* ===== דפים לקוראים בלבד ===== */}
 
         <Route
@@ -234,6 +263,21 @@ export default function AppRoutes() {
           element={
             <RoleRoute allowedRoles={LIBRARIAN_ROLES}>
               <ManageReservationsPage />
+            </RoleRoute>
+          }
+        />
+
+        {/*
+        דף ניהול רשימות ההמתנה.
+
+        רק ספרנית רשאית לראות את כל המשתמשים
+        הממתינים ואת מצב ההצעות במערכת.
+        */}
+        <Route
+          path="/admin/waiting-lists"
+          element={
+            <RoleRoute allowedRoles={LIBRARIAN_ROLES}>
+              <ManageWaitingListsPage />
             </RoleRoute>
           }
         />

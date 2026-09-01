@@ -296,6 +296,25 @@ export default function UserProfileDashboard() {
             <p>View your active reservations</p>
           </button>
 
+          {/*
+            כפתור מעבר לרשימות ההמתנה האישיות.
+
+            בדף זה המשתמש יכול:
+            - לראות את מיקומו בתור.
+            - לראות אם התקבלה הצעה.
+            - לבדוק את זמן פקיעת ההצעה.
+            - לעזוב רשימת המתנה פעילה.
+          */}
+          <button
+            type="button"
+            className={"profileBox profileActionButton"}
+            onClick={() => navigate("/my-waiting-lists")}
+          >
+            <h3>⏳ My Waiting Lists</h3>
+
+            <p>Track book and seat waiting-list positions</p>
+          </button>
+
           <button
             type="button"
             className={"profileBox profileActionButton"}

@@ -104,6 +104,14 @@ async function addBook(bookDetails) {
       return {
         success: true,
         bookAlreadyExists: true,
+
+        /*
+        מזהה הספר מוחזר לנתיב כדי שניתן יהיה לבדוק
+        אם קיימים משתמשים שממתינים לספר שהתפנה
+        בעקבות הוספת העותקים החדשים.
+        */
+        bookId: existingBook.bookId,
+
         message: `Book already exists. Quantity updated to ${newTotalQuantity}`,
       };
     }
@@ -144,6 +152,16 @@ async function addBook(bookDetails) {
       return {
         success: true,
         bookAlreadyExists: false,
+
+        /*
+          insertId הוא ה-bookId שנוצר אוטומטית במסד
+          הנתונים עבור הספר החדש.
+
+          ה-ID הפנימי מוחזר לנתיב לצורך פעולות המשך,
+          ואינו מחליף את ה-ISBN של הספר.
+        */
+        bookId: result.insertId,
+
         message: "Book added successfully",
       };
     }

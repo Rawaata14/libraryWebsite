@@ -3,12 +3,14 @@
 MapPage.jsx
 
 תיאור הקובץ:
-דף בחירת מקום ויצירת הזמנה במפת הספרייה.
+דף בחירת מקום במפת הספרייה.
 
 העמוד אחראי על:
 - הצגת בחירת התאריך והשעה.
 - הצגת מפת המקומות.
-- פתיחת חלון הזמנה לאחר בחירת כיסא פנוי.
+- פתיחת חלון הזמנה עבור מקום פנוי.
+- פתיחת חלון הצטרפות לתור עבור מקום תפוס.
+- סימון מקום שהוצע למשתמש מרשימת ההמתנה.
 - הצגת הודעת הצלחה או שגיאה נגישה.
 
 מצב ההזמנה והפעולות מנוהלים באמצעות:
@@ -16,9 +18,12 @@ useSeatReservation
 =========================================================
 */
 
-import PageShell from "../components/layout/PageShell";
 import PageBanner from "../components/layout/PageBanner";
+
+import PageShell from "../components/layout/PageShell";
+
 import RoomMap from "../components/dashboard/RoomMap";
+
 import SeatReservationSummary from "../components/map/SeatReservationSummary";
 
 import useSeatReservation from "../hooks/useSeatReservation";
@@ -28,7 +33,7 @@ import useSeatReservation from "../hooks/useSeatReservation";
 MapPage
 
 תפקיד:
-מחברת בין תהליך ההזמנה שב-Hook
+מחברת בין תהליך ההזמנה ורשימת ההמתנה שב-Hook
 לבין מפת המקומות ורכיבי התצוגה.
 ---------------------------------------------------------
 */
@@ -39,6 +44,8 @@ export default function MapPage() {
     availableSlots,
     selectedTime,
     selectedSeat,
+    offeredSeatId,
+    isSelectedSeatAvailable,
     isSubmitting,
     mapRefreshKey,
     reservationFeedback,
@@ -57,10 +64,18 @@ export default function MapPage() {
         <div className="mapPageCard mapPageCardColumn">
           {/*
           =================================================
-          הוראות קצרות לתהליך ההזמנה
+          הוראות קצרות לתהליך
+
+          מקום פנוי:
+          המשתמש מאשר הזמנה.
+
+          מקום תפוס:
+          המשתמש מצטרף לרשימת המתנה.
+
+          הצעה פעילה:
+          המקום שהוצע למשתמש מסומן במפה.
           =================================================
           */}
-
           <ol className="reservationSteps" aria-label="Reservation steps">
             <li>
               <span>1</span>
@@ -69,12 +84,12 @@ export default function MapPage() {
 
             <li>
               <span>2</span>
-              Choose an available seat
+              Choose a seat
             </li>
 
             <li>
               <span>3</span>
-              Confirm reservation
+              Reserve or join the waiting list
             </li>
           </ol>
 
@@ -83,7 +98,6 @@ export default function MapPage() {
           הודעת הצלחה או שגיאה
           =================================================
           */}
-
           {reservationFeedback && (
             <div
               className={`mapReservationFeedback ${
@@ -103,7 +117,6 @@ export default function MapPage() {
           בחירת תאריך, שעה ומקום
           =================================================
           */}
-
           <div className="mapSelectionPanel fullWidthPanel">
             <div className="mapFilters">
               <div className="formGroup">
@@ -140,17 +153,27 @@ export default function MapPage() {
                     ))
                   ) : (
                     <option value="" disabled>
-                      No available slots for this date
+                      No future time slots for this date
                     </option>
                   )}
                 </select>
               </div>
             </div>
 
+            {/*
+            RoomMap מקבלת את התאריך וטווח הזמן
+            ומציגה את מצב המקומות לאותו מועד.
+
+            selectedSeatId:
+            - אם המשתמש כבר לחץ על מקום, מסומן
+              המקום שנבחר.
+            - אם המשתמש הגיע מהצעה פעילה, מסומן
+              המקום שהוצע לו עד שילחץ עליו.
+            */}
             <RoomMap
               key={mapRefreshKey}
               onSeatSelect={handleSeatSelect}
-              selectedSeatId={selectedSeat?.id}
+              selectedSeatId={selectedSeat?.id || offeredSeatId}
               selectedDate={selectedDate}
               selectedTime={selectedTime}
             />
@@ -160,17 +183,24 @@ export default function MapPage() {
 
       {/*
       ===================================================
-      חלון סיכום ואישור ההזמנה
+      חלון סיכום ואישור הפעולה
 
-      מוצג רק לאחר בחירת כיסא פנוי.
+      מקום פנוי:
+      החלון מציג אישור הזמנה.
+
+      מקום תפוס:
+      החלון מציג אישור הצטרפות לרשימת המתנה.
+
+      מקום חסום אינו ניתן לבחירה ולכן אינו
+      פותח את החלון.
       ===================================================
       */}
-
       {selectedSeat && (
         <SeatReservationSummary
           selectedSeat={selectedSeat}
           selectedDate={selectedDate}
           selectedTime={selectedTime}
+          isSeatAvailable={isSelectedSeatAvailable}
           isSubmitting={isSubmitting}
           onConfirm={handleConfirmReservation}
           onClose={closeReservationDialog}

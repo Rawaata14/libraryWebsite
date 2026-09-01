@@ -22,7 +22,6 @@ import useLibrarianDashboard from "../hooks/useLibrarianDashboard";
 
 import "../styles/librarianDashboard.css";
 
-import { formatReservationDate } from "../utils/reservationUtils";
 
 /*
 ---------------------------------------------------------

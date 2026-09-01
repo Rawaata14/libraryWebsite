@@ -465,12 +465,16 @@ async function cancelReservation(reservationId, userId) {
           startTime,
           '%H:%i:%s'
         ) AS startTime,
+        TIME_FORMAT(
+          endTime,
+          '%H:%i:%s'
+        ) AS endTime,
         status
       FROM seat_reservation
       WHERE reservationId = ?
         AND userId = ?
       LIMIT 1
-    `;
+`;
 
     const reservations = await doQuery(findSQL, [reservationId, userId]);
 
@@ -552,6 +556,13 @@ async function cancelReservation(reservationId, userId) {
         seatId: reservation.seatId,
         reservationDate,
         startTime: reservationStartTime,
+
+        /*
+          שעת הסיום מוחזרת כדי שניתן יהיה להציע את
+          המקום למשתמש הבא שממתין לאותו טווח זמן.
+        */
+        endTime: normalizeTime(reservation.endTime),
+
         isToday: reservationDate === libraryNow.date,
       },
     };
@@ -580,11 +591,23 @@ async function cancelReservationByLibrarian(reservationId) {
         reservationId,
         userId,
         seatId,
+        DATE_FORMAT(
+          reservationDate,
+          '%Y-%m-%d'
+        ) AS reservationDate,
+        TIME_FORMAT(
+          startTime,
+          '%H:%i:%s'
+        ) AS startTime,
+        TIME_FORMAT(
+          endTime,
+          '%H:%i:%s'
+        ) AS endTime,
         status
       FROM seat_reservation
       WHERE reservationId = ?
       LIMIT 1
-    `;
+`;
 
     const reservations = await doQuery(getReservationSQL, [reservationId]);
 
@@ -639,6 +662,14 @@ async function cancelReservationByLibrarian(reservationId) {
         reservationId,
         userId: reservation.userId,
         seatId: reservation.seatId,
+
+        /*
+        פרטי הזמן נדרשים כדי לחפש את המשתמש הבא
+        שממתין לאותו מקום ובאותו חלון זמן.
+      */
+        reservationDate: normalizeDate(reservation.reservationDate),
+        startTime: normalizeTime(reservation.startTime),
+        endTime: normalizeTime(reservation.endTime),
       },
     };
   } catch (error) {
@@ -656,31 +687,50 @@ async function cancelReservationByLibrarian(reservationId) {
 getReservationById
 
 תפקיד:
-שולפת הזמנה אחת לפי המזהה.
+שולפת הזמנה אחת לפי המזהה שלה.
+
+הפונקציה מחזירה:
+- פרטי ההזמנה.
+- פרטי המקום.
+- מזהה המשתמש.
+- כתובת המייל של המשתמש.
+
+כתובת המייל נדרשת כדי לאפשר לספרנית לשלוח
+לבעל ההזמנה גם התראה בתוך המערכת וגם הודעת
+דוא"ל.
+
+LEFT JOIN:
+נעשה שימוש ב-LEFT JOIN כדי שעדיין יהיה ניתן
+לקבל את פרטי ההזמנה גם אם קיימת בעיה חריגה
+ברשומת המשתמש.
 ---------------------------------------------------------
 */
 async function getReservationById(reservationId) {
   try {
     const sql = `
       SELECT
-        reservationId,
-        userId,
-        seatId,
+        sr.reservationId,
+        sr.userId,
+        sr.seatId,
         DATE_FORMAT(
-          reservationDate,
+          sr.reservationDate,
           '%Y-%m-%d'
         ) AS reservationDate,
         TIME_FORMAT(
-          startTime,
+          sr.startTime,
           '%H:%i:%s'
         ) AS startTime,
         TIME_FORMAT(
-          endTime,
+          sr.endTime,
           '%H:%i:%s'
         ) AS endTime,
-        status
-      FROM seat_reservation
-      WHERE reservationId = ?
+        sr.status,
+        u.email AS userEmail,
+        u.fullName AS userFullName
+      FROM seat_reservation AS sr
+      LEFT JOIN user AS u
+        ON sr.userId = u.userId
+      WHERE sr.reservationId = ?
       LIMIT 1
     `;
 
@@ -741,8 +791,16 @@ const getReservationsEndingIn15Minutes = async () => {
 getAllTimeSlotsAvailability
 
 תפקיד:
-מחזירה את חלונות הזמן שעדיין ניתנים להזמנה
-ושבהם קיים לפחות מקום פנוי.
+מחזירה את כל חלונות הזמן העתידיים שעדיין ניתן
+לבחור עבור התאריך המבוקש.
+
+גם חלון שבו כל המקומות תפוסים נשאר ברשימה:
+- אם קיים מקום פנוי, המשתמש יוכל להזמין אותו.
+- אם המקום הרצוי תפוס, המשתמש יוכל להצטרף
+  לרשימת ההמתנה.
+
+הזמינות של כל מקום מסוים נבדקת בנפרד כאשר
+המפה נטענת וכאשר המשתמש מבצע את הפעולה.
 ---------------------------------------------------------
 */
 async function getAllTimeSlotsAvailability(date) {
@@ -757,6 +815,9 @@ async function getAllTimeSlotsAvailability(date) {
 
     const libraryNow = getLibraryDateTime();
 
+    /*
+    לא מחזירים חלונות זמן עבור תאריך שכבר עבר.
+    */
     if (date < libraryNow.date) {
       return {
         success: true,
@@ -764,38 +825,14 @@ async function getAllTimeSlotsAvailability(date) {
       };
     }
 
-    const totalSeatsResult = await doQuery(`
-      SELECT COUNT(*) AS count
-      FROM seat
-      WHERE LOWER(status) <> 'blocked'
-    `);
+    /*
+    עבור היום הנוכחי מוצגים רק חלונות שעדיין
+    לא התחילו.
 
-    const totalSeats = Number(totalSeatsResult[0]?.count) || 0;
-
-    if (totalSeats === 0) {
-      return {
-        success: true,
-        data: [],
-      };
-    }
-
-    const sql = `
-      SELECT
-        TIME_FORMAT(
-          startTime,
-          '%H:%i'
-        ) AS startTime,
-        seatId
-      FROM seat_reservation
-      WHERE reservationDate = ?
-        AND LOWER(status) NOT IN (
-          'cancelled',
-          'canceled'
-        )
-    `;
-
-    const reservations = await doQuery(sql, [date]);
-
+    עבור יום עתידי מוצגים כל חלונות הזמן.
+    חלון מלא אינו מוסר, משום שהוא עדיין יכול
+    לשמש להצטרפות לרשימת המתנה.
+    */
     const validSlots = RESERVATION_TIME_SLOTS.filter((slot) => {
       const startTime = slot.split(" - ")[0];
 
@@ -803,15 +840,7 @@ async function getAllTimeSlotsAvailability(date) {
         return false;
       }
 
-      const bookedSeats = new Set(
-        reservations
-          .filter(
-            (reservation) => normalizeTime(reservation.startTime) === startTime,
-          )
-          .map((reservation) => reservation.seatId),
-      );
-
-      return bookedSeats.size < totalSeats;
+      return true;
     });
 
     return {
@@ -819,11 +848,11 @@ async function getAllTimeSlotsAvailability(date) {
       data: validSlots,
     };
   } catch (error) {
-    console.error("Error fetching available time slots:", error);
+    console.error("Error fetching reservation time slots:", error);
 
     return {
       success: false,
-      message: "Failed to fetch available time slots",
+      message: "Failed to fetch reservation time slots",
     };
   }
 }

@@ -363,23 +363,59 @@ export default function Header() {
                     </NavLink>
 
                     {isLibrarian ? (
-                      <NavLink
-                        to="/admin/librarian"
-                        className={profileLinkClassName}
-                        role="menuitem"
-                      >
-                        <span aria-hidden="true">📊</span>
-                        Librarian Dashboard
-                      </NavLink>
+                      <>
+                        {/*
+                         קישור לדאשבורד הראשי של הספרנית.
+                        */}
+                        <NavLink
+                          to="/admin/librarian"
+                          className={profileLinkClassName}
+                          role="menuitem"
+                        >
+                          <span aria-hidden="true">📊</span>
+                          Librarian Dashboard
+                        </NavLink>
+
+                        {/*
+                          קישור לניהול כל רשימות ההמתנה
+                          של הספרים ושל מקומות הישיבה.
+                        */}
+                        <NavLink
+                          to="/admin/waiting-lists"
+                          className={profileLinkClassName}
+                          role="menuitem"
+                        >
+                          <span aria-hidden="true">⏳</span>
+                          Manage Waiting Lists
+                        </NavLink>
+                      </>
                     ) : (
-                      <NavLink
-                        to="/my-reservations"
-                        className={profileLinkClassName}
-                        role="menuitem"
-                      >
-                        <span aria-hidden="true">📅</span>
-                        My Reservations
-                      </NavLink>
+                      <>
+                        {/*
+                           קישור להזמנות המקומות של המשתמש.
+                          */}
+                        <NavLink
+                          to="/my-reservations"
+                          className={profileLinkClassName}
+                          role="menuitem"
+                        >
+                          <span aria-hidden="true">📅</span>
+                          My Reservations
+                        </NavLink>
+
+                        {/*
+                          קישור לרשימות ההמתנה האישיות
+                          של המשתמש.
+                        */}
+                        <NavLink
+                          to="/my-waiting-lists"
+                          className={profileLinkClassName}
+                          role="menuitem"
+                        >
+                          <span aria-hidden="true">⏳</span>
+                          My Waiting Lists
+                        </NavLink>
+                      </>
                     )}
 
                     <div className={"profileDropdownDivider"} />

@@ -3,15 +3,17 @@
 useBookReservation.js
 
 תיאור הקובץ:
-Custom Hook המרכז את הלוגיקה של דף שריון הספר.
+Custom Hook המרכז את הלוגיקה של דף שריון הספר
+והצטרפות לרשימת ההמתנה.
 
 אחריות:
 - טעינת הספר שנבחר.
 - שחזור הספר לאחר רענון הדף.
-- טעינת הזמנות הכיסא של המשתמש.
+- טעינת הזמנות המקום של המשתמש.
 - סינון הזמנות תקפות.
-- ניהול בחירת הזמנת כיסא.
-- שליחת בקשת שריון הספר.
+- ניהול בחירת הזמנת מקום.
+- שריון ספר זמין.
+- הצטרפות לרשימת המתנה לספר שאינו זמין.
 =========================================================
 */
 
@@ -25,6 +27,8 @@ import { getBookById, reserveBook } from "../services/bookService";
 
 import { getReservations } from "../services/reservationService";
 
+import { joinBookWaitingList } from "../services/waitingListService";
+
 import { splitReservationsByTime } from "../utils/reservationUtils";
 
 /*
@@ -32,7 +36,11 @@ import { splitReservationsByTime } from "../utils/reservationUtils";
 ELIGIBLE_RESERVATION_STATUSES
 
 תפקיד:
-מרכז את הסטטוסים שמאפשרים לשריין ספר.
+מרכז את הסטטוסים שמאפשרים לשריין ספר או
+להצטרף לרשימת המתנה לספר.
+
+הספר מיועד לשימוש בתוך הספרייה ולכן נדרשת
+הזמנת מקום תקפה גם לצורך ההמתנה.
 ---------------------------------------------------------
 */
 const ELIGIBLE_RESERVATION_STATUSES = [
@@ -44,14 +52,28 @@ const ELIGIBLE_RESERVATION_STATUSES = [
 
 /*
 ---------------------------------------------------------
+getRequestErrorMessage
+
+תפקיד:
+מחזירה הודעת שגיאה ברורה מתוך שגיאת Axios.
+---------------------------------------------------------
+*/
+function getRequestErrorMessage(error, fallbackMessage) {
+  return error.response?.data?.message || error.message || fallbackMessage;
+}
+
+/*
+---------------------------------------------------------
 useBookReservation
 
 תפקיד:
-מספק לדף השריון את כל המידע והפעולות הנדרשות.
+מספק לדף הספר את כל המידע והפעולות הנדרשות
+לשריון או להצטרפות לרשימת המתנה.
 ---------------------------------------------------------
 */
 export function useBookReservation() {
   const location = useLocation();
+
   const { id: routeBookId } = useParams();
 
   const { user } = useContext(AuthContext);
@@ -72,7 +94,7 @@ export function useBookReservation() {
 
   /*
   ---------------------------------------------------------
-  טעינת הספר והזמנות הכיסא
+  טעינת הספר והזמנות המקום
 
   אם פרטי הספר לא הגיעו דרך הניווט:
   הספר נשלף מחדש לפי המזהה שבכתובת.
@@ -102,12 +124,12 @@ export function useBookReservation() {
         const reservations = reservationsResponse.data?.reservations || [];
 
         /*
-        ספרן עשוי לקבל מהשרת את כל ההזמנות.
-        לכן מתבצע גם סינון בצד התצוגה לפי userId.
+          ספרנית עשויה לקבל מהשרת את כל ההזמנות.
+          לכן מתבצע גם סינון בצד התצוגה לפי userId.
 
-        ה-Backend עדיין מבצע בדיקת בעלות נוספת,
-        ולכן אין הסתמכות אבטחתית על הסינון הזה.
-        */
+          ה-Backend עדיין מבצע בדיקת בעלות נוספת,
+          ולכן אין הסתמכות אבטחתית על הסינון הזה.
+          */
         const currentUserReservations = reservations.filter((reservation) => {
           if (!reservation.userId || !user?.userId) {
             return true;
@@ -116,6 +138,10 @@ export function useBookReservation() {
           return Number(reservation.userId) === Number(user.userId);
         });
 
+        /*
+          רק הזמנה בעלת מצב פעיל יכולה לשמש
+          לשריון ספר או להצטרפות לתור.
+          */
         const reservationsWithValidStatus = currentUserReservations.filter(
           (reservation) =>
             ELIGIBLE_RESERVATION_STATUSES.includes(
@@ -123,6 +149,11 @@ export function useBookReservation() {
             ),
         );
 
+        /*
+          splitReservationsByTime משתמש בזמן
+          הספרייה ומחזיר רק הזמנות עתידיות
+          שעדיין לא הסתיימו.
+          */
         const { upcomingReservations } = splitReservationsByTime(
           reservationsWithValidStatus,
         );
@@ -141,8 +172,10 @@ export function useBookReservation() {
 
         if (isMounted) {
           setError(
-            loadError.response?.data?.message ||
+            getRequestErrorMessage(
+              loadError,
               "Failed to load the book reservation details.",
+            ),
           );
         }
       } finally {
@@ -161,10 +194,24 @@ export function useBookReservation() {
 
   /*
   ---------------------------------------------------------
+  isBookAvailable
+
+  תפקיד:
+  קובעת אם קיים כרגע לפחות עותק זמין.
+
+  הערך קובע איזו פעולה תתבצע:
+  - true: שריון ספר.
+  - false: הצטרפות לרשימת המתנה.
+  ---------------------------------------------------------
+  */
+  const isBookAvailable = Number(book?.available_quantity) > 0;
+
+  /*
+  ---------------------------------------------------------
   selectedReservation
 
   תפקיד:
-  מחזירה את אובייקט ההזמנה שנבחרה לפי המזהה.
+  מחזירה את אובייקט הזמנת המקום שנבחרה.
   ---------------------------------------------------------
   */
   const selectedReservation = useMemo(
@@ -181,13 +228,15 @@ export function useBookReservation() {
   handleReservationChange
 
   תפקיד:
-  מעדכנת את הזמנת הכיסא שנבחרה ומנקה
+  מעדכנת את הזמנת המקום שנבחרה ומנקה
   הודעות קודמות.
   ---------------------------------------------------------
   */
   const handleReservationChange = (reservationId) => {
     setSelectedReservationId(reservationId);
+
     setError("");
+
     setSuccessMessage("");
   };
 
@@ -196,51 +245,103 @@ export function useBookReservation() {
   handleReserveBook
 
   תפקיד:
-  שולחת לשרת את הספר ואת הזמנת הכיסא שנבחרה.
+  מבצעת את הפעולה המתאימה לפי זמינות הספר.
+
+  אם הספר זמין:
+  - נשלחת בקשת שריון.
+  - הכמות הזמינה מתעדכנת מקומית.
+
+  אם הספר אינו זמין:
+  - המשתמש מצטרף לרשימת ההמתנה.
+  - ההמתנה מקושרת להזמנת המקום שנבחרה.
+  - הכמות אינה משתנה.
   ---------------------------------------------------------
   */
   const handleReserveBook = async () => {
     if (!book?.bookId) {
       setError("No book was selected.");
+
       return;
     }
 
     if (!selectedReservationId) {
-      setError("Select a valid seat reservation before reserving the book.");
+      setError(
+        isBookAvailable
+          ? "Select a valid seat reservation before reserving the book."
+          : "Select a valid seat reservation before joining the waiting list.",
+      );
+
       return;
     }
 
     try {
       setIsLoading(true);
+
       setError("");
+
       setSuccessMessage("");
 
-      const response = await reserveBook(
-        book.bookId,
-        Number(selectedReservationId),
-      );
-
-      setSuccessMessage(
-        response.data?.message || "Book reserved successfully.",
-      );
+      const reservationId = Number(selectedReservationId);
 
       /*
-      עדכון מקומי של מספר העותקים מונע הצגת
-      מלאי ישן לאחר השלמת השריון.
+      -------------------------------------------------------
+      שריון ספר זמין
+      -------------------------------------------------------
       */
-      setBook((currentBook) => ({
-        ...currentBook,
-        available_quantity: Math.max(
-          Number(currentBook.available_quantity) - 1,
-          0,
-        ),
-      }));
+      if (isBookAvailable) {
+        const response = await reserveBook(book.bookId, reservationId);
+
+        setSuccessMessage(
+          response.data?.message || "Book reserved successfully.",
+        );
+
+        /*
+        עדכון מקומי של הכמות מונע הצגת מלאי
+        ישן לאחר השלמת השריון.
+        */
+        setBook((currentBook) => ({
+          ...currentBook,
+
+          available_quantity: Math.max(
+            Number(currentBook.available_quantity) - 1,
+            0,
+          ),
+        }));
+
+        return;
+      }
+
+      /*
+      -------------------------------------------------------
+      הצטרפות לרשימת ההמתנה
+
+      השרת בודק:
+      - שהספר קיים ואינו זמין.
+      - שהזמנת המקום שייכת למשתמש.
+      - שההזמנה עדיין תקפה.
+      - שאין כבר המתנה פעילה זהה.
+      -------------------------------------------------------
+      */
+      const result = await joinBookWaitingList(book.bookId, reservationId);
+
+      setSuccessMessage(
+        result.message || "You joined the book waiting list successfully.",
+      );
     } catch (reservationError) {
-      console.error("Error reserving book:", reservationError);
+      console.error(
+        isBookAvailable
+          ? "Error reserving book:"
+          : "Error joining book waiting list:",
+        reservationError,
+      );
 
       setError(
-        reservationError.response?.data?.message ||
-          "Failed to reserve the book. Please try again.",
+        getRequestErrorMessage(
+          reservationError,
+          isBookAvailable
+            ? "Failed to reserve the book. Please try again."
+            : "Failed to join the waiting list. Please try again.",
+        ),
       );
     } finally {
       setIsLoading(false);
@@ -253,6 +354,7 @@ export function useBookReservation() {
     eligibleReservations,
     selectedReservation,
     selectedReservationId,
+    isBookAvailable,
     isPageLoading,
     isLoading,
     error,
