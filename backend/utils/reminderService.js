@@ -1,5 +1,5 @@
 const reservationQueries = require("../database/queries/reservationQueries");
-const transporter = require("../utils/mailer");
+const { sendLibraryEmail } = require("../utils/mailer");
 
 /**
  * בודק ושולח התראות לכל מי שההזמנה שלו מסתיימת בעוד 15 דקות
@@ -17,10 +17,14 @@ const checkAndSendExpirationReminders = async () => {
         from: process.env.EMAIL_USER,
         to: reservation.userEmail,
         subject: "תזכורת: הזמנת הכיסא שלך עומדת להסתיים בעוד 15 דקות",
-        text: `היי ${reservation.firstName},\n\nרצינו לעדכן שהזמנת הכיסא שלך (כיסא מספר ${reservation.seatId}) בספרייה תסתיים בעוד כ-15 דקות.\nנשמח לראותך שוב,\nצוות הספרייה.`,
+        text: `היי ${reservation.fullName},\n\nרצינו לעדכן שהזמנת הכיסא שלך (כיסא מספר ${reservation.seatId}) בספרייה תסתיים בעוד כ-15 דקות.\nנשמח לראותך שוב,\nצוות הספרייה.`,
       };
-
-      await transporter.sendMail(mailOptions);
+      console.log("sending reminder to email:", reservation.userEmail);
+      await sendLibraryEmail(
+        reservation.userEmail,
+        mailOptions.subject,
+        mailOptions.text,
+      );
     }
   } catch (error) {
     console.error("Error in checkAndSendExpirationReminders workflow:", error);
