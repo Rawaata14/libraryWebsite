@@ -41,7 +41,6 @@ const SESSION_SECRET = process.env.SESSION_SECRET;
 
 const { checkAndSendExpirationReminders } = require("./utils/reminderService");
 
-
 /*
 ---------------------------------------------------------
 בדיקת SESSION_SECRET
@@ -209,6 +208,25 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+/*
+---------------------------------------------------------
+טיפול מרכזי בשגיאות
+
+תפקיד:
+מחזיר תשובה אחידה במקרה של שגיאה שלא טופלה
+בתוך אחד מקובצי ה-Routes.
+---------------------------------------------------------
+*/
+app.use((error, req, res, next) => {
+  console.error("=== שגיאה מפורטת בשרת: ===");
+  console.error(error.stack); // <--- מוסיפים את זה כדי לראות את המיקום המדויק
+
+  return res.status(500).json({
+    success: false,
+    message: "Internal server error",
+  });
+});
 
 setInterval(() => {
   checkAndSendExpirationReminders();

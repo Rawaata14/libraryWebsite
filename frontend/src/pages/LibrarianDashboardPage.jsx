@@ -146,8 +146,7 @@ export default function LibrarianDashboardPage() {
                       <tr>
                         <th scope="col">Book Title</th>
                         <th scope="col">Time Slot</th>
-                        <th scope="col">Available Now</th>
-                        <th scope="col">User ID</th>
+                        <th scope="col">Available Copies</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -168,7 +167,6 @@ export default function LibrarianDashboardPage() {
                                 loan.book?.available_quantity ??
                                 "-"}
                             </td>
-                            <td>{loan.userId}</td>
                           </tr>
                         ))
                       ) : (

@@ -52,7 +52,11 @@ router.get("/get-map", async (req, res) => {
     }
 
     // 3. קוראים לפונקציה החדשה ב-Queries עם הנתונים המעובדים
-    const result = await seatQueries.getMapSeatsByTimeSlot(date, startTime, endTime);
+    const result = await seatQueries.getMapSeatsByTimeSlot(
+      date,
+      startTime,
+      endTime,
+    );
 
     if (result.success) {
       res.status(200).json({ map: result.map });
@@ -78,6 +82,32 @@ router.delete("/delete-seat/:seatId", requireLibrarian, async (req, res) => {
   } catch (error) {
     console.error("Error in deleting seat:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// Route for updating a seat's status (e.g. blocking/unblocking)
+router.put("/status/:seatId", requireLibrarian, async (req, res) => {
+  try {
+    const seatId = req.params.seatId;
+    const { status, location, rotation, x, y, type } = req.body;
+
+    // שולפים את הכיסא הקיים כדי לא לאבד שדות אחרים אם הם לא נשלחו
+    // לחלופין, אפשר להשתמש בפונקציה קיימת שמביאה את הכיסא לפי ID,
+    // אבל אם את שולחת את כל אובייקט הכיסא ממה שקיים ב-State - אפשר לעדכן ישירות:
+    const result = await seatQueries.updateSeat(seatId, req.body);
+
+    if (result.success) {
+      res
+        .status(200)
+        .json({ success: true, message: "Seat status updated successfully" });
+    } else {
+      res
+        .status(500)
+        .json({ success: false, message: "Failed to update seat status" });
+    }
+  } catch (error) {
+    console.error("Error in updating seat status:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 

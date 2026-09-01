@@ -34,6 +34,23 @@ export const deleteMapItem = async (seatId) => {
 
 /*
 ---------------------------------------------------------
+updateSeatStatus
+
+תפקיד:
+מעדכן את הסטטוס של כיסא מסוים (למשל blocked או available) בשרת.
+---------------------------------------------------------
+*/
+export const updateSeatStatus = async (seatItem) => {
+  return axios.put(buildApiUrl(`/seats/status/${seatItem.seatId}`), seatItem, {
+    headers: {
+      "Content-Type": "application/json",
+    },
+    withCredentials: true,
+  });
+};
+
+/*
+---------------------------------------------------------
 saveLibraryMap
 
 תפקיד:

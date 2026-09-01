@@ -16,10 +16,10 @@ const checkAndSendExpirationReminders = async () => {
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: reservation.userEmail,
-        subject: "תזכורת: הזמנת הכיסא שלך עומדת להסתיים בעוד 15 דקות",
-        text: `היי ${reservation.fullName},\n\nרצינו לעדכן שהזמנת הכיסא שלך (כיסא מספר ${reservation.seatId}) בספרייה תסתיים בעוד כ-15 דקות.\nנשמח לראותך שוב,\nצוות הספרייה.`,
+        subject: "Reminder: Your seat reservation is expiring in 15 minutes",
+        text: `Hi ${reservation.fullName},\n\nWe wanted to let you know that your seat reservation (Seat #${reservation.seatId}) at the library will expire in about 15 minutes.\nWe hope to see you again soon,\nThe Library Team.`,
       };
-      console.log("sending reminder to email:", reservation.userEmail);
+
       await sendLibraryEmail(
         reservation.userEmail,
         mailOptions.subject,

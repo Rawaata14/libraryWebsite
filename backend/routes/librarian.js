@@ -6,7 +6,7 @@ librarian.js
 Routes עבור דשבורד הספרנית.
 
 הקובץ אחראי על:
-- שליפת סטטיסטיקות מרכזיות ממסד הנתונים.
+- שליפת סטטיסטיקות מרכזיות ממסד הנתונים (דרך שכבת השאילתות).
 - חישוב הזמנות היום לפי חלונות זמן.
 - חישוב מספר המקומות הזמינים בכל חלון.
 - החזרת פעילות יומית אחרונה.
@@ -15,9 +15,25 @@ Routes עבור דשבורד הספרנית.
 */
 
 const express = require("express");
-
-const doQuery = require("../database/query");
 const { requireLibrarian } = require("../middleware/auth");
+
+const {
+  getTodayReservationsCount,
+  getHourlyReservationsForToday,
+  getRecentTodayReservations,
+} = require("../queries/reservationQueries");
+const {
+  getLoansCountByStatus,
+  getActiveLoansListForLibrarian,
+} = require("../queries/bookQueries");
+const {
+  getBlockedSeatsCount,
+  getReservableSeatsCount,
+} = require("../queries/seatQueries");
+const {
+  getUnreadLibrarianMessagesCount,
+  getRecentTodayMessages,
+} = require("../queries/messageQueries");
 
 const router = express.Router();
 
@@ -63,127 +79,28 @@ router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
       במקביל כדי לקצר את זמן טעינת הדשבורד.
       */
     const [
-      todayReservationsResult,
-      activeLoansResult,
-      activeLoansListResult,
-      overdueBooksResult,
-      unreadMessagesResult,
-      blockedSeatsResult,
-      reservableSeatsResult,
+      todayReservations,
+      activeLoans,
+      activeLoansList,
+      overdueBooks,
+      unreadMessages,
+      blockedSeats,
+      totalReservableSeats,
       hourlyReservationsResult,
       todayReservationsActivity,
       todayMessagesActivity,
     ] = await Promise.all([
-      doQuery(`
-          SELECT COUNT(*) AS count
-          FROM seat_reservation
-          WHERE reservationDate = CURDATE()
-            AND LOWER(status) <> 'cancelled'
-        `),
-
-      doQuery(`
-          SELECT COUNT(*) AS count
-          FROM loan
-          WHERE LOWER(status) = 'active'
-        `),
-
-      doQuery(`SELECT 
-          l.loanId,
-          l.bookId,
-          l.userId,
-          l.dueDate,
-          l.status,
-          b.title AS bookTitle,
-          b.total_quantity,
-          MIN(TIME_FORMAT(sr.startTime, '%H:%i')) AS startTime,
-          MIN(TIME_FORMAT(sr.endTime, '%H:%i')) AS endTime,
-          (b.total_quantity - (
-              SELECT COUNT(*) 
-              FROM loan active_l 
-              WHERE active_l.bookId = b.bookId 
-                AND LOWER(active_l.status) = 'active'
-                AND DATE(active_l.loanDate) = CURDATE()
-          )) AS availableQuantity
-        FROM loan l
-        JOIN book b ON l.bookId = b.bookId
-        LEFT JOIN seat_reservation sr ON l.userId = sr.userId AND sr.reservationDate = CURDATE()
-        WHERE LOWER(l.status) = 'active'
-          AND DATE(l.loanDate) = CURDATE()
-        GROUP BY l.loanId, l.bookId, l.userId, l.dueDate, l.status, b.title, b.total_quantity
-        ORDER BY l.loanDate DESC
-        LIMIT 10`),
-
-      doQuery(`
-          SELECT COUNT(*) AS count
-          FROM loan
-          WHERE LOWER(status) = 'late'
-        `),
-
-      doQuery(`
-          SELECT COUNT(*) AS count
-          FROM messages
-          WHERE isRead = 0
-            AND recipientRole = 'librarian'
-        `),
-
-      doQuery(`
-          SELECT COUNT(*) AS count
-          FROM seat
-          WHERE LOWER(status) = 'blocked'
-        `),
-
-      /*
-        סופרים רק פריטים שניתן להזמין.
-        שולחנות ועמדת הקבלה אינם חלק מהקיבולת.
-        */
-      doQuery(`
-          SELECT COUNT(*) AS count
-          FROM seat
-          WHERE LOWER(status) <> 'blocked'
-            AND type IN (
-              'seat',
-              'seat-to-add',
-              'single-seat',
-              'computer-seat'
-            )
-        `),
-
-      doQuery(`
-          SELECT
-            TIME_FORMAT(startTime, '%H:%i') AS startTime,
-            TIME_FORMAT(endTime, '%H:%i') AS endTime,
-            COUNT(*) AS booked
-          FROM seat_reservation
-          WHERE reservationDate = CURDATE()
-            AND LOWER(status) <> 'cancelled'
-          GROUP BY startTime, endTime
-          ORDER BY startTime ASC
-        `),
-
-      doQuery(`
-          SELECT
-            reservationId,
-            seatId,
-            startTime,
-            endTime,
-            status
-          FROM seat_reservation
-          WHERE reservationDate = CURDATE()
-          ORDER BY startTime ASC
-          LIMIT 5
-        `),
-
-      doQuery(`
-          SELECT senderName, createdAt
-          FROM messages
-          WHERE DATE(createdAt) = CURDATE()
-            AND recipientRole = 'librarian'
-          ORDER BY createdAt DESC
-          LIMIT 5
-        `),
+      getTodayReservationsCount(),
+      getLoansCountByStatus("active"),
+      getActiveLoansListForLibrarian(),
+      getLoansCountByStatus("late"),
+      getUnreadLibrarianMessagesCount(),
+      getBlockedSeatsCount(),
+      getReservableSeatsCount(),
+      getHourlyReservationsForToday(),
+      getRecentTodayReservations(),
+      getRecentTodayMessages(),
     ]);
-
-    const totalReservableSeats = Number(reservableSeatsResult[0]?.count) || 0;
 
     /*
       ---------------------------------------------------
@@ -223,12 +140,9 @@ router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
     const todayActivity = [
       ...todayReservationsActivity.map((reservation) => {
         const startTime = String(reservation.startTime).slice(0, 5);
-
         const endTime = String(reservation.endTime).slice(0, 5);
-
         return `Seat ${reservation.seatId} reserved from ${startTime} to ${endTime} (${reservation.status})`;
       }),
-
       ...todayMessagesActivity.map(
         (message) => `New message from ${message.senderName}`,
       ),
@@ -237,18 +151,12 @@ router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
     return res.status(200).json({
       success: true,
       stats: {
-        activeLoans: Number(activeLoansResult[0]?.count) || 0,
-
-        activeLoansList: activeLoansListResult || [],
-
-        overdueBooks: Number(overdueBooksResult[0]?.count) || 0,
-
-        unreadMessages: Number(unreadMessagesResult[0]?.count) || 0,
-
-        blockedSeats: Number(blockedSeatsResult[0]?.count) || 0,
-
-        todayReservations: Number(todayReservationsResult[0]?.count) || 0,
-
+        activeLoans,
+        activeLoansList,
+        overdueBooks,
+        unreadMessages,
+        blockedSeats,
+        todayReservations,
         hourlyReservations,
         todayActivity,
       },
