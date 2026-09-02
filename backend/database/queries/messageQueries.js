@@ -277,7 +277,7 @@ markConversationAsRead
 
 דוגמה:
 כאשר הספרן פותח שיחה, מסומנות כנקראו רק
-ההודעות שה-recipientRole שלהן הוא librarian.
+ההודעות שה-recipientRole שלהן هو librarian.
 ---------------------------------------------------------
 */
 async function markConversationAsRead(conversationId, recipientRole) {
@@ -347,6 +347,50 @@ async function getUserEmailForNotification(userId) {
   }
 }
 
+/*
+---------------------------------------------------------
+getUnreadLibrarianMessagesCount
+
+תפקיד:
+מחזירה את מספר ההודעות החדשות שלא נקראו המיועדות לספרנית.
+---------------------------------------------------------
+*/
+async function getUnreadLibrarianMessagesCount() {
+  const sql = `
+    SELECT COUNT(*) AS count
+    FROM messages
+    WHERE isRead = 0
+      AND recipientRole = 'librarian'
+  `;
+  const result = await doQuery(sql);
+  return Number(result[0]?.count) || 0;
+}
+
+/*
+---------------------------------------------------------
+getRecentTodayMessages
+
+תפקיד:
+מחזירה את ההודעות האחרונות שהתקבלו עבור הספרנית במהלך היום.
+---------------------------------------------------------
+*/
+async function getRecentTodayMessages() {
+  const sql = `
+    SELECT senderName, createdAt
+    FROM messages
+    WHERE DATE(createdAt) = CURDATE()
+      AND recipientRole = 'librarian'
+    ORDER BY createdAt DESC
+    LIMIT 5
+  `;
+  return await doQuery(sql);
+}
+
+/*
+---------------------------------------------------------
+ייצוא הפונקציות
+---------------------------------------------------------
+*/
 module.exports = {
   addMessage,
   getAllMessages,
@@ -357,4 +401,6 @@ module.exports = {
   markConversationAsRead,
   markMessageAsRead,
   getUserEmailForNotification,
+  getUnreadLibrarianMessagesCount,
+  getRecentTodayMessages,
 };

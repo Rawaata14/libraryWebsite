@@ -908,6 +908,61 @@ async function deleteBook(bookId) {
 
 /*
 ---------------------------------------------------------
+getLoansCountByStatus
+
+תפקיד:
+מחזירה את סך כל ההשאלות במערכת לפי סטטוס מבוקש.
+---------------------------------------------------------
+*/
+async function getLoansCountByStatus(status) {
+  const sql = `
+    SELECT COUNT(*) AS count
+    FROM loan
+    WHERE LOWER(status) = LOWER(?)
+  `;
+  const result = await doQuery(sql, [status]);
+  return Number(result[0]?.count) || 0;
+}
+
+/*
+getActiveLoansListForLibrarian
+
+תפקיד:
+מחזירה רשימה של ההשאלות הפעילות להיום עבור הספרנית,
+כולל חישוב דינמי של עותקים זמינים בחלונות הזמן.
+*/
+async function getActiveLoansListForLibrarian() {
+  const sql = `
+    SELECT
+      l.bookId,
+      b.title AS bookTitle,
+      b.total_quantity,
+      TIME_FORMAT(sr.startTime, '%H:%i') AS startTime,
+      TIME_FORMAT(sr.endTime, '%H:%i') AS endTime,
+      (b.total_quantity - (
+          SELECT COUNT(*)
+          FROM loan active_l
+          JOIN seat_reservation active_sr ON active_l.seatReservationId = active_sr.reservationId
+          WHERE active_l.bookId = b.bookId
+            AND LOWER(active_l.status) = 'active'
+            AND DATE(active_l.loanDate) = CURDATE()
+            AND active_sr.startTime < sr.endTime
+            AND active_sr.endTime > sr.startTime
+      )) AS availableQuantity
+    FROM loan l
+    JOIN book b ON l.bookId = b.bookId
+    JOIN seat_reservation sr ON l.seatReservationId = sr.reservationId
+    WHERE LOWER(l.status) = 'active'
+      AND DATE(l.loanDate) = CURDATE()
+    GROUP BY l.bookId, b.title, b.total_quantity, sr.startTime, sr.endTime
+    ORDER BY sr.startTime ASC
+    LIMIT 10
+  `;
+  return await doQuery(sql);
+}
+
+/*
+---------------------------------------------------------
 ייצוא הפונקציות
 ---------------------------------------------------------
 */
@@ -918,4 +973,6 @@ module.exports = {
   updateBook,
   reserveBook,
   deleteBook,
+  getLoansCountByStatus,
+  getActiveLoansListForLibrarian,
 };

@@ -1,5 +1,30 @@
+/*
+=========================================================
+seatQueries.js
+
+תיאור הקובץ:
+שכבת השאילתות של מערכת הכיסאות והמפה.
+
+אחריות:
+- הוספת כיסא חדש למערכת.
+- שליפת מצב הכיסאות במפה לפי תאריך וטווח שעות (חישוב דינמי).
+- עדכון פרטי כיסא קיים.
+- מחיקת כיסא מהמערכת.
+- שליפת סטטיסטיקות על כמות הכיסאות החסומים והניתנים להזמנה.
+=========================================================
+*/
+
 const doQuery = require("../query");
 
+/*
+---------------------------------------------------------
+addSeat
+
+תפקיד:
+מוסיפה כיסא חדש למסד הנתונים עם ערכי ברירת מחדל
+לסטטוס וסוג הכיסא במידת הצורך.
+---------------------------------------------------------
+*/
 async function addSeat(seatDetails) {
   const { location, status, rotation, x, y, type } = seatDetails;
   const normalizedStatus = status || "available"; // Default status is "available"
@@ -35,18 +60,19 @@ getMapSeatsByTimeSlot
 async function getMapSeatsByTimeSlot(reservationDate, startTime, endTime) {
   try {
     const getMapSQL = `
-      SELECT 
-        s.*, -- מחזיר את כל השדות של הכיסא (כולל x, y, width, height וכו')
-        CASE 
+      SELECT
+        s.*,
+        CASE
+          WHEN s.status = 'blocked' THEN 'blocked'
           WHEN sr.reservationId IS NOT NULL THEN 'occupied'
           ELSE 'available'
         END AS status
       FROM seat s
-      LEFT JOIN seat_reservation sr 
-        ON s.seatId = sr.seatId 
-        AND sr.reservationDate = ? 
+      LEFT JOIN seat_reservation sr
+        ON s.seatId = sr.seatId
+        AND sr.reservationDate = ?
         AND sr.status <> 'cancelled'
-        AND sr.startTime < ? 
+        AND sr.startTime < ?
         AND sr.endTime > ?
     `;
 
@@ -63,6 +89,14 @@ async function getMapSeatsByTimeSlot(reservationDate, startTime, endTime) {
   }
 }
 
+/*
+---------------------------------------------------------
+updateSeat
+
+תפקיד:
+מעדכנת את פרטי הכיסא הקיים (מיקום, סטטוס, זוית, קואורדינטות וסוג).
+---------------------------------------------------------
+*/
 async function updateSeat(seatId, seatDetails) {
   const { location, status, rotation, x, y, type } = seatDetails;
   const normalizedStatus = status || "available";
@@ -86,6 +120,14 @@ async function updateSeat(seatId, seatDetails) {
   }
 }
 
+/*
+---------------------------------------------------------
+deleteSeat
+
+תפקיד:
+מוחקת כיסא מהמערכת על פי מזהה הכיסא.
+---------------------------------------------------------
+*/
 async function deleteSeat(seatId) {
   try {
     const deleteSeatSQL = "DELETE FROM seat WHERE seatId = ?";
@@ -97,9 +139,58 @@ async function deleteSeat(seatId) {
   }
 }
 
+/*
+---------------------------------------------------------
+getBlockedSeatsCount
+
+תפקיד:
+מחזירה את מספר הכיסאות המוגדרים כחסומים במערכת.
+---------------------------------------------------------
+*/
+async function getBlockedSeatsCount() {
+  const sql = `
+    SELECT COUNT(*) AS count
+    FROM seat
+    WHERE LOWER(status) = 'blocked'
+  `;
+  const result = await doQuery(sql);
+  return Number(result[0]?.count) || 0;
+}
+
+/*
+---------------------------------------------------------
+getReservableSeatsCount
+
+תפקיד:
+מחזירה את סך כל הכיסאות והעמדות שניתן להזמין בפועל (לא חסומים).
+---------------------------------------------------------
+*/
+async function getReservableSeatsCount() {
+  const sql = `
+    SELECT COUNT(*) AS count
+    FROM seat
+    WHERE LOWER(status) <> 'blocked'
+      AND type IN (
+        'seat',
+        'seat-to-add',
+        'single-seat',
+        'computer-seat'
+      )
+  `;
+  const result = await doQuery(sql);
+  return Number(result[0]?.count) || 0;
+}
+
+/*
+---------------------------------------------------------
+ייצוא הפונקציות
+---------------------------------------------------------
+*/
 module.exports = {
   addSeat,
   getMapSeatsByTimeSlot,
   updateSeat,
   deleteSeat,
+  getBlockedSeatsCount,
+  getReservableSeatsCount,
 };

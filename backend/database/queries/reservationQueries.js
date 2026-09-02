@@ -857,6 +857,66 @@ async function getAllTimeSlotsAvailability(date) {
   }
 }
 
+/*
+getTodayReservationsCount
+
+תפקיד:
+מחזירה את סך כל הזמנות הכיסאות הפעילות להיום (שלא בוטלו).
+*/
+async function getTodayReservationsCount() {
+  const sql = `
+    SELECT COUNT(*) AS count
+    FROM seat_reservation
+    WHERE reservationDate = CURDATE()
+      AND LOWER(status) <> 'cancelled'
+  `;
+  const result = await doQuery(sql);
+  return Number(result[0]?.count) || 0;
+}
+
+/*
+getHourlyReservationsForToday
+
+תפקיד:
+מחזירה את כמות ההזמנות המרכזת לפי חלונות זמן להיום.
+*/
+async function getHourlyReservationsForToday() {
+  const sql = `
+    SELECT
+      TIME_FORMAT(startTime, '%H:%i') AS startTime,
+      TIME_FORMAT(endTime, '%H:%i') AS endTime,
+      COUNT(*) AS booked
+    FROM seat_reservation
+    WHERE reservationDate = CURDATE()
+      AND LOWER(status) <> 'cancelled'
+    GROUP BY startTime, endTime
+    ORDER BY startTime ASC
+  `;
+  return await doQuery(sql);
+}
+
+/*
+getRecentTodayReservations
+
+תפקיד:
+מחזירה את רשימת ההזמנות האחרונות שבוצעו להיום לצורך הצגת פעילות.
+*/
+async function getRecentTodayReservations() {
+  const sql = `
+    SELECT
+      reservationId,
+      seatId,
+      startTime,
+      endTime,
+      status
+    FROM seat_reservation
+    WHERE reservationDate = CURDATE()
+    ORDER BY startTime ASC
+    LIMIT 5
+  `;
+  return await doQuery(sql);
+}
+
 module.exports = {
   reserveSeat,
   getAllReservations,
@@ -866,4 +926,7 @@ module.exports = {
   cancelReservationByLibrarian,
   getAllTimeSlotsAvailability,
   getReservationsEndingIn15Minutes,
+  getRecentTodayReservations,
+  getTodayReservationsCount,
+  getHourlyReservationsForToday,
 };

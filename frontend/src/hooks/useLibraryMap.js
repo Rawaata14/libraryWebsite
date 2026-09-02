@@ -20,7 +20,11 @@ import { useState, useEffect } from "react";
 
 import useMapDragging from "./useMapDragging";
 
-import { deleteMapItem, saveLibraryMap } from "../services/mapService";
+import {
+  deleteMapItem,
+  updateSeatStatus,
+  saveLibraryMap,
+} from "../services/mapService";
 
 import { getAvailablePositionInZone, mapZones } from "../utils/mapUtils";
 
@@ -180,21 +184,39 @@ export default function useLibraryMap({
   toggleBlockItem
   ---------------------------------------------------------
   */
-  const toggleBlockItem = () => {
+  const toggleBlockItem = async () => {
     if (!selectedSeatId) {
       return;
     }
 
-    setItems((previousItems) =>
-      previousItems.map((item) =>
-        item.seatId === selectedSeatId
-          ? {
-              ...item,
-              status: item.status === "blocked" ? "available" : "blocked",
-            }
-          : item,
-      ),
-    );
+    // מוצאים את הכיסא הנוכחי כדי לדעת מה הסטטוס ההפוך שלו
+    const currentItem = items.find((item) => item.seatId === selectedSeatId);
+    if (!currentItem) return;
+
+    const newStatus =
+      currentItem.status === "blocked" ? "available" : "blocked";
+
+    try {
+      // יוצרים אובייקט מעודכן ששולח את הסטטוס החדש יחד עם כל שאר שדות הכיסא הקיימים
+      const updatedItem = { ...currentItem, status: newStatus };
+
+      // שולחים את כל האובייקט המלא לשרת
+      const response = await updateSeatStatus(updatedItem);
+
+      if (response.data.success || response.status === 200) {
+        // עדכון ה-State המקומי בדפדפן רק אחרי שהשרת אישר
+        setItems((previousItems) =>
+          previousItems.map((item) =>
+            item.seatId === selectedSeatId
+              ? { ...item, status: newStatus }
+              : item,
+          ),
+        );
+      }
+    } catch (error) {
+      console.error("Error updating seat status in DB:", error);
+      alert("Failed to update seat status.");
+    }
   };
 
   /*
@@ -291,6 +313,6 @@ export default function useLibraryMap({
     handleMapPointerLeave,
     updateItemPosition,
     saveMap,
-    cancelChanges, 
+    cancelChanges,
   };
 }

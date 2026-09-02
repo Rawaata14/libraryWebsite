@@ -11,7 +11,9 @@ Routes עבור מערכת הספרים.
 - שליפת כל הספרים.
 - שליפת ספר לפי מזהה.
 - שריון ספר במסגרת הזמנת כיסא תקפה.
+- חיבור שריון הספר לרשימת ההמתנה.
 - עריכת פרטי ספר וכמות עותקים.
+- הצעת ספר שהתפנה למשתמש הבא בתור.
 - מחיקת ספר ללא היסטוריית השאלות.
 =========================================================
 */
@@ -22,6 +24,8 @@ const path = require("path");
 const fs = require("fs/promises");
 
 const bookQueries = require("../database/queries/bookQueries");
+
+const waitingListService = require("../services/waitingListService");
 
 const router = express.Router();
 
@@ -133,10 +137,45 @@ async function removeStoredBookImage(imageName) {
 
 /*
 ---------------------------------------------------------
+offerBookToNextWaitingUser
+
+תפקיד:
+בודקת אם יש משתמש שממתין לספר שהתפנה
+ומפעילה את תהליך ההצעה למשתמש הבא בתור.
+
+הפונקציה אינה מבטלת פעולה שכבר הצליחה אם
+שליחת ההצעה או ההתראה נכשלת.
+
+למה:
+הוספת ספר או עדכון מלאי צריכים להישאר
+מוצלחים גם אם שירות רשימת ההמתנה נתקל
+בשגיאה זמנית.
+---------------------------------------------------------
+*/
+async function offerBookToNextWaitingUser(bookId) {
+  if (!Number.isInteger(bookId) || bookId <= 0) {
+    return;
+  }
+
+  try {
+    await waitingListService.offerNextBook(bookId);
+  } catch (waitingListError) {
+    console.error(
+      "Book inventory was updated, but waiting-list processing failed:",
+      waitingListError,
+    );
+  }
+}
+
+/*
+---------------------------------------------------------
 POST /books/add-book
 
 תפקיד:
 מוסיפה ספר חדש למערכת.
+
+אם הספר כבר קיים לפי ISBN ונוספו לו עותקים,
+נבדקת רשימת ההמתנה ומופעל המשתמש הבא בתור.
 
 גישה:
 רק משתמשת בעלת תפקיד librarian רשאית
@@ -179,6 +218,23 @@ router.post("/add-book", upload.single("image"), async (req, res) => {
       */
     if (!result.success || result.bookAlreadyExists) {
       await removeUploadedFile(req.file);
+    }
+
+    /*
+      אם נוספו עותקים לספר שכבר קיים,
+      ייתכן שכעת אפשר להציע אותו למשתמש
+      הראשון ברשימת ההמתנה.
+
+      ספר חדש אינו אמור לכלול רשימת המתנה
+      קודמת, ולכן הבדיקה מופעלת רק כאשר
+      הספר כבר היה קיים.
+      */
+    if (
+      result.success &&
+      result.bookAlreadyExists &&
+      Number.isInteger(Number(result.bookId))
+    ) {
+      await offerBookToNextWaitingUser(Number(result.bookId));
     }
 
     if (result.success) {
@@ -271,6 +327,16 @@ POST /books/:id/reserve
 משריינת ספר עבור המשתמש המחובר במסגרת
 הזמנת כיסא תקפה השייכת לו.
 
+לפני השריון נבדק אם קיימת הצעה פעילה
+לספר מתוך רשימת ההמתנה:
+
+- אם אין הצעה פעילה, אפשר לבצע שריון רגיל.
+- אם הספר מוצע למשתמש המחובר, הוא יכול לשריין.
+- אם הספר מוצע למשתמש אחר, השריון נחסם.
+
+לאחר שריון מוצלח, הצעת רשימת ההמתנה
+מסומנת כ-completed.
+
 ה-Frontend שולח:
 {
   "reservationId": 12
@@ -290,6 +356,8 @@ router.post("/:id/reserve", async (req, res) => {
 
     const seatReservationId = Number(req.body.reservationId);
 
+    const userId = Number(req.session.user.userId);
+
     if (!Number.isInteger(bookId) || bookId <= 0) {
       return res.status(400).json({
         success: false,
@@ -305,11 +373,57 @@ router.post("/:id/reserve", async (req, res) => {
       });
     }
 
-    const result = await bookQueries.reserveBook(
+    /*
+    בדיקת הרשאה מול הצעה פעילה ברשימת ההמתנה.
+
+    הבדיקה מונעת ממשתמש אחר לקחת ספר שכבר
+    הוצע לזמן מוגבל למשתמש הראשון בתור.
+    */
+    const offerAccess = await waitingListService.validateBookOfferAccess(
       bookId,
-      req.session.user.userId,
+      userId,
       seatReservationId,
     );
+
+    if (!offerAccess.success) {
+      return res.status(offerAccess.status || 409).json({
+        success: false,
+
+        message:
+          offerAccess.message ||
+          "This book is currently offered to another user.",
+      });
+    }
+
+    const result = await bookQueries.reserveBook(
+      bookId,
+      userId,
+      seatReservationId,
+    );
+
+    /*
+    מסמנים הצעה כ-completed רק לאחר ששריון
+    הספר הסתיים בהצלחה.
+
+    כך ההצעה אינה הולכת לאיבוד אם שמירת
+    השריון נכשלה.
+    */
+    if (result.success && offerAccess.waitingId) {
+      try {
+        await waitingListService.completeOffer("book", offerAccess.waitingId);
+      } catch (waitingListError) {
+        /*
+        שריון הספר כבר הצליח ולכן אין להחזיר
+        למשתמש הודעת כישלון.
+
+        השגיאה נרשמת לצורך בדיקה ותחזוקה.
+        */
+        console.error(
+          "Book was reserved, but completing the waiting-list offer failed:",
+          waitingListError,
+        );
+      }
+    }
 
     return res
       .status(result.statusCode || (result.success ? 201 : 400))
@@ -330,6 +444,9 @@ PATCH /books/:id
 
 תפקיד:
 מעדכנת פרטי ספר וכמות עותקים.
+
+אם העדכון יצר עותקים זמינים, נבדקת רשימת
+ההמתנה ומופעל המשתמש הבא בתור.
 
 גישה:
 רק ספרנית מחוברת רשאית לבצע את הפעולה.
@@ -364,6 +481,17 @@ router.patch("/:id", async (req, res) => {
     }
 
     const result = await bookQueries.updateBook(bookId, req.body);
+
+    /*
+    אם לאחר העדכון קיים לפחות עותק זמין,
+    בודקים אם יש משתמש שממתין לספר.
+
+    offerNextBook מבצעת בדיקה נוספת של
+    המלאי ושל רשימת ההמתנה.
+    */
+    if (result.success && Number(result.book?.available_quantity) > 0) {
+      await offerBookToNextWaitingUser(bookId);
+    }
 
     return res
       .status(result.statusCode || (result.success ? 200 : 400))

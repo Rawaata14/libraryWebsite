@@ -17,9 +17,7 @@ app.js
 =========================================================
 */
 
-require("dotenv").config({
-  quiet: true,
-});
+require("dotenv").config({ quiet: true });
 
 const express = require("express");
 const session = require("express-session");
@@ -28,34 +26,35 @@ const path = require("path");
 
 const dbSingleton = require("./database/dbSingleton");
 
-/*
-=========================================================
-ייבוא קובצי הנתיבים
-=========================================================
-*/
 const userRoutes = require("./routes/user");
 const bookRoutes = require("./routes/book");
 const seatRoutes = require("./routes/seat");
-
 const reservationRoutes = require("./routes/reservation");
-
 const messageRoutes = require("./routes/message");
-
 const reportRoutes = require("./routes/report");
-
 const notificationRoutes = require("./routes/notification");
-
 const librarianRoutes = require("./routes/librarian");
 
+/*
+---------------------------------------------------------
+ייבוא הנתיבים של רשימות ההמתנה
+
+תפקיד:
+מחבר לשרת את הפעולות של רשימות ההמתנה
+לספרים ולמקומות.
+---------------------------------------------------------
+*/
 const waitingListRoutes = require("./routes/waitingList");
 
 /*
-=========================================================
-ייבוא שירותי הרקע
-=========================================================
-*/
-const { checkAndSendExpirationReminders } = require("./utils/reminderService");
+---------------------------------------------------------
+ייבוא מתזמן רשימות ההמתנה
 
+תפקיד:
+מאפשר להפעיל את תהליכי הרקע המטפלים
+בהצעות זמינות וברשומות שפג תוקפן.
+---------------------------------------------------------
+*/
 const {
   startWaitingListScheduler,
 } = require("./services/waitingListScheduler");
@@ -63,10 +62,10 @@ const {
 const app = express();
 
 const PORT = Number(process.env.PORT) || 8000;
-
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5000";
-
 const SESSION_SECRET = process.env.SESSION_SECRET;
+
+const { checkAndSendExpirationReminders } = require("./utils/reminderService");
 
 /*
 ---------------------------------------------------------
@@ -104,20 +103,13 @@ CORS
 app.use(
   cors({
     origin: FRONTEND_URL,
-
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-
     credentials: true,
   }),
 );
 
 app.use(express.json());
-
-app.use(
-  express.urlencoded({
-    extended: true,
-  }),
-);
+app.use(express.urlencoded({ extended: true }));
 
 /*
 ---------------------------------------------------------
@@ -135,11 +127,8 @@ app.use(
 
     cookie: {
       httpOnly: true,
-
       secure: process.env.NODE_ENV === "production",
-
       sameSite: "lax",
-
       maxAge: 1000 * 60 * 60 * 8,
     },
   }),
@@ -150,8 +139,7 @@ app.use(
 Static uploads
 
 תפקיד:
-מאפשר ל-Frontend לגשת לתמונות ספרים
-ולתמונות פרופיל.
+מאפשר ל-Frontend לגשת לתמונות ספרים ותמונות פרופיל.
 ---------------------------------------------------------
 */
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -163,19 +151,22 @@ Routes
 */
 
 app.use("/user", userRoutes);
-
 app.use("/books", bookRoutes);
-
 app.use("/seats", seatRoutes);
-
 app.use("/reservations", reservationRoutes);
-
 app.use("/messages", messageRoutes);
-
 app.use("/reports", reportRoutes);
-
 app.use("/notifications", notificationRoutes);
 
+/*
+---------------------------------------------------------
+Waiting-list routes
+
+תפקיד:
+מאפשר למשתמשים ולספרנית לבצע פעולות
+ברשימות ההמתנה לספרים ולמקומות.
+---------------------------------------------------------
+*/
 app.use("/waiting-lists", waitingListRoutes);
 
 app.use("/api/librarian", librarianRoutes);
@@ -230,83 +221,17 @@ app.use((error, req, res, next) => {
 
 /*
 ---------------------------------------------------------
-startReminderScheduler
-
-תפקיד:
-מפעילה את שירות התזכורות שהשותפה הוסיפה.
-
-השירות בודק אחת לדקה אם קיימות הזמנות
-שמועד הסיום שלהן מתקרב ושולח למשתמש
-את ההתראה המתאימה.
-
-המתזמן מופעל רק לאחר:
-- התחברות מוצלחת למסד הנתונים.
-- הפעלה מוצלחת של שרת Express.
----------------------------------------------------------
-*/
-function startReminderScheduler() {
-  const reminderInterval = setInterval(async () => {
-    try {
-      await checkAndSendExpirationReminders();
-    } catch (error) {
-      /*
-        שגיאה במחזור תזכורות אחד אינה צריכה
-        להפיל את שרת הספרייה.
-        */
-      console.error("Expiration reminder cycle failed:", error);
-    }
-  }, 60 * 1000);
-
-  /*
-  unref מאפשר לתהליך Node להיסגר באופן תקין
-  כאשר אין פעולות פעילות אחרות.
-  */
-  if (typeof reminderInterval.unref === "function") {
-    reminderInterval.unref();
-  }
-
-  return reminderInterval;
-}
-
-/*
----------------------------------------------------------
-startBackgroundServices
-
-תפקיד:
-מפעילה את שירותי הרקע של המערכת לאחר שהשרת
-והחיבור למסד הנתונים מוכנים.
-
-שירותי הרקע:
-1. תזכורות על הזמנות שעומדות להסתיים.
-2. תחזוקת רשימות ההמתנה.
-
-מתזמן רשימות ההמתנה אחראי על:
-- טיפול בהצעות שפג תוקפן.
-- מעבר למשתמש הבא בתור.
-- החזרת ספרים למלאי לאחר סיום השימוש.
----------------------------------------------------------
-*/
-function startBackgroundServices() {
-  startReminderScheduler();
-
-  startWaitingListScheduler();
-
-  console.log("Background services started successfully.");
-}
-
-/*
----------------------------------------------------------
 startServer
 
 תפקיד:
 בודקת את החיבור למסד הנתונים ורק לאחר הצלחה
 מפעילה את שרת Express.
 
-לאחר שהשרת מתחיל לפעול, מופעלים גם שירותי
-הרקע של התזכורות ורשימות ההמתנה.
+לאחר הפעלת השרת מופעל גם מתזמן
+רשימות ההמתנה.
 
 למה נוצרה:
-אין טעם להפעיל שרת או מתזמנים שאינם מסוגלים
+אין טעם להפעיל שרת או מתזמן שאינם מסוגלים
 לגשת למסד הנתונים.
 ---------------------------------------------------------
 */
@@ -317,7 +242,11 @@ async function startServer() {
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
 
-      startBackgroundServices();
+      /*
+      מתזמן רשימות ההמתנה מופעל רק לאחר
+      שהחיבור למסד והפעלת השרת הצליחו.
+      */
+      startWaitingListScheduler();
     });
   } catch (error) {
     console.error(
@@ -327,6 +256,40 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+/*
+---------------------------------------------------------
+טיפול מרכזי בשגיאות
+
+תפקיד:
+מחזיר תשובה אחידה במקרה של שגיאה שלא טופלה
+בתוך אחד מקובצי ה-Routes.
+---------------------------------------------------------
+*/
+app.use((error, req, res, next) => {
+  console.error("=== שגיאה מפורטת בשרת: ===");
+  console.error(error.stack); // <--- מוסיפים את זה כדי לראות את המיקום המדויק
+
+  return res.status(500).json({
+    success: false,
+    message: "Internal server error",
+  });
+});
+
+/*
+---------------------------------------------------------
+הפעלת שירות התזכורות
+
+תפקיד:
+בודק בכל דקה אם קיימת הזמנה שעומדת
+להסתיים ושולח למשתמש את התזכורת המתאימה.
+
+החלק נשמר בהתאם למימוש של השותפה.
+---------------------------------------------------------
+*/
+setInterval(() => {
+  checkAndSendExpirationReminders();
+}, 60000);
 
 startServer();
 
