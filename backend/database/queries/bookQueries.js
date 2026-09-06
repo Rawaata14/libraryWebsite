@@ -17,6 +17,7 @@ bookQueries.js
 
 const doQuery = require("../query");
 const { getConnection } = require("../dbSingleton");
+const { sendBookLoanEmail } = require("../../utils/emailService");
 
 /*
 ---------------------------------------------------------
@@ -729,6 +730,14 @@ async function reserveBook(bookId, userId, seatReservationId) {
 
     await connection.commit();
 
+    if (users.length > 0) {
+      const user = users[0];
+      sendBookLoanEmail(user.email, user.fullName, {
+        title: book.title,
+        dueDate: seatReservation.reservationDate,
+      });
+    }
+
     return {
       success: true,
       statusCode: 201,
@@ -975,4 +984,5 @@ module.exports = {
   deleteBook,
   getLoansCountByStatus,
   getActiveLoansListForLibrarian,
+  sendBookLoanEmail,
 };

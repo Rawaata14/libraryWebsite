@@ -19,7 +19,7 @@ router.post("/save-map", requireLibrarian, async (req, res) => {
       } else {
         result = await seatQueries.updateSeat(seatDetails.seatId, seatDetails);
       }
-      results.push(result);
+      results.push(result);git
     }
     if (results.every((r) => r.success)) {
       res.status(201).json({

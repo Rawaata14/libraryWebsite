@@ -1,5 +1,6 @@
 const doQuery = require("../query");
 const bcrypt = require("bcrypt");
+const { sendWelcomeEmail } = require("../../utils/emailService");
 
 /*
 ---------------------------------------------------------
@@ -92,6 +93,9 @@ async function registerUser(detailsToInsert) {
       "SELECT * FROM `user` WHERE userId = ?",
       [insertResult.insertId],
     );
+
+    // שליחת מייל ברכה למשתמש החדש
+    await sendWelcomeEmail(email, fullName);
 
     return {
       success: true,

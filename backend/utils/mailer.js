@@ -50,5 +50,7 @@ const sendLibraryEmail = async (toEmail, subject, messageHtml) => {
   }
 };
 
-// ייצוא הפונקציה החוצה כדי שניתן יהיה לייבא ולהשתמש בה בנתבים (Routes) השונים של השרת
-module.exports = { sendLibraryEmail };
+// ייצוא הפונקציות החוצה כדי שניתן יהיה לייבא ולהשתמש בהן בנתבים (Routes) השונים של השרת
+module.exports = {
+  sendLibraryEmail,
+};

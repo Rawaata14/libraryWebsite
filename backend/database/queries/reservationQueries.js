@@ -15,6 +15,10 @@ reservationQueries.js
 */
 
 const doQuery = require("../query");
+const {
+  sendSeatReservationEmail,
+  sendSeatCancellationEmail,
+} = require("../../utils/emailService");
 
 const LIBRARY_TIME_ZONE = "Asia/Jerusalem";
 
@@ -208,7 +212,7 @@ function validateReservationTime(reservationDate, startTime, endTime) {
 checkReservationOverlap
 
 תפקיד:
-בודקת אם קיימת הזמנה פעילה חופפת.
+בודקת אם קיימת הזמנה פעילה חופפת עבור אותו כיסא.
 ---------------------------------------------------------
 */
 async function checkReservationOverlap(
@@ -258,7 +262,8 @@ async function checkReservationOverlap(
 reserveSeat
 
 תפקיד:
-יוצרת הזמנה לאחר אימות הזמן ובדיקת חפיפה.
+יוצרת הזמנה לאחר אימות הזמן, בדיקת חפיפה לכיסא, 
+ובדיקה שהמשתמש עצמו אינו מחזיק בהזמנה חופפת אחרת.
 ---------------------------------------------------------
 */
 async function reserveSeat(reservationDetails) {
@@ -276,6 +281,7 @@ async function reserveSeat(reservationDetails) {
       return validation;
     }
 
+    // 1. בדיקה האם הכיסא הספציפי תפוס בחלון הזמן הזה
     const overlapResult = await checkReservationOverlap(
       seatId,
       validation.reservationDate,
@@ -292,6 +298,34 @@ async function reserveSeat(reservationDetails) {
         success: false,
         conflict: true,
         message: "This seat is already reserved during the selected time.",
+      };
+    }
+
+    // 2. בדיקה מערכתית: האם למשתמש עצמו כבר יש הזמנה פעילה אחרת באותו חלון זמן
+    const userOverlapSQL = `
+      SELECT reservationId 
+      FROM seat_reservation
+      WHERE userId = ?
+        AND reservationDate = ?
+        AND LOWER(status) NOT IN ('cancelled', 'canceled')
+        AND startTime < ?
+        AND endTime > ?
+      LIMIT 1
+    `;
+
+    const userExistingReservations = await doQuery(userOverlapSQL, [
+      userId,
+      validation.reservationDate,
+      validation.endTime,
+      validation.startTime,
+    ]);
+
+    if (userExistingReservations.length > 0) {
+      return {
+        success: false,
+        conflict: true,
+        message:
+          "You already have an active seat reservation during this time slot.",
       };
     }
 
@@ -316,6 +350,23 @@ async function reserveSeat(reservationDetails) {
       validation.endTime,
       status,
     ]);
+
+    if (result.affectedRows > 0) {
+      const users = await doQuery(
+        `SELECT email, fullName FROM user WHERE userId = ?`,
+        [userId],
+      );
+
+      if (users.length > 0) {
+        const user = users[0];
+        sendSeatReservationEmail(user.email, user.fullName, {
+          reservationDate: validation.reservationDate,
+          startTime: validation.startTime,
+          endTime: validation.endTime,
+          seatId,
+        });
+      }
+    }
 
     return {
       success: true,
@@ -474,7 +525,7 @@ async function cancelReservation(reservationId, userId) {
       WHERE reservationId = ?
         AND userId = ?
       LIMIT 1
-`;
+    `;
 
     const reservations = await doQuery(findSQL, [reservationId, userId]);
 
@@ -542,13 +593,26 @@ async function cancelReservation(reservationId, userId) {
       };
     }
 
-    /*
-      אין לעדכן כאן את status של הכיסא.
+    const users = await doQuery(
+      `SELECT email, fullName FROM user WHERE userId = ?`,
+      [userId],
+    );
 
-      זמינות הכיסא מחושבת לפי ההזמנות הפעילות
-      לתאריך ולשעה, בעוד status בטבלת seat משמש
-      גם לחסימה מנהלית של מקום.
-    */
+    if (users.length > 0) {
+      const user = users[0];
+      await sendSeatCancellationEmail(
+        user.email,
+        user.fullName,
+        {
+          reservationDate,
+          startTime: reservationStartTime,
+          endTime: normalizeTime(reservation.endTime),
+          seatId: reservation.seatId,
+        },
+        false,
+      );
+    }
+
     return {
       success: true,
       data: {
@@ -556,13 +620,7 @@ async function cancelReservation(reservationId, userId) {
         seatId: reservation.seatId,
         reservationDate,
         startTime: reservationStartTime,
-
-        /*
-          שעת הסיום מוחזרת כדי שניתן יהיה להציע את
-          המקום למשתמש הבא שממתין לאותו טווח זמן.
-        */
         endTime: normalizeTime(reservation.endTime),
-
         isToday: reservationDate === libraryNow.date,
       },
     };
@@ -581,10 +639,18 @@ async function cancelReservation(reservationId, userId) {
 cancelReservationByLibrarian
 
 תפקיד:
-מאפשרת לספרנית לבצע ביטול חריג בכל שלב.
+מאפשרת לספרנית לבצע ביטול חריג בכל שלב,
+כולל העברת סיבת ביטול אופציונלית.
 ---------------------------------------------------------
 */
-async function cancelReservationByLibrarian(reservationId) {
+async function cancelReservationByLibrarian(
+  reservationId,
+  cancellationReason = "",
+) {
+  console.log(
+    "Received cancellation reason from frontend/route:",
+    cancellationReason,
+  );
   try {
     const getReservationSQL = `
       SELECT
@@ -607,7 +673,7 @@ async function cancelReservationByLibrarian(reservationId) {
       FROM seat_reservation
       WHERE reservationId = ?
       LIMIT 1
-`;
+    `;
 
     const reservations = await doQuery(getReservationSQL, [reservationId]);
 
@@ -652,24 +718,37 @@ async function cancelReservationByLibrarian(reservationId) {
       };
     }
 
-    /*
-      גם בביטול ספרנית אין לשנות את seat.status,
-      כדי לא לבטל בטעות חסימה מנהלית של הכיסא.
-    */
+    const users = await doQuery(
+      `SELECT email, fullName FROM user WHERE userId = ?`,
+      [reservation.userId],
+    );
+
+    if (users.length > 0) {
+      const user = users[0];
+      await sendSeatCancellationEmail(
+        user.email,
+        user.fullName,
+        {
+          reservationDate: normalizeDate(reservation.reservationDate),
+          startTime: normalizeTime(reservation.startTime),
+          endTime: normalizeTime(reservation.endTime),
+          seatId: reservation.seatId,
+        },
+        true,
+        cancellationReason, // העברת הסיבה לפונקציית המייל
+      );
+    }
+
     return {
       success: true,
       data: {
         reservationId,
         userId: reservation.userId,
         seatId: reservation.seatId,
-
-        /*
-        פרטי הזמן נדרשים כדי לחפש את המשתמש הבא
-        שממתין לאותו מקום ובאותו חלון זמן.
-      */
         reservationDate: normalizeDate(reservation.reservationDate),
         startTime: normalizeTime(reservation.startTime),
         endTime: normalizeTime(reservation.endTime),
+        cancellationReason,
       },
     };
   } catch (error) {
@@ -688,21 +767,6 @@ getReservationById
 
 תפקיד:
 שולפת הזמנה אחת לפי המזהה שלה.
-
-הפונקציה מחזירה:
-- פרטי ההזמנה.
-- פרטי המקום.
-- מזהה המשתמש.
-- כתובת המייל של המשתמש.
-
-כתובת המייל נדרשת כדי לאפשר לספרנית לשלוח
-לבעל ההזמנה גם התראה בתוך המערכת וגם הודעת
-דוא"ל.
-
-LEFT JOIN:
-נעשה שימוש ב-LEFT JOIN כדי שעדיין יהיה ניתן
-לקבל את פרטי ההזמנה גם אם קיימת בעיה חריגה
-ברשומת המשתמש.
 ---------------------------------------------------------
 */
 async function getReservationById(reservationId) {
@@ -759,8 +823,7 @@ async function getReservationById(reservationId) {
 }
 
 /**
- * שולף את כל ההזמנות הפעילות שהשעה שלהן מסתיימת בעוד 15 דקות בדיוק,
- * כולל פרטי המשתמש והמייל שלו לצורך שליחת התראה.
+ * שולף את כל ההזמנות הפעילות שהשעה שלהן מסתיימת בעוד 15 דקות בדיוק
  */
 const getReservationsEndingIn15Minutes = async () => {
   try {
@@ -793,14 +856,6 @@ getAllTimeSlotsAvailability
 תפקיד:
 מחזירה את כל חלונות הזמן העתידיים שעדיין ניתן
 לבחור עבור התאריך המבוקש.
-
-גם חלון שבו כל המקומות תפוסים נשאר ברשימה:
-- אם קיים מקום פנוי, המשתמש יוכל להזמין אותו.
-- אם המקום הרצוי תפוס, המשתמש יוכל להצטרף
-  לרשימת ההמתנה.
-
-הזמינות של כל מקום מסוים נבדקת בנפרד כאשר
-המפה נטענת וכאשר המשתמש מבצע את הפעולה.
 ---------------------------------------------------------
 */
 async function getAllTimeSlotsAvailability(date) {
@@ -815,9 +870,6 @@ async function getAllTimeSlotsAvailability(date) {
 
     const libraryNow = getLibraryDateTime();
 
-    /*
-    לא מחזירים חלונות זמן עבור תאריך שכבר עבר.
-    */
     if (date < libraryNow.date) {
       return {
         success: true,
@@ -825,14 +877,6 @@ async function getAllTimeSlotsAvailability(date) {
       };
     }
 
-    /*
-    עבור היום הנוכחי מוצגים רק חלונות שעדיין
-    לא התחילו.
-
-    עבור יום עתידי מוצגים כל חלונות הזמן.
-    חלון מלא אינו מוסר, משום שהוא עדיין יכול
-    לשמש להצטרפות לרשימת המתנה.
-    */
     const validSlots = RESERVATION_TIME_SLOTS.filter((slot) => {
       const startTime = slot.split(" - ")[0];
 
