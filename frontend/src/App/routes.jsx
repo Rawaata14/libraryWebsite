@@ -8,7 +8,7 @@ routes.jsx
 אחריות:
 - הגדרת כל הנתיבים במקום אחד.
 - הגנה על דפים לפי מצב התחברות והרשאות.
-- הוספת נתיבי רשימות ההמתנה.
+- הוספת נתיבי רשימות ההמתנה וניהול השאלות הספרים.
 - הפניית נתיבים לא קיימים לדף הבית.
 =========================================================
 */
@@ -26,8 +26,8 @@ import LibrarianDashboardPage from "../pages/LibrarianDashboardPage";
 
 import LoginPage from "../pages/LoginPage";
 
+import ManageBookLoansPage from "../pages/ManageBookLoansPage";
 import ManageReservationsPage from "../pages/ManageReservationsPage";
-
 import ManageWaitingListsPage from "../pages/ManageWaitingListsPage";
 
 import MapPage from "../pages/MapPage";
@@ -263,6 +263,18 @@ export default function AppRoutes() {
           element={
             <RoleRoute allowedRoles={LIBRARIAN_ROLES}>
               <ManageReservationsPage />
+            </RoleRoute>
+          }
+        />
+
+        {/*
+        דף ניהול השאלות הספרים.
+        */}
+        <Route
+          path="/admin/book-loans"
+          element={
+            <RoleRoute allowedRoles={LIBRARIAN_ROLES}>
+              <ManageBookLoansPage />
             </RoleRoute>
           }
         />

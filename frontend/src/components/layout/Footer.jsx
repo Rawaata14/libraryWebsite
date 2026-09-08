@@ -62,9 +62,12 @@ export default function Footer() {
         */}
 
         <address className="footerContact">
-          <a className="footerContactItem" href="mailto:info@library.com">
+          <a
+            className="footerContactItem"
+            href="mailto:libraryinfo2403@gmail.com"
+          >
             <span aria-hidden="true">✉</span>
-            <span>info@library.com</span>
+            <span>libraryinfo2403@gmail.com</span>
           </a>
 
           <a className="footerContactItem" href="tel:031234567">

@@ -7,9 +7,8 @@ LibrarianSidebar.jsx
 
 הסרגל כולל:
 - קישור לדשבורד הספרנית.
-- נתונים מרכזיים מהדשבורד.
-- קישורים לדפי הניהול.
-- כפתור לרענון הנתונים.
+- נתונים מרכזיים וכפתור רענון (הוסתרו זמנית בהערה).
+- קישורים לדפי הניהול (כולל הקישור החדש לניהול השאלות ספרים).
 =========================================================
 */
 
@@ -45,55 +44,67 @@ export default function LibrarianSidebar() {
 
       <div className="librarianSidebarDivider" />
 
-      <div className="librarianSidebarStats">
-        {isLoading ? (
-          <p className="librarianSidebarMessage">Loading statistics...</p>
-        ) : errorMessage ? (
-          <p className="librarianSidebarError">Statistics unavailable</p>
-        ) : (
-          <>
-            <div className="librarianSidebarStat">
-              <span>📅 Today</span>
-              <strong>{stats.todayReservations}</strong>
-            </div>
+      {/*
+        ---------------------------------------------------------
+        אזור הנתונים והרענון הוסתר זמנית לפי בקשה:
+        ---------------------------------------------------------
+        <div className="librarianSidebarStats">
+          {isLoading ? (
+            <p className="librarianSidebarMessage">Loading statistics...</p>
+          ) : errorMessage ? (
+            <p className="librarianSidebarError">Statistics unavailable</p>
+          ) : (
+            <>
+              <div className="librarianSidebarStat">
+                <span>📅 Today</span>
+                <strong>{stats.todayReservations}</strong>
+              </div>
 
-            <div className="librarianSidebarStat">
-              <span>📚 Active Loans</span>
-              <strong>{stats.activeLoans}</strong>
-            </div>
+              <div className="librarianSidebarStat">
+                <span>📚 Active Loans</span>
+                <strong>{stats.activeLoans}</strong>
+              </div>
 
-            <div className="librarianSidebarStat">
-              <span>⚠️ Overdue</span>
-              <strong>{stats.overdueBooks}</strong>
-            </div>
+              <div className="librarianSidebarStat">
+                <span>⚠️ Overdue</span>
+                <strong>{stats.overdueBooks}</strong>
+              </div>
 
-            <div className="librarianSidebarStat">
-              <span>✉️ Messages</span>
-              <strong>{stats.unreadMessages}</strong>
-            </div>
+              <div className="librarianSidebarStat">
+                <span>✉️ Messages</span>
+                <strong>{stats.unreadMessages}</strong>
+              </div>
 
-            <div className="librarianSidebarStat">
-              <span>🚫 Blocked Seats</span>
-              <strong>{stats.blockedSeats}</strong>
-            </div>
-          </>
-        )}
-      </div>
+              <div className="librarianSidebarStat">
+                <span>🚫 Blocked Seats</span>
+                <strong>{stats.blockedSeats}</strong>
+              </div>
+            </>
+          )}
+        </div>
 
-      <button
-        type="button"
-        className="librarianSidebarRefresh"
-        onClick={fetchDashboardStats}
-        disabled={isLoading}
-      >
-        {isLoading ? "Refreshing..." : "Refresh Data"}
-      </button>
+        <button
+          type="button"
+          className="librarianSidebarRefresh"
+          onClick={fetchDashboardStats}
+          disabled={isLoading}
+        >
+          {isLoading ? "Refreshing..." : "Refresh Data"}
+        </button>
 
-      <div className="librarianSidebarDivider" />
+        <div className="librarianSidebarDivider" />
+      */}
 
       <nav className="librarianSidebarNavigation">
         <NavLink to="/admin/reservations" className={navClassName}>
           📅 Manage Reservations
+        </NavLink>
+
+        {/* 
+          קישור חדש לניהול השאלות הספרים (Book Loan Management)
+        */}
+        <NavLink to="/admin/book-loans" className={navClassName}>
+          📦 Manage Book Loans
         </NavLink>
 
         {/*

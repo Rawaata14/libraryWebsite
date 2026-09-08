@@ -45,7 +45,7 @@ joinBookWaitingList
 */
 export async function joinBookWaitingList(bookId, reservationId) {
   const response = await axios.post(
-    buildApiUrl("/waiting-lists/book"),
+    buildApiUrl(`/waiting-lists/books/${bookId}`),
     {
       bookId,
       reservationId,

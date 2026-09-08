@@ -1,0 +1,172 @@
+/*
+=========================================================
+manage-book-loans.css
+
+תיאור הקובץ:
+עיצוב דף ניהול השאלות הספרים של הספרן.
+=========================================================
+*/
+
+.manageBookLoansPage {
+  width: 100%;
+  min-height: 75vh;
+  padding: 35px 2%;
+  position: relative;
+}
+
+.manageBookLoansCard {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 30px;
+  color: #ffffff;
+  background: rgba(35, 18, 12, 0.95);
+  border: 2px solid rgba(164, 107, 86, 0.75);
+  border-radius: 22px;
+  box-shadow: 0 16px 35px rgba(0, 0, 0, 0.35);
+}
+
+.manageBookLoansHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 24px;
+
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.manageBookLoansHeader h2 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+}
+
+.manageBookLoansHeader p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.manageBookLoansErrorBanner {
+  background: rgba(244, 67, 54, 0.14);
+  border: 1px solid rgba(244, 67, 54, 0.4);
+  color: #ff9b94;
+  padding: 14px 16px;
+  border-radius: 13px;
+  margin-bottom: 20px;
+}
+
+.bookLoansTableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 16px;
+}
+
+.manageLoansTable {
+  width: 100%;
+  min-width: 800px;
+  border-collapse: collapse;
+}
+
+.manageLoansTable th,
+.manageLoansTable td {
+  padding: 14px 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.manageLoansTable th {
+  color: #ffb74d;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.92rem;
+}
+
+.manageLoansTable tbody tr {
+  transition: background 0.2s ease;
+}
+
+.manageLoansTable tbody tr:hover {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.manageLoansTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.refreshLoansButton {
+  padding: 11px 20px;
+
+  border: none;
+  border-radius: 12px;
+
+  color: #ffffff;
+  background: #914a36;
+
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.refreshLoansButton:hover {
+  background: #a85a42;
+}
+
+.refreshLoansButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+/* סטטוסים */
+.statusBadge {
+  display: inline-block;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.statusBadge.active {
+  color: #86de8b;
+  background: rgba(76, 175, 80, 0.17);
+}
+
+.statusBadge.late,
+.statusBadge.overdue {
+  color: #ff8e86;
+  background: rgba(244, 67, 54, 0.17);
+}
+
+/* כפתור החזרה למלאי */
+.returnBookButton {
+  padding: 6px 12px;
+  border: 1px solid rgba(33, 150, 243, 0.5);
+  border-radius: 9px;
+  color: #86caff;
+  background: rgba(33, 150, 243, 0.12);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.returnBookButton:hover {
+  color: #ffffff;
+  background: rgba(33, 150, 243, 0.25);
+}
+
+/* מצבי טעינה וריק */
+.loansTableLoading,
+.loansTableEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  padding: 30px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  font-size: 1rem;
+}

@@ -2,15 +2,15 @@
 =========================================================
 librarian.js
 
-׳×׳™׳׳•׳¨ ׳”׳§׳•׳‘׳¥:
-Routes ׳¢׳‘׳•׳¨ ׳“׳©׳‘׳•׳¨׳“ ׳”׳¡׳₪׳¨׳ ׳™׳×.
+תיאור הקובץ:
+Routes עבור דשבורד הספרנית.
 
-׳”׳§׳•׳‘׳¥ ׳׳—׳¨׳׳™ ׳¢׳:
-- ׳©׳׳™׳₪׳× ׳¡׳˜׳˜׳™׳¡׳˜׳™׳§׳•׳× ׳׳¨׳›׳–׳™׳•׳× ׳׳׳¡׳“ ׳”׳ ׳×׳•׳ ׳™׳ (׳“׳¨׳ ׳©׳›׳‘׳× ׳”׳©׳׳™׳׳×׳•׳×).
-- ׳—׳™׳©׳•׳‘ ׳”׳–׳׳ ׳•׳× ׳”׳™׳•׳ ׳׳₪׳™ ׳—׳׳•׳ ׳•׳× ׳–׳׳.
-- ׳—׳™׳©׳•׳‘ ׳׳¡׳₪׳¨ ׳”׳׳§׳•׳׳•׳× ׳”׳–׳׳™׳ ׳™׳ ׳‘׳›׳ ׳—׳׳•׳.
-- ׳”׳—׳–׳¨׳× ׳₪׳¢׳™׳׳•׳× ׳™׳•׳׳™׳× ׳׳—׳¨׳•׳ ׳”.
-- ׳”׳’׳‘׳׳× ׳”׳’׳™׳©׳” ׳׳׳©׳×׳׳©׳× ׳‘׳¢׳׳× ׳”׳¨׳©׳׳× ׳¡׳₪׳¨׳ ׳™׳×.
+הקובץ אחראי על:
+- שליפת סטטיסטיקות מרכזיות ממסד הנתונים (דרך שכבת השאלתות).
+- חישוב זמני היום לפי חלונות זמן.
+- חישוב מספר המקומות הזמינים בכל חלון.
+- החזרת פעילות יומית אחרונה.
+- הגבלת הגישה למשתמשת בעלת הרשאה ספרנית.
 =========================================================
 */
 
@@ -24,8 +24,9 @@ const {
 } = require("../database/queries/reservationQueries");
 const {
   getLoansCountByStatus,
-  getActiveLoansListForLibrarian,
-} = require("../database/queries/bookQueries");
+  getAllActiveLoansListForLibrarian,
+  returnBookByLibrarian,
+} = require("../database/queries/loanQueries");
 const {
   getBlockedSeatsCount,
   getReservableSeatsCount,
@@ -41,9 +42,9 @@ const router = express.Router();
 ---------------------------------------------------------
 RESERVATION_TIME_SLOTS
 
-׳×׳₪׳§׳™׳“:
-׳׳’׳“׳™׳¨ ׳‘׳׳§׳•׳ ׳׳¨׳›׳–׳™ ׳׳× ׳—׳׳•׳ ׳•׳× ׳”׳”׳–׳׳ ׳” ׳”׳™׳•׳׳™׳™׳
-׳”׳׳•׳¦׳’׳™׳ ׳‘׳“׳©׳‘׳•׳¨׳“ ׳”׳¡׳₪׳¨׳ ׳™׳×.
+תפקיד:
+מגדיר במקום מרכזי את חלונות ההזמנה היומיים
+המוצגים בדשבורד הספרנית.
 ---------------------------------------------------------
 */
 const RESERVATION_TIME_SLOTS = [
@@ -59,24 +60,24 @@ const RESERVATION_TIME_SLOTS = [
 ---------------------------------------------------------
 Route: GET /api/librarian/dashboard-stats
 
-׳×׳₪׳§׳™׳“:
-׳׳—׳–׳™׳¨ ׳׳× ׳›׳ ׳ ׳×׳•׳ ׳™ ׳“׳©׳‘׳•׳¨׳“ ׳”׳¡׳₪׳¨׳ ׳™׳× ׳׳׳§׳•׳¨ ׳׳—׳“.
+תפקיד:
+מחזיר את כל נתוני דשבורד הספרנית ממקור אחד.
 
-׳”׳ ׳×׳•׳ ׳™׳ ׳›׳•׳׳׳™׳:
-- ׳׳¡׳₪׳¨ ׳”׳–׳׳ ׳•׳× ׳”׳™׳•׳.
-- ׳”׳–׳׳ ׳•׳× ׳׳₪׳™ ׳—׳׳•׳ ׳–׳׳.
-- ׳׳¡׳₪׳¨ ׳׳§׳•׳׳•׳× ׳–׳׳™׳ ׳™׳ ׳‘׳›׳ ׳—׳׳•׳.
-- ׳”׳©׳׳׳•׳× ׳₪׳¢׳™׳׳•׳× ׳•׳¡׳₪׳¨׳™׳ ׳‘׳׳™׳—׳•׳¨.
-- ׳”׳•׳“׳¢׳•׳× ׳©׳׳ ׳ ׳§׳¨׳׳•.
-- ׳›׳™׳¡׳׳•׳× ׳—׳¡׳•׳׳™׳.
-- ׳₪׳¢׳™׳׳•׳× ׳”׳™׳•׳.
+הנתונים כוללים:
+- מספר הזמנות היום.
+- הזמנות לפי חלון זמן.
+- מספר מקומות זמינים בכל חלון.
+- השאלות פעילות (כלליות) וספרים באיחור.
+- הודעות שלא נקראו.
+- כיסאות חסומים.
+- פעילות היום.
 ---------------------------------------------------------
 */
 router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
   try {
     /*
-      ׳›׳ ׳”׳©׳׳™׳׳×׳•׳× ׳©׳׳™׳ ׳ ׳×׳׳•׳™׳•׳× ׳–׳• ׳‘׳–׳• ׳׳•׳₪׳¢׳׳•׳×
-      ׳‘׳׳§׳‘׳™׳ ׳›׳“׳™ ׳׳§׳¦׳¨ ׳׳× ׳–׳׳ ׳˜׳¢׳™׳ ׳× ׳”׳“׳©׳‘׳•׳¨׳“.
+      כל השאילתות שאינן תלויות זו בזו מופעלות
+      במקביל כדי לקצר את זמן טעינת הדשבורד.
       */
     const [
       todayReservations,
@@ -92,7 +93,7 @@ router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
     ] = await Promise.all([
       getTodayReservationsCount(),
       getLoansCountByStatus("active"),
-      getActiveLoansListForLibrarian(),
+      getAllActiveLoansListForLibrarian(), // עודכן לשליפת כל ההשאלות הפעילות
       getLoansCountByStatus("late"),
       getUnreadLibrarianMessagesCount(),
       getBlockedSeatsCount(),
@@ -106,9 +107,9 @@ router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
       ---------------------------------------------------
       hourlyReservations
 
-      ׳×׳₪׳§׳™׳“:
-      ׳‘׳•׳ ׳” ׳׳× ׳›׳ ׳—׳׳•׳ ׳•׳× ׳”׳–׳׳, ׳’׳ ׳׳ ׳׳™׳ ׳‘׳”׳ ׳”׳–׳׳ ׳•׳×,
-      ׳•׳׳—׳©׳‘ ׳׳× ׳׳¡׳₪׳¨ ׳”׳׳§׳•׳׳•׳× ׳”׳₪׳ ׳•׳™׳™׳ ׳‘׳›׳ ׳—׳׳•׳.
+      תפקיד:
+      בונה את כל חלונות הזמן, גם אם אין בהם הזמנות,
+      ומחשב את מספר המקומות הפנויים בכל חלון.
       ---------------------------------------------------
       */
     const hourlyReservations = RESERVATION_TIME_SLOTS.map((slot) => {
@@ -132,9 +133,9 @@ router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
       ---------------------------------------------------
       todayActivity
 
-      ׳×׳₪׳§׳™׳“:
-      ׳׳׳—׳“׳× ׳׳× ׳”׳”׳–׳׳ ׳•׳× ׳•׳”׳”׳•׳“׳¢׳•׳× ׳”׳׳—׳¨׳•׳ ׳•׳×
-      ׳׳¨׳©׳™׳׳× ׳₪׳¢׳™׳׳•׳× ׳׳—׳×.
+      תפקיד:
+      מאחדת את ההזמנות וההודעות האחרונות
+      לרשימת פעילות אחת.
       ---------------------------------------------------
       */
     const todayActivity = [
@@ -168,6 +169,28 @@ router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
       success: false,
       message: "Failed to load librarian dashboard stats",
     });
+  }
+});
+
+/*
+---------------------------------------------------------
+Route: PATCH /api/librarian/loans/:loanId/return
+
+תפקיד:
+מעדכן את סטטוס ההשאלה ל-'returned' ומחזיר את הספר למלאי באופן דינמי.
+---------------------------------------------------------
+*/
+router.patch("/loans/:loanId/return", requireLibrarian, async (req, res) => {
+  try {
+    const { loanId } = req.params;
+    const result = await returnBookByLibrarian(loanId);
+
+    return res.status(result.statusCode).json(result);
+  } catch (error) {
+    console.error("Error in return route:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 });
 
