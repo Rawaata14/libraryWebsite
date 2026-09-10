@@ -19,8 +19,13 @@ const {
   sendSeatReservationEmail,
   sendSeatCancellationEmail,
 } = require("../../utils/emailService");
-
-const LIBRARY_TIME_ZONE = "Asia/Jerusalem";
+const {
+  isValidDate,
+  isValidTime,
+  normalizeDate,
+  normalizeTime,
+  getLibraryDateTime,
+} = require("../../utils/formatters");
 
 const RESERVATION_TIME_SLOTS = [
   "08:00 - 10:00",
@@ -28,131 +33,8 @@ const RESERVATION_TIME_SLOTS = [
   "12:00 - 14:00",
   "14:00 - 16:00",
   "16:00 - 18:00",
+  "18:00 - 20:00",
 ];
-
-/*
----------------------------------------------------------
-getLibraryDateTime
-
-תפקיד:
-מחזירה תאריך ושעה נוכחיים לפי שעון ישראל.
----------------------------------------------------------
-*/
-function getLibraryDateTime() {
-  const formatter = new Intl.DateTimeFormat("en-GB", {
-    timeZone: LIBRARY_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  });
-
-  const parts = formatter.formatToParts(new Date()).reduce((result, part) => {
-    if (part.type !== "literal") {
-      result[part.type] = part.value;
-    }
-
-    return result;
-  }, {});
-
-  const date = `${parts.year}-${parts.month}-${parts.day}`;
-
-  const time = `${parts.hour}:${parts.minute}`;
-
-  return {
-    date,
-    time,
-    dateTimeKey: `${date}T${time}`,
-  };
-}
-
-/*
----------------------------------------------------------
-normalizeDate
-
-תפקיד:
-מחזירה תאריך בפורמט YYYY-MM-DD.
----------------------------------------------------------
-*/
-function normalizeDate(value) {
-  if (!value) {
-    return "";
-  }
-
-  const match = String(value)
-    .trim()
-    .match(/^(\d{4})-(\d{2})-(\d{2})/);
-
-  return match ? `${match[1]}-${match[2]}-${match[3]}` : "";
-}
-
-/*
----------------------------------------------------------
-normalizeTime
-
-תפקיד:
-מחזירה שעה בפורמט HH:MM.
----------------------------------------------------------
-*/
-function normalizeTime(value) {
-  if (!value) {
-    return "";
-  }
-
-  const match = String(value)
-    .trim()
-    .match(/^(\d{2}):(\d{2})/);
-
-  return match ? `${match[1]}:${match[2]}` : "";
-}
-
-/*
----------------------------------------------------------
-isValidDate
-
-תפקיד:
-בודקת שמבנה התאריך תקין ושזהו תאריך אמיתי.
----------------------------------------------------------
-*/
-function isValidDate(value) {
-  const normalizedDate = normalizeDate(value);
-
-  if (!normalizedDate || normalizedDate !== String(value).trim()) {
-    return false;
-  }
-
-  const [year, month, day] = normalizedDate.split("-").map(Number);
-
-  const date = new Date(Date.UTC(year, month - 1, day));
-
-  return (
-    date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 &&
-    date.getUTCDate() === day
-  );
-}
-
-/*
----------------------------------------------------------
-isValidTime
-
-תפקיד:
-בודקת שמבנה השעה תקין.
----------------------------------------------------------
-*/
-function isValidTime(value) {
-  const normalizedTime = normalizeTime(value);
-
-  if (!normalizedTime) {
-    return false;
-  }
-
-  const [hours, minutes] = normalizedTime.split(":").map(Number);
-
-  return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59;
-}
 
 /*
 ---------------------------------------------------------

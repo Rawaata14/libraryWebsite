@@ -3,7 +3,7 @@
 ManageBookLoansPage.jsx
 
 תיאור הקובץ:
-דף ניהול השאלות הספרים עבור הספרנית.
+דף ניהול השאלות הספרים עבור הספרנית, כולל סינון מתקדם לפי תאריך ושעה.
 =========================================================
 */
 
@@ -31,6 +31,10 @@ export default function ManageBookLoansPage() {
     setSearchText,
     statusFilter,
     setStatusFilter,
+    selectedDate,
+    setSelectedDate,
+    selectedTime,
+    setSelectedTime,
     activeLoansCount,
     overdueLoansCount,
     handleReturnBook,
@@ -44,7 +48,7 @@ export default function ManageBookLoansPage() {
           <div className="manageBookLoansHeader">
             <div>
               <h2>Manage Book Loans</h2>
-              <p>View and manage all active book loans</p>
+              <p>View and manage all book loans</p>
             </div>
             <button
               type="button"
@@ -85,8 +89,12 @@ export default function ManageBookLoansPage() {
           <LoansFilters
             searchText={searchText}
             statusFilter={statusFilter}
+            selectedDate={selectedDate}
+            selectedTime={selectedTime}
             onSearchChange={setSearchText}
             onStatusChange={setStatusFilter}
+            onDateChange={setSelectedDate}
+            onTimeChange={setSelectedTime}
           />
 
           <BookLoansTable

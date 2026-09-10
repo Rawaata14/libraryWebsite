@@ -130,27 +130,41 @@ export default function useLibrarianDashboard() {
       const response = await getLibrarianDashboardStats();
       const receivedStats = response.data?.stats || {};
 
+      const rawActiveLoans = Array.isArray(receivedStats.activeLoansList)
+        ? receivedStats.activeLoansList
+        : Array.isArray(receivedStats.activeLoans)
+          ? receivedStats.activeLoans
+          : [];
+
+      // מיפוי נכון של ההלוואות כדי לחלץ את כמות העותקים הזמינים מכל שדה אפשרי שהשרת עשוי לשלוח
+      const normalizedActiveLoans = rawActiveLoans.map((loan) => {
+        const availableCopies =
+          loan.remainingCopies ??
+          loan.availableQuantity ??
+          loan.available_quantity ??
+          loan.copiesLeft ??
+          loan.book?.availableCopies ??
+          loan.book?.availableQuantity ??
+          loan.book?.available_quantity ??
+          loan.stock ??
+          "-";
+
+        return {
+          ...loan,
+          availableCopies,
+        };
+      });
+
       setStats({
         activeLoans: Number(receivedStats.activeLoans) || 0,
-
-        activeLoansList: Array.isArray(receivedStats.activeLoansList)
-          ? receivedStats.activeLoansList
-          : Array.isArray(receivedStats.activeLoans)
-            ? receivedStats.activeLoans
-            : [],
-
+        activeLoansList: normalizedActiveLoans,
         overdueBooks: Number(receivedStats.overdueBooks) || 0,
-
         unreadMessages: Number(receivedStats.unreadMessages) || 0,
-
         blockedSeats: Number(receivedStats.blockedSeats) || 0,
-
         todayReservations: Number(receivedStats.todayReservations) || 0,
-
         hourlyReservations: normalizeHourlyReservations(
           receivedStats.hourlyReservations,
         ),
-
         todayActivity: Array.isArray(receivedStats.todayActivity)
           ? receivedStats.todayActivity
           : [],

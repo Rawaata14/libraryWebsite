@@ -22,7 +22,6 @@ import useLibrarianDashboard from "../hooks/useLibrarianDashboard";
 
 import "../styles/librarianDashboard.css";
 
-
 /*
 ---------------------------------------------------------
 LibrarianDashboardPage
@@ -162,9 +161,9 @@ export default function LibrarianDashboardPage() {
                               </span>
                             </td>
                             <td>
-                              {loan.availableQuantity ??
-                                loan.book?.available_quantity ??
-                                "-"}
+                              <span className="badge-available">
+                                {loan.availableCopies}
+                              </span>
                             </td>
                           </tr>
                         ))

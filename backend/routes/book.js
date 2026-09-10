@@ -24,7 +24,7 @@ const path = require("path");
 const fs = require("fs/promises");
 
 const bookQueries = require("../database/queries/bookQueries");
-
+const loanQueries = require("../database/queries/loanQueries");
 const waitingListService = require("../services/waitingListService");
 
 const router = express.Router();
@@ -395,9 +395,9 @@ router.post("/:id/reserve", async (req, res) => {
       });
     }
 
-    const result = await bookQueries.reserveBook(
-      bookId,
+    const result = await loanQueries.reserveBook(
       userId,
+      bookId,
       seatReservationId,
     );
 

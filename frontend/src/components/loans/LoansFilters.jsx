@@ -8,6 +8,7 @@ LoansFilters.jsx
 הקומפוננטה כוללת:
 - חיפוש לפי כותרת ספר או שם משתמש.
 - סינון לפי סטטוס ההשאלה (פעיל, מאחר, הוחזר וכו').
+- סינון לפי תאריך ושעה ספציפיים.
 
 הקומפוננטה אינה שומרת state פנימי.
 =========================================================
@@ -18,8 +19,12 @@ import PropTypes from "prop-types";
 export default function LoansFilters({
   searchText,
   statusFilter,
+  selectedDate,
+  selectedTime,
   onSearchChange,
   onStatusChange,
+  onDateChange,
+  onTimeChange,
 }) {
   return (
     <div className="managementFilters">
@@ -42,6 +47,20 @@ export default function LoansFilters({
         <option value="returned">Returned</option>
         <option value="cancelled">Cancelled</option>
       </select>
+
+      <input
+        type="date"
+        value={selectedDate || ""}
+        onChange={(event) => onDateChange(event.target.value)}
+        aria-label="Filter loans by date"
+      />
+
+      <input
+        type="time"
+        value={selectedTime || ""}
+        onChange={(event) => onTimeChange(event.target.value)}
+        aria-label="Filter loans by time"
+      />
     </div>
   );
 }
@@ -51,12 +70,16 @@ export default function LoansFilters({
 LoansFilters.propTypes
 
 תפקיד:
-מגדיר את ערכי הסינון ואת פעולות שינוי החיפוש והסטטוס עבור השאלות.
+מגדיר את ערכי הסינון ואת פעולות שינוי החיפוש, הסטטוס, התאריך והשעה עבור השאלות.
 ---------------------------------------------------------
 */
 LoansFilters.propTypes = {
   searchText: PropTypes.string.isRequired,
   statusFilter: PropTypes.string.isRequired,
+  selectedDate: PropTypes.string,
+  selectedTime: PropTypes.string,
   onSearchChange: PropTypes.func.isRequired,
   onStatusChange: PropTypes.func.isRequired,
+  onDateChange: PropTypes.func.isRequired,
+  onTimeChange: PropTypes.func.isRequired,
 };

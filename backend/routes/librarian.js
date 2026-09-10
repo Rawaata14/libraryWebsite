@@ -24,7 +24,8 @@ const {
 } = require("../database/queries/reservationQueries");
 const {
   getLoansCountByStatus,
-  getAllActiveLoansListForLibrarian,
+  getAllLoansListForLibrarian,
+  getTodaysLoansListForLibrarian,
   returnBookByLibrarian,
 } = require("../database/queries/loanQueries");
 const {
@@ -93,7 +94,7 @@ router.get("/dashboard-stats", requireLibrarian, async (req, res) => {
     ] = await Promise.all([
       getTodayReservationsCount(),
       getLoansCountByStatus("active"),
-      getAllActiveLoansListForLibrarian(), // עודכן לשליפת כל ההשאלות הפעילות
+      getTodaysLoansListForLibrarian(), // עודכן לשליפת כל ההשאלות הפעילות
       getLoansCountByStatus("late"),
       getUnreadLibrarianMessagesCount(),
       getBlockedSeatsCount(),
@@ -194,4 +195,30 @@ router.patch("/loans/:loanId/return", requireLibrarian, async (req, res) => {
   }
 });
 
+/*
+---------------------------------------------------------
+Route: GET /api/librarian/all-loans
+
+תפקיד:
+מחזיר את כל ההשאלות במערכת עבור דף ניהול ההשאלות,
+כולל תמיכה בסינון אופציונלי לפי תאריך ושעה.
+---------------------------------------------------------
+*/
+router.get("/all-loans", requireLibrarian, async (req, res) => {
+  try {
+    const { date, time } = req.query;
+    const allLoans = await getAllLoansListForLibrarian(date, time);
+
+    return res.status(200).json({
+      success: true,
+      loans: allLoans,
+    });
+  } catch (error) {
+    console.error("Failed to load all loans:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load all loans",
+    });
+  }
+});
 module.exports = router;

@@ -3,12 +3,12 @@
 useManageBookLoans.js
 
 תיאור הקובץ:
-Custom Hook המרכז את הלוגיקה של ניהול השאלות הספרים עבור הספרן.
+Custom Hook המרכז את הלוגיקה של ניהול השאלות הספרים עבור הספרן,
+כולל תמיכה בסינון מתקדם לפי תאריך ושעה מול השרת.
 =========================================================
 */
 
 import { useState, useEffect, useCallback } from "react";
-import { getLibrarianDashboardStats } from "../services/dashboardService";
 import axios from "axios";
 import { buildApiUrl } from "../config/api";
 
@@ -16,6 +16,8 @@ export default function useManageBookLoans() {
   const [loans, setLoans] = useState([]);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -24,11 +26,22 @@ export default function useManageBookLoans() {
     setIsLoading(true);
     setErrorMessage("");
     try {
-      const response = await getLibrarianDashboardStats();
+      // בניית פרמטרים לשאילתת השרת
+      const params = {};
+      if (selectedDate) params.date = selectedDate;
+      if (selectedTime) params.time = selectedTime;
+
+      const response = await axios.get(
+        buildApiUrl("/api/librarian/all-loans"),
+        {
+          params,
+          withCredentials: true,
+        },
+      );
       const responseData = response.data;
 
       if (responseData.success) {
-        setLoans(responseData.stats?.activeLoansList || []);
+        setLoans(responseData.loans || []);
       } else {
         setErrorMessage(responseData.message || "Failed to load book loans.");
       }
@@ -38,8 +51,9 @@ export default function useManageBookLoans() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedDate, selectedTime]);
 
+  // טעינה מחדש בכל פעם שהתאריך או השעה משתנים
   useEffect(() => {
     fetchLoans();
   }, [fetchLoans]);
@@ -50,18 +64,12 @@ export default function useManageBookLoans() {
 
   תפקיד:
   שולח בקשה לעדכון סטטוס ההשאלה ל-'returned' בלחיצת כפתור
-  ومעדכן את הרשימה באופן דינמי.
+  ומעדכן את הרשימה באופן דינמי.
   ---------------------------------------------------------
   */
   const handleReturnBook = async (loanId) => {
     setErrorMessage("");
     setSuccessMessage("");
-
-    console.log("Attempting to return loan with ID:", loanId);
-    console.log(
-      "Target URL:",
-      buildApiUrl(`/api/librarian/loans/${loanId}/return`),
-    );
 
     try {
       const response = await axios.patch(
@@ -88,6 +96,7 @@ export default function useManageBookLoans() {
     }
   };
 
+  // סינון טקסטואלי וסטטוס מתבצע מקומית על התוצאות שהוחזרו מהשרת
   const filteredLoans = loans.filter((loan) => {
     const matchesSearch =
       loan.bookTitle?.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -114,6 +123,10 @@ export default function useManageBookLoans() {
     setSearchText,
     statusFilter,
     setStatusFilter,
+    selectedDate,
+    setSelectedDate,
+    selectedTime,
+    setSelectedTime,
     isLoading,
     errorMessage,
     clearErrorMessage: () => setErrorMessage(""),
