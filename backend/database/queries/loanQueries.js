@@ -55,8 +55,7 @@ async function reserveBook(userId, bookId, seatReservationId) {
         SELECT
           bookId,
           title,
-          total_quantity,
-          available_quantity
+          total_quantity
         FROM book
         WHERE bookId = ?
         LIMIT 1
@@ -107,17 +106,6 @@ async function reserveBook(userId, bookId, seatReservationId) {
 
     const seat = seats[0];
     const { startTime, endTime, reservationDate } = seat;
-
-    console.log("=== DEBUG SEAT RESERVATION ===");
-    console.log(
-      "reservationDate value:",
-      reservationDate,
-      "| Type:",
-      typeof reservationDate,
-    );
-    console.log("endTime value:", endTime, "| Type:", typeof endTime);
-    console.log("startTime value:", startTime, "| Type:", typeof startTime);
-    console.log("==============================");
 
     // נרמול הכרחי הממיר את אובייקט ה-Date למחרוזת תקנית (YYYY-MM-DD)
     const cleanDate = normalizeDate(reservationDate);
@@ -434,7 +422,10 @@ getAllLoansListForLibrarian
 עם אופציה לסינון מתקדם לפי תאריך ו/או שעה ספציפית.
 ---------------------------------------------------------
 */
-async function getAllLoansListForLibrarian(selectedDate = null, selectedTime = null) {
+async function getAllLoansListForLibrarian(
+  selectedDate = null,
+  selectedTime = null,
+) {
   let sql = `
     SELECT 
       l.loanId,

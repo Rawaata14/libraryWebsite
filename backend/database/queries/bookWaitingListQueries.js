@@ -50,10 +50,16 @@ async function getBook(bookId) {
   const sql = `
     SELECT
       bookId,
+      title, 
+      total_quantity - COUNT(l.loanId) AS available_quantity
+    FROM book b LEFT JOIN loan l
+      ON b.bookId = l.bookId
+      AND l.status IN ('active', 'overdue')
+    WHERE b.bookId = ?
+    GROUP BY 
+      b.bookId,
       title,
-      available_quantity
-    FROM book
-    WHERE bookId = ?
+      total_quantity
     LIMIT 1
   `;
 

@@ -263,10 +263,6 @@ releaseFinishedLoans
 async function releaseFinishedLoans(libraryDate, libraryTime) {
   const databasePool = await getConnection();
 
-  /*
-  תחילה מאתרים את כל ההשאלות הפעילות
-  שזמן הזמנת המקום שלהן הסתיים.
-  */
   const candidates = await doQuery(
     `
       SELECT
@@ -295,25 +291,12 @@ async function releaseFinishedLoans(libraryDate, libraryTime) {
 
   const releasedBookIds = [];
 
-  /*
-  כל השאלה מטופלת בנפרד.
-
-  כך תקלה בהשאלה אחת אינה גורמת להחזרה
-  כפולה של השאלה שכבר טופלה.
-  */
   for (const candidate of candidates) {
     const connection = await databasePool.getConnection();
 
     try {
       await connection.beginTransaction();
 
-      /*
-      שינוי הסטטוס יתבצע רק אם ההשאלה
-      עדיין active.
-
-      affectedRows מגן מפני טיפול כפול
-      על ידי שני מחזורי תחזוקה.
-      */
       const [loanResult] = await connection.query(
         `
             UPDATE loan
@@ -329,35 +312,12 @@ async function releaseFinishedLoans(libraryDate, libraryTime) {
       );
 
       if (loanResult.affectedRows === 1) {
-        /*
-        החזרת עותק אחד למלאי.
-
-        LEAST מונעת חריגה מעל הכמות הכוללת.
-        */
-        await connection.query(
-          `
-            UPDATE book
-
-            SET available_quantity =
-              LEAST(
-                total_quantity,
-                available_quantity + 1
-              )
-
-            WHERE bookId = ?
-          `,
-          [candidate.bookId],
-        );
-
+        // עצם עדכון הסטטוס ל-returned משחרר אוטומטית את העותק בחישוב הדינמי
         releasedBookIds.push(candidate.bookId);
       }
 
       await connection.commit();
     } catch (error) {
-      /*
-      אם אחת הפעולות נכשלה, מבטלים
-      את כל הפעולות של אותה השאלה.
-      */
       await connection.rollback();
 
       throw error;
@@ -366,13 +326,8 @@ async function releaseFinishedLoans(libraryDate, libraryTime) {
     }
   }
 
-  /*
-  שימוש ב-Set מונע החזרת אותו bookId
-  כמה פעמים כאשר כמה עותקים חזרו יחד.
-  */
   return [...new Set(releasedBookIds)];
 }
-
 /*
 ---------------------------------------------------------
 releaseLoansForReservation
@@ -412,10 +367,6 @@ async function releaseLoansForReservation(reservationId) {
   try {
     await connection.beginTransaction();
 
-    /*
-    נעילת כל ההשאלות הפעילות המקושרות
-    להזמנת המקום.
-    */
     const [loans] = await connection.query(
       `
           SELECT
@@ -435,12 +386,6 @@ async function releaseLoansForReservation(reservationId) {
     const releasedBookIds = [];
 
     for (const loan of loans) {
-      /*
-      ההשאלה מסומנת כמוחזרת.
-
-      returnDate מקבל את loanDate כדי לעמוד
-      באילוץ התאריכים גם בביטול מוקדם.
-      */
       const [loanResult] = await connection.query(
         `
             UPDATE loan
@@ -456,32 +401,10 @@ async function releaseLoansForReservation(reservationId) {
       );
 
       if (loanResult.affectedRows === 1) {
-        await connection.query(
-          `
-            UPDATE book
-
-            SET available_quantity =
-              LEAST(
-                total_quantity,
-                available_quantity + 1
-              )
-
-            WHERE bookId = ?
-          `,
-          [loan.bookId],
-        );
-
         releasedBookIds.push(loan.bookId);
       }
     }
 
-    /*
-    משתמש שהמתין לספר במסגרת הזמנת המקום
-    שבוטלה אינו יכול עוד לממש את ההצעה.
-
-    לכן ההמתנות הפעילות הקשורות להזמנה
-    מסומנות כ-cancelled.
-    */
     await connection.query(
       `
         UPDATE waiting_list_book

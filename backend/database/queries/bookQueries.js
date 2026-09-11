@@ -80,23 +80,18 @@ async function addBook(bookDetails) {
 
       const currentTotalQuantity = Number(existingBook.total_quantity) || 0;
 
-      const currentAvailableQuantity =
-        Number(existingBook.available_quantity) || 0;
 
       const newTotalQuantity = currentTotalQuantity + quantityInt;
 
-      const newAvailableQuantity = currentAvailableQuantity + quantityInt;
 
       const updateBookSQL = `
         UPDATE book
-        SET total_quantity = ?,
-            available_quantity = ?
+        SET total_quantity = ?
         WHERE isbn = ?
       `;
 
       await doQuery(updateBookSQL, [
         newTotalQuantity,
-        newAvailableQuantity,
         isbn,
       ]);
 
@@ -128,11 +123,10 @@ async function addBook(bookDetails) {
         publishYear,
         status,
         total_quantity,
-        available_quantity,
         category,
         book_image_name
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const result = await doQuery(insertBookSQL, [
@@ -141,7 +135,6 @@ async function addBook(bookDetails) {
       author,
       publishYear || null,
       normalizedStatus,
-      quantityInt,
       quantityInt,
       normalizedCategory,
       image || null,
@@ -241,12 +234,6 @@ updateBook
 תפקיד:
 מעדכנת את פרטי הספר ואת הכמות הכוללת בצורה בטוחה.
 
-הכמות הזמינה אינה מתקבלת מה-Frontend. במקום זאת
-נשמר מספר העותקים שאינם זמינים כרגע:
-
-total_quantity - available_quantity
-
-כך לא ניתן להחזיר בטעות עותק מושאל למלאי.
 ---------------------------------------------------------
 */
 async function updateBook(bookId, bookDetails) {
@@ -328,12 +315,15 @@ async function updateBook(bookId, bookDetails) {
     */
     const [books] = await connection.query(
       `
-        SELECT
-          bookId,
-          total_quantity,
-          available_quantity
-        FROM book
-        WHERE bookId = ?
+        SELECT 
+          b.bookId, 
+          b.total_quantity, 
+          COUNT(l.bookId) AS loanedCopies
+        FROM book b LEFT JOIN loan l
+        ON b.bookId = l.bookId
+        AND l.status = 'active'
+        WHERE b.bookId = ?
+        GROUP BY b.bookId
         LIMIT 1
         FOR UPDATE
       `,
@@ -354,34 +344,18 @@ async function updateBook(bookId, bookDetails) {
 
     /*
     -------------------------------------------------------
-    חישוב מספר העותקים שאינם זמינים
-
-    לדוגמה:
-    total_quantity = 5
-    available_quantity = 3
-    unavailableCopies = 2
-    -------------------------------------------------------
-    */
-    const unavailableCopies = Math.max(
-      0,
-      Number(currentBook.total_quantity) -
-        Number(currentBook.available_quantity),
-    );
-
-    /*
-    -------------------------------------------------------
     מניעת הסרת עותק שכבר מושאל או משוריין
     -------------------------------------------------------
     */
-    if (totalQuantity < unavailableCopies) {
+    if (totalQuantity < currentBook.loanedCopies) {
       await connection.rollback();
 
       return {
         success: false,
         statusCode: 409,
         message:
-          `Quantity cannot be lower than ${unavailableCopies}, ` +
-          `because ${unavailableCopies} copies are currently unavailable.`,
+          `Quantity cannot be lower than ${currentBook.loanedCopies}, ` +
+          `because ${currentBook.loanedCopies} copies are currently unavailable.`,
       };
     }
 
@@ -419,7 +393,7 @@ async function updateBook(bookId, bookDetails) {
     חישוב הכמות הזמינה והסטטוס החדש
     -------------------------------------------------------
     */
-    const availableQuantity = totalQuantity - unavailableCopies;
+    const availableQuantity = totalQuantity - currentBook.loanedCopies;
 
     const status = availableQuantity > 0 ? "available" : "unavailable";
 
@@ -437,8 +411,7 @@ async function updateBook(bookId, bookDetails) {
             publishYear = ?,
             category = ?,
             status = ?,
-            total_quantity = ?,
-            available_quantity = ?
+            total_quantity = ?
         WHERE bookId = ?
       `,
       [
@@ -449,7 +422,6 @@ async function updateBook(bookId, bookDetails) {
         category,
         status,
         totalQuantity,
-        availableQuantity,
         bookId,
       ],
     );
@@ -474,11 +446,14 @@ async function updateBook(bookId, bookDetails) {
 
     await connection.commit();
 
+    const updatedBook = updatedBooks[0];
+    updatedBook.available_quantity = availableQuantity;
+    
     return {
       success: true,
       statusCode: 200,
       message: "Book updated successfully.",
-      book: updatedBooks[0],
+      book: updatedBook,
     };
   } catch (error) {
     if (connection) {

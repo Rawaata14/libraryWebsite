@@ -12,9 +12,7 @@ BookEditModal.jsx
 - הצגת הכמות שתהיה זמינה לאחר השמירה.
 - מניעת הקטנת הכמות מתחת למספר העותקים
   שכבר אינם זמינים.
-
-הכמות הזמינה אינה ניתנת לעריכה ישירה.
-השרת מחשב אותה ושומר על תקינות המלאי.
+- אפשרות לפתיחת נעילת שדה ה-ISBN באמצעות מנעול.
 =========================================================
 */
 
@@ -29,12 +27,6 @@ BookEditModal
 
 תפקיד:
 מציגה חלון עריכה מעל עמוד הספרים.
-
-החלון נסגר באמצעות:
-- כפתור הסגירה.
-- כפתור Cancel.
-- לחיצה מחוץ לחלון.
-- מקש Escape.
 ---------------------------------------------------------
 */
 export default function BookEditModal({
@@ -53,13 +45,11 @@ export default function BookEditModal({
   });
 
   const [errorMessage, setErrorMessage] = useState("");
+  const [isIsbnEditable, setIsIsbnEditable] = useState(false);
 
   /*
   ---------------------------------------------------------
   טעינת פרטי הספר לטופס
-
-  בכל פעם שנבחר ספר חדש לעריכה, הטופס מתמלא
-  בפרטים הנוכחיים שלו.
   ---------------------------------------------------------
   */
   useEffect(() => {
@@ -73,10 +63,11 @@ export default function BookEditModal({
       author: book.author || "",
       publishYear: book.publishYear || "",
       category: book.category || "General",
-      totalQuantity: String(book.total_quantity ?? 1),
+      totalQuantity: String(book.total_quantity ?? book.totalQuantity ?? 1),
     });
 
     setErrorMessage("");
+    setIsIsbnEditable(false);
   }, [book]);
 
   /*
@@ -106,12 +97,7 @@ export default function BookEditModal({
   ---------------------------------------------------------
   unavailableCopies
 
-  מחשב כמה עותקים אינם זמינים כרגע.
-
-  לדוגמה:
-  total_quantity = 5
-  available_quantity = 3
-  unavailableCopies = 2
+  מחשב כמה עותקים אינם זמינים כרגע בצורה בטוחה.
   ---------------------------------------------------------
   */
   const unavailableCopies = useMemo(() => {
@@ -119,15 +105,18 @@ export default function BookEditModal({
       return 0;
     }
 
-    return Math.max(
-      0,
-      Number(book.total_quantity) - Number(book.available_quantity),
+    const total = Number(book.total_quantity ?? book.totalQuantity) || 0;
+
+    const available = Number(
+      book.available_quantity ??
+        book.availableQuantity ??
+        book.remainingCopies ??
+        0,
     );
+
+    return Math.max(0, total - available);
   }, [book]);
 
-  /*
-  אין להציג את החלון אם לא נבחר ספר לעריכה.
-  */
   if (!book) {
     return null;
   }
@@ -153,9 +142,6 @@ export default function BookEditModal({
   /*
   ---------------------------------------------------------
   handleSubmit
-
-  בודקת את הכמות ולאחר מכן שולחת את הפרטים
-  לפונקציית השמירה שהתקבלה מ-BooksPage.
   ---------------------------------------------------------
   */
   const handleSubmit = async (event) => {
@@ -165,7 +151,6 @@ export default function BookEditModal({
 
     if (!Number.isInteger(totalQuantity) || totalQuantity < 1) {
       setErrorMessage("Total quantity must be at least 1.");
-
       return;
     }
 
@@ -174,7 +159,6 @@ export default function BookEditModal({
         `Quantity cannot be lower than ${unavailableCopies}, ` +
           `because ${unavailableCopies} copies are currently unavailable.`,
       );
-
       return;
     }
 
@@ -191,9 +175,6 @@ export default function BookEditModal({
     }
   };
 
-  /*
-  הכמות שתהיה זמינה לאחר שמירת הטופס.
-  */
   const availableAfterSaving = Math.max(
     0,
     Number(formData.totalQuantity || 0) - unavailableCopies,
@@ -218,7 +199,6 @@ export default function BookEditModal({
         <div className="bookEditHeader">
           <div>
             <h2 id="book-edit-title">Edit Book</h2>
-
             <p>Update the book details and library inventory.</p>
           </div>
 
@@ -236,13 +216,29 @@ export default function BookEditModal({
         <form className="bookEditForm" onSubmit={handleSubmit}>
           <label htmlFor="edit-book-isbn">
             ISBN
-            <input
-              id="edit-book-isbn"
-              name="isbn"
-              value={formData.isbn}
-              onChange={handleChange}
-              required
-            />
+            <div className="isbnInputWrapper">
+              <input
+                id="edit-book-isbn"
+                name="isbn"
+                value={formData.isbn}
+                onChange={handleChange}
+                disabled={!isIsbnEditable}
+                required
+              />
+              <button
+                type="button"
+                className="isbnUnlockButton"
+                onClick={() => setIsIsbnEditable((prev) => !prev)}
+                aria-label={
+                  isIsbnEditable ? "Lock ISBN field" : "Unlock ISBN field"
+                }
+                title={
+                  isIsbnEditable ? "ISBN is editable" : "Click to unlock ISBN"
+                }
+              >
+                {isIsbnEditable ? "🔓" : "🔒"}
+              </button>
+            </div>
           </label>
 
           <label htmlFor="edit-book-title">
@@ -306,7 +302,6 @@ export default function BookEditModal({
 
           <div className="bookInventorySummary">
             <span>Currently unavailable: {unavailableCopies}</span>
-
             <span>Available after saving: {availableAfterSaving}</span>
           </div>
 
@@ -340,14 +335,6 @@ export default function BookEditModal({
   );
 }
 
-/*
----------------------------------------------------------
-BookEditModal.propTypes
-
-תפקיד:
-מגדיר את סוגי הנתונים שהקומפוננטה מקבלת.
----------------------------------------------------------
-*/
 BookEditModal.propTypes = {
   book: bookPropType,
   isSaving: PropTypes.bool,
