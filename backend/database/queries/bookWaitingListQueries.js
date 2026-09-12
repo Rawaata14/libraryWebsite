@@ -49,17 +49,17 @@ getBook
 async function getBook(bookId) {
   const sql = `
     SELECT
-      bookId,
-      title, 
-      total_quantity - COUNT(l.loanId) AS available_quantity
+      b.bookId,
+      b.title, 
+      b.total_quantity - COUNT(l.loanId) AS available_quantity
     FROM book b LEFT JOIN loan l
       ON b.bookId = l.bookId
       AND l.status IN ('active', 'overdue')
     WHERE b.bookId = ?
     GROUP BY 
       b.bookId,
-      title,
-      total_quantity
+      b.title,
+      b.total_quantity
     LIMIT 1
   `;
 
@@ -261,6 +261,49 @@ async function addBookEntry(bookId, userId, seatReservationId) {
 
 /*
 ---------------------------------------------------------
+hasActiveLoanForBook
+
+תפקיד:
+בודקת האם למשתמש יש כבר השאלה פעילה או באיחור
+עבור הספר המבוקש.
+
+למה הבדיקה נדרשת:
+משתמש שמחזיק כבר בעותק פעיל של הספר בידיים
+אינו אמור להירשם לרשימת ההמתנה לאותו ספר.
+
+@param {number} bookId
+מזהה הספר.
+
+@param {number} userId
+מזהה המשתמש.
+
+@returns {Promise<boolean>}
+true אם קיימת השאלה פעילה, אחרת false.
+---------------------------------------------------------
+*/
+async function hasActiveLoanForBook(bookId, userId) {
+  const sql = `
+    SELECT loanId
+
+    FROM loan
+
+    WHERE bookId = ?
+      AND userId = ?
+      AND status IN (
+        'active',
+        'overdue'
+      )
+
+    LIMIT 1
+  `;
+
+  const loans = await doQuery(sql, [bookId, userId]);
+
+  return loans.length > 0;
+}
+
+/*
+---------------------------------------------------------
 getUserBookWaitingLists
 
 תפקיד:
@@ -362,11 +405,11 @@ async function getUserBookWaitingLists(userId) {
     FROM waiting_list_book
       AS waiting
 
-    INNER JOIN book
+    LEFT JOIN book
       ON book.bookId =
         waiting.bookId
 
-    INNER JOIN seat_reservation
+    LEFT JOIN seat_reservation
       AS reservation
       ON reservation.reservationId =
         waiting.seatReservationId
@@ -383,7 +426,8 @@ async function getUserBookWaitingLists(userId) {
       waiting.queueBookId DESC
   `;
 
-  return doQuery(sql, [userId]);
+  const result = await doQuery(sql, [userId]);
+  return result;
 }
 
 /*
@@ -447,15 +491,15 @@ async function getAllBookWaitingLists() {
     FROM waiting_list_book
       AS waiting
 
-    INNER JOIN book
+    LEFT JOIN book
       ON book.bookId =
         waiting.bookId
 
-    INNER JOIN user
+    LEFT JOIN user
       ON user.userId =
         waiting.userId
 
-    INNER JOIN seat_reservation
+    LEFT JOIN seat_reservation
       AS reservation
       ON reservation.reservationId =
         waiting.seatReservationId
@@ -731,4 +775,5 @@ module.exports = {
   offerBookEntry,
   getBookOffer,
   hasActiveBookOffer,
+  hasActiveLoanForBook,
 };

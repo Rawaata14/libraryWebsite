@@ -31,7 +31,7 @@ const {
   addMinutesToSqlDateTime,
 } = require("../utils/libraryDateTime");
 
-const { escapeHtml, sendOptionalEmail } = require("./waitingListHelpers");
+const { escapeHtml, sendOptionalEmail } = require("../utils/emailService");
 
 /*
 משך הזמן שבו הצעת ספר שמורה למשתמש
@@ -141,6 +141,25 @@ async function joinBookWaitingList(bookId, userId, seatReservationId) {
       statusCode: 409,
 
       message: "You are already on the " + "waiting list for this book.",
+    };
+  }
+
+  /*
+  מניעת הצטרפות לרשימת המתנה אם למשתמש
+  יש כבר השאלה פעילה או באיחור לספר הזה.
+  */
+  const hasActiveLoan = await bookWaitingListQueries.hasActiveLoanForBook(
+    bookId,
+    userId,
+  );
+
+  if (hasActiveLoan) {
+    return {
+      success: false,
+
+      statusCode: 409,
+
+      message: "You already have an active loan for this book.",
     };
   }
 

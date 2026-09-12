@@ -32,6 +32,8 @@ waitingListQueries.
 
 const waitingListQueries = require("../database/queries/waitingListQueries");
 
+const waitingListMaintenanceQueries = require("../database/queries/waitingListMaintenanceQueries");
+
 const { getLibraryDateTime } = require("../utils/libraryDateTime");
 
 const { offerNextBook } = require("./bookWaitingListService");
@@ -309,37 +311,27 @@ async function offerReleasedBooks(bookIds) {
 
 /*
 ---------------------------------------------------------
-releaseFinishedLoansAndOfferBooks
+releaseFinishedLoansAndOfferBooks -> מעודכן לסימון איחור והתראה
 
 תפקיד:
-מחזירה למלאי ספרים שהשימוש בהם הסתיים ומעבירה
-אותם למשתמשים הבאים ברשימת ההמתנה.
-
-במערכת הנוכחית הזמנת ספר מקושרת להזמנת מקום
-בספרייה. לכן, כאשר מועד השימוש במקום הסתיים,
-גם הספר שהוזמן במסגרת אותו ביקור צריך לחזור
-למלאי.
-
-מהלך הפעולה:
-1. מקבלת את התאריך והשעה הנוכחיים לפי זמן הספרייה.
-2. מבקשת משכבת השאילתות לסגור את ההשאלות
-   שהזמן שלהן הסתיים.
-3. הכמות הזמינה של הספרים מתעדכנת במסד הנתונים.
-4. כל ספר שהתפנה מוצע למשתמש הבא בתור.
-
-ערך מוחזר:
-מערך מזהי הספרים שחזרו למלאי.
+במקום לשחרר אוטומטית את הספרים למלאי, הפונקציה כעת:
+1. מאתרת השאלות שזמן השימוש בהן הסתיים.
+2. מעדכנת את הסטטוס שלהן ל-"overdue" (באיחור).
+3. יוצרת התראה מתאימה לספרנית במערכת.
+4. משאירה את הספר במצב "מושאל" (לא מחזירה למלאי),
+   כדי שהספרנית תוכל לנהל את המעקב מול הקורא פיזית.
 ---------------------------------------------------------
 */
 async function releaseFinishedLoansAndOfferBooks() {
   const now = getLibraryDateTime();
 
-  const releasedBookIds = await waitingListQueries.releaseFinishedLoans(
-    now.date,
-    now.time,
-  );
+  // במקום לשחרר את הספרים למלאי, נפעיל שאילתת עדכון לסטטוס איחור והתראה
+  const overdueLoanIds =
+    await waitingListMaintenanceQueries.flagOverdueLoansAndNotify(
+      now.sqlDateTime,
+    );
 
-  return offerReleasedBooks(releasedBookIds);
+  return overdueLoanIds;
 }
 
 /*

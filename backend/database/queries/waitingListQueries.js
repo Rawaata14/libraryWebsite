@@ -53,15 +53,15 @@ getUserWaitingLists
 ---------------------------------------------------------
 */
 async function getUserWaitingLists(userId) {
-  const [bookEntries, seatEntries] = await Promise.all([
+  const [books, seats] = await Promise.all([
     bookWaitingListQueries.getUserBookWaitingLists(userId),
 
     seatWaitingListQueries.getUserSeatWaitingLists(userId),
   ]);
 
   return {
-    bookEntries,
-    seatEntries,
+    books,
+    seats,
   };
 }
 

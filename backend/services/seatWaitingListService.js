@@ -30,13 +30,9 @@ const {
   addMinutesToSqlDateTime,
 } = require("../utils/libraryDateTime");
 
-const {
-  normalizeTime,
-  normalizeDate,
-  escapeHtml,
-  sendOptionalEmail,
-} = require("./waitingListHelpers");
+const { escapeHtml, sendOptionalEmail } = require("../utils/emailService");
 
+const { normalizeDate, normalizeTime } = require("../utils/formatters");
 /*
 משך הזמן שבו הצעת מקום שמורה למשתמש
 הראשון בתור.

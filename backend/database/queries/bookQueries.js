@@ -80,9 +80,7 @@ async function addBook(bookDetails) {
 
       const currentTotalQuantity = Number(existingBook.total_quantity) || 0;
 
-
       const newTotalQuantity = currentTotalQuantity + quantityInt;
-
 
       const updateBookSQL = `
         UPDATE book
@@ -90,10 +88,7 @@ async function addBook(bookDetails) {
         WHERE isbn = ?
       `;
 
-      await doQuery(updateBookSQL, [
-        newTotalQuantity,
-        isbn,
-      ]);
+      await doQuery(updateBookSQL, [newTotalQuantity, isbn]);
 
       return {
         success: true,
@@ -183,15 +178,24 @@ getAllBooks
 async function getAllBooks() {
   try {
     const sql = `
-      SELECT *
-      FROM book
-      ORDER BY category ASC, title ASC
+      SELECT 
+        b.*,
+        (b.total_quantity - COUNT(l.bookId)) AS available_quantity
+      FROM book b 
+      LEFT JOIN loan l ON b.bookId = l.bookId AND l.status = 'active'
+      GROUP BY b.bookId
+      ORDER BY b.category ASC, b.title ASC
     `;
 
-    return await doQuery(sql);
+    const books = await doQuery(sql);
+
+    // לוודא שהכמות הזמינה מוחזרת כמספר תקין ולא שלילי
+    return books.map((book) => ({
+      ...book,
+      available_quantity: Math.max(0, Number(book.available_quantity) || 0),
+    }));
   } catch (error) {
     console.error("Error fetching books:", error);
-
     throw new Error("An error occurred while fetching books");
   }
 }
@@ -201,15 +205,20 @@ async function getAllBooks() {
 getBookById
 
 תפקיד:
-מחזירה ספר אחד לפי bookId.
+מחזירה ספר אחד לפי bookId יחד עם חישוב
+המלאי הזמין בזמן אמת.
 ---------------------------------------------------------
 */
 async function getBookById(bookId) {
   try {
     const sql = `
-      SELECT *
-      FROM book
-      WHERE bookId = ?
+      SELECT 
+        b.*,
+        (b.total_quantity - COUNT(l.bookId)) AS available_quantity
+      FROM book b 
+      LEFT JOIN loan l ON b.bookId = l.bookId AND l.status = 'active'
+      WHERE b.bookId = ?
+      GROUP BY b.bookId
       LIMIT 1
     `;
 
@@ -219,7 +228,10 @@ async function getBookById(bookId) {
       return null;
     }
 
-    return books[0];
+    const book = books[0];
+    book.available_quantity = Math.max(0, Number(book.available_quantity) || 0);
+
+    return book;
   } catch (error) {
     console.error("Error fetching book by ID:", error);
 
@@ -448,7 +460,7 @@ async function updateBook(bookId, bookDetails) {
 
     const updatedBook = updatedBooks[0];
     updatedBook.available_quantity = availableQuantity;
-    
+
     return {
       success: true,
       statusCode: 200,

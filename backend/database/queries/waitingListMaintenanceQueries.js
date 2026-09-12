@@ -435,6 +435,70 @@ async function releaseLoansForReservation(reservationId) {
   }
 }
 
+/*
+---------------------------------------------------------
+flagOverdueLoansAndNotify
+
+תפקיד:
+1. מאתרת השאלות פעילות שזמן ההחזרה (dueDate) שלהן עבר.
+2. מעדכנת את הסטטוס שלהן לֵ-'overdue'.
+3. יוצרת התראה לכל הספרנים במערכת על הספרים שלא הוחזרו.
+---------------------------------------------------------
+*/
+async function flagOverdueLoansAndNotify(currentDateTime) {
+  // א. שליפת ההשאלות הפעילות שזמנן עבר
+  const findSql = `
+    SELECT loan.loanId, loan.userId, loan.bookId, loan.dueDate, book.title AS bookTitle
+    FROM loan
+    INNER JOIN book ON loan.bookId = book.bookId
+    WHERE loan.status = 'active'
+      AND loan.dueDate <= ?
+  `;
+  const overdueLoans = await doQuery(findSql, [currentDateTime]);
+
+  if (!overdueLoans || overdueLoans.length === 0) {
+    return [];
+  }
+
+  // ב. עדכון הסטטוס שלהן ל-overdue
+  const loanIds = overdueLoans.map((loan) => loan.loanId);
+  const placeholders = loanIds.map(() => "?").join(", ");
+
+  const updateSql = `
+    UPDATE loan
+    SET status = 'overdue'
+    WHERE loanId IN (${placeholders})
+  `;
+  await doQuery(updateSql, loanIds);
+
+  // ג. איתור כל משתמשי ה-Librarian כדי לשלוח אליהם התראה
+  const librariansSql = `
+    SELECT userId FROM user WHERE role = 'librarian'
+  `;
+  const librarians = await doQuery(librariansSql);
+
+  // ד. יצירת התראות לכל ספרנית עבור כל השאילתות שבאיחור
+  if (librarians && librarians.length > 0) {
+    for (const loan of overdueLoans) {
+      for (const lib of librarians) {
+        const notifSql = `
+          INSERT INTO notification (userId, message, sentDate, type, isRead)
+          VALUES (?, ?, ?, 'overdue_loan', 0)
+        `;
+        // חילוץ תאריך נקי בלבד (ללא אזורי זמן ארוכים ומבלבלים)
+        const formattedDate = loan.dueDate
+          ? String(loan.dueDate).split("T")[0]
+          : "N/A";
+
+        const message = `The book "${loan.bookTitle || "Book #" + loan.bookId}" (Loan #${loan.loanId}) is overdue. Due date was: ${formattedDate}.`;
+        await doQuery(notifSql, [lib.userId, message, currentDateTime]);
+      }
+    }
+  }
+
+  return loanIds;
+}
+
 module.exports = {
   getExpiredBookOffers,
   getExpiredSeatOffers,
@@ -444,4 +508,5 @@ module.exports = {
   completeSeatOffer,
   releaseFinishedLoans,
   releaseLoansForReservation,
+  flagOverdueLoansAndNotify,
 };

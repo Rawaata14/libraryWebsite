@@ -11,6 +11,57 @@ const transporter = nodemailer.createTransport({
 
 /*
 ---------------------------------------------------------
+escapeHtml
+
+תפקיד:
+ממירה תווים מיוחדים לערכים בטוחים לשילוב בתוך תוכן HTML של מייל.
+---------------------------------------------------------
+*/
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+/*
+---------------------------------------------------------
+sendOptionalEmail
+
+תפקיד:
+שולחת מייל באופן אופציונלי כך שכשל בשליחה אינו מפיל את התהליך הראשי.
+---------------------------------------------------------
+*/
+async function sendOptionalEmail(toEmail, subject, htmlMessage, textMessage) {
+  if (!toEmail) {
+    return {
+      success: false,
+      skipped: true,
+      error: "The user does not have an email address.",
+    };
+  }
+
+  try {
+    const mailOptions = {
+      from: `"Library Management System" <${process.env.EMAIL_USER}>`,
+      to: toEmail,
+      subject: subject,
+      html: htmlMessage,
+      text: textMessage,
+    };
+
+    await transporter.sendMail(mailOptions);
+    return { success: true };
+  } catch (error) {
+    console.error("Waiting-list email was not sent:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/*
+---------------------------------------------------------
 sendWelcomeEmail
 
 תפקיד:
@@ -128,14 +179,6 @@ async function sendBookLoanEmail(userEmail, fullName, bookDetails) {
 sendSeatCancellationEmail
 
 תפקיד:
-שולחת הודעת אישור על ביטול הזמנת מקום ישיבה.
----------------------------------------------------------
-*/
-/*
----------------------------------------------------------
-sendSeatCancellationEmail
-
-תפקיד:
 שולחת הודעת אישור על ביטול הזמנת מקום ישיבה (מותאם למבטל).
 ---------------------------------------------------------
 */
@@ -186,6 +229,8 @@ async function sendSeatCancellationEmail(
 }
 
 module.exports = {
+  escapeHtml,
+  sendOptionalEmail,
   sendWelcomeEmail,
   sendSeatReservationEmail,
   sendBookLoanEmail,
