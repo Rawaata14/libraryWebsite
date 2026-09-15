@@ -18,15 +18,12 @@ BooksPage.jsx
 
 import { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import BookCard from "../components/common/BookCard";
 import Button from "../components/common/Button";
 import BookEditModal from "../components/books/BookEditModal";
 import PageBanner from "../components/layout/PageBanner";
 import PageShell from "../components/layout/PageShell";
-
 import { AuthContext } from "../context/AuthContext";
-
 import { deleteBook, getAllBooks, updateBook } from "../services/bookService";
 
 /*
@@ -40,21 +37,13 @@ BooksPage
 */
 export default function BooksPage() {
   const navigate = useNavigate();
-
   const { user } = useContext(AuthContext);
-
   const isLibrarian = user?.role === "librarian";
-
   const [books, setBooks] = useState([]);
-
   const [searchTerm, setSearchTerm] = useState("");
-
   const [selectedCategory, setSelectedCategory] = useState("All");
-
   const [deletingBookId, setDeletingBookId] = useState(null);
-
   const [editingBook, setEditingBook] = useState(null);
-
   const [isSavingBook, setIsSavingBook] = useState(false);
 
   /*

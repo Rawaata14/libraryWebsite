@@ -19,15 +19,10 @@ Routes לניהול הזמנות מקומות.
 */
 
 const express = require("express");
-
 const reservationQueries = require("../database/queries/reservationQueries");
-
 const notificationQueries = require("../database/queries/notificationQueries");
-
 const waitingListService = require("../services/waitingListService");
-
 const { sendLibraryEmail } = require("../utils/mailer");
-
 const router = express.Router();
 
 /*

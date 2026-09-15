@@ -12,9 +12,7 @@ PageBanner.jsx
 =========================================================
 */
 import { useLocation } from "react-router-dom";
-
 import PropTypes from "prop-types";
-
 import "../../styles/page-banner.css";
 import BackButton from "../common/BackButton";
 

@@ -17,9 +17,7 @@ BackButton.jsx
 import { useContext } from "react";
 import PropTypes from "prop-types";
 import { useLocation, useNavigate } from "react-router-dom";
-
 import { AuthContext } from "../../context/AuthContext";
-
 import "../../styles/back-button.css";
 
 /*

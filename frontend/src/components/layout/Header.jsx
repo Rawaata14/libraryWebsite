@@ -17,15 +17,10 @@ Header.jsx
 */
 
 import { useContext, useEffect, useRef, useState } from "react";
-
 import { NavLink, useLocation } from "react-router-dom";
-
 import { AuthContext } from "../../context/AuthContext";
-
 import { NotificationContext } from "../../context/NotificationContext";
-
 import { getProfileImageSrc } from "../../utils/profileImage";
-
 import "../../styles/header.css";
 
 /*

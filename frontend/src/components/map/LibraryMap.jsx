@@ -18,10 +18,8 @@ useLibraryMap
 */
 
 import PropTypes from "prop-types";
-
 import MapItem from "./MapItem";
 import MapToolbar from "./MapToolbar";
-
 import useLibraryMap from "../../hooks/useLibraryMap";
 import { mapZones } from "../../utils/mapUtils";
 import { seatPropType } from "../../propTypes/seatPropTypes";

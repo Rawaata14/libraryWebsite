@@ -1,3 +1,18 @@
+/*
+=========================================================
+seat.js
+
+תיאור הקובץ:
+נתבי (Routes) ה-API האחראים על ניהול מפת הישיבה בספרייה.
+
+אחריות:
+- שמירת מפת הכיסאות (הוספה גורפת או עדכון של כיסאות קיימים) – מוגן ע"י הרשאת ספרנית.
+- שליפת מפת הכיסאות והסטטוס שלהם לפי תאריך וטווח שעות נבחר.
+- מחיקת כיסא ספציפי מהמערכת – מוגן ע"י הרשאת ספרנית.
+- עדכון סטטוס או פרטי כיסא (למשל חסימה/שחרור מקומות ישיבה) – מוגן ע"י הרשאת ספרנית.
+=========================================================
+*/
+
 const express = require("express");
 
 const seatQueries = require("../database/queries/seatQueries");
@@ -19,7 +34,8 @@ router.post("/save-map", requireLibrarian, async (req, res) => {
       } else {
         result = await seatQueries.updateSeat(seatDetails.seatId, seatDetails);
       }
-      results.push(result);git
+      results.push(result);
+      git;
     }
     if (results.every((r) => r.success)) {
       res.status(201).json({
@@ -91,9 +107,6 @@ router.put("/status/:seatId", requireLibrarian, async (req, res) => {
     const seatId = req.params.seatId;
     const { status, location, rotation, x, y, type } = req.body;
 
-    // שולפים את הכיסא הקיים כדי לא לאבד שדות אחרים אם הם לא נשלחו
-    // לחלופין, אפשר להשתמש בפונקציה קיימת שמביאה את הכיסא לפי ID,
-    // אבל אם את שולחת את כל אובייקט הכיסא ממה שקיים ב-State - אפשר לעדכן ישירות:
     const result = await seatQueries.updateSeat(seatId, req.body);
 
     if (result.success) {

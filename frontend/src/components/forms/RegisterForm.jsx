@@ -16,12 +16,10 @@ RegisterForm.jsx
 
 import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-
 import InputField from "../common/InputField";
 import Button from "../common/Button";
 import BackButton from "../common/BackButton";
 import { AuthContext } from "../../context/AuthContext";
-
 import { registerUser } from "../../services/authService";
 
 const PASSWORD_PATTERN = /^(?=.*[a-zA-Z])(?=.*\d).{6,20}$/;

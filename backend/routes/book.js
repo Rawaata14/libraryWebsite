@@ -22,11 +22,9 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs/promises");
-
 const bookQueries = require("../database/queries/bookQueries");
 const loanQueries = require("../database/queries/loanQueries");
 const waitingListService = require("../services/waitingListService");
-
 const router = express.Router();
 
 /*

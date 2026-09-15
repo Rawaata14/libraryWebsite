@@ -19,13 +19,9 @@ useSeatReservation
 */
 
 import PageBanner from "../components/layout/PageBanner";
-
 import PageShell from "../components/layout/PageShell";
-
 import RoomMap from "../components/dashboard/RoomMap";
-
 import SeatReservationSummary from "../components/map/SeatReservationSummary";
-
 import useSeatReservation from "../hooks/useSeatReservation";
 
 /*

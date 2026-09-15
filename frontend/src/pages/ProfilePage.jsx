@@ -16,15 +16,11 @@ useProfile
 */
 
 import { useContext } from "react";
-
 import { AuthContext } from "../context/AuthContext";
-
 import ProfileHeader from "../components/profile/ProfileHeader";
 import UserProfileDashboard from "../components/profile/UserProfileDashboard";
 import LibrarianProfileDashboard from "../components/profile/LibrarianProfileDashboard";
-
 import useProfile from "../hooks/useProfile";
-
 import "../styles/profile.css";
 
 /*
@@ -38,9 +34,7 @@ ProfilePage
 */
 export default function ProfilePage() {
   const { user, updateUser } = useContext(AuthContext);
-
   const isLibrarian = user?.role === "librarian";
-
   const {
     isEditingProfile,
     setIsEditingProfile,
