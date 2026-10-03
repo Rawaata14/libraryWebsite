@@ -172,27 +172,38 @@ async function addBook(bookDetails) {
 getAllBooks
 
 תפקיד:
-מחזירה את כל הספרים במאגר.
+מחזירה את כל הספרים במאגר בצירוף חיווי האם למשתמש
+המחובר יש השאלה פעילה עליהם.
 ---------------------------------------------------------
 */
-async function getAllBooks() {
+async function getAllBooks(userId = null) {
   try {
     const sql = `
       SELECT 
         b.*,
         (b.total_quantity - COUNT(l.bookId)) AS available_quantity
+        ${userId ? `, (
+          SELECT COUNT(1) 
+          FROM loan active_l 
+          WHERE active_l.bookId = b.bookId 
+            AND active_l.userId = ? 
+            AND active_l.status IN ('active', 'overdue')
+        ) > 0 AS userHasActiveLoan` : `, 0 AS userHasActiveLoan`}
       FROM book b 
       LEFT JOIN loan l ON b.bookId = l.bookId AND l.status = 'active'
       GROUP BY b.bookId
       ORDER BY b.category ASC, b.title ASC
     `;
 
-    const books = await doQuery(sql);
+    // אם יש userId, נצטרך להעביר אותו כפרמטר לשאילתה
+    const queryParams = userId ? [userId] : [];
+    const books = await doQuery(sql, queryParams);
 
-    // לוודא שהכמות הזמינה מוחזרת כמספר תקין ולא שלילי
+    // לוודא שהכמות הזמינה מוחזרת כמספר תקין וש-userHasActiveLoan מוחזר כבוליאני
     return books.map((book) => ({
       ...book,
       available_quantity: Math.max(0, Number(book.available_quantity) || 0),
+      userHasActiveLoan: Boolean(book.userHasActiveLoan),
     }));
   } catch (error) {
     console.error("Error fetching books:", error);
@@ -209,7 +220,7 @@ getBookById
 המלאי הזמין בזמן אמת.
 ---------------------------------------------------------
 */
-async function getBookById(bookId) {
+async function getBookById(bookId, userId = null) {
   try {
     const sql = `
       SELECT 
@@ -230,6 +241,12 @@ async function getBookById(bookId) {
 
     const book = books[0];
     book.available_quantity = Math.max(0, Number(book.available_quantity) || 0);
+
+    if (userId) {
+      book.userHasActiveLoan = await hasActiveLoanForBook(bookId, userId);
+    } else {
+      book.userHasActiveLoan = false;
+    }
 
     return book;
   } catch (error) {

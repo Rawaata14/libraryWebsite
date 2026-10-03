@@ -60,34 +60,45 @@ router.post("/books/:bookId", requireAuth, async (req, res) => {
     if (!Number.isInteger(bookId) || bookId <= 0) {
       return res.status(400).json({
         success: false,
-
         message: "Invalid book ID.",
       });
     }
 
     /*
       בדיקת מזהה הזמנת המקום.
-
-      הבדיקה המלאה של בעלות ההזמנה,
-      הסטטוס והזמן מתבצעת בשכבת השירות.
       */
     if (!Number.isInteger(reservationId) || reservationId <= 0) {
       return res.status(400).json({
         success: false,
+        message: "A valid seat reservation must be selected.",
+      });
+    }
 
-        message: "A valid seat reservation " + "must be selected.",
+    const userId = Number(req.session.user.userId);
+
+    /*
+      בדיקה האם למשתמש יש כבר השאלה פעילה או באיחור לספר הזה.
+      אם כן, חוסמים את האפשרות להירשם לרשימת ההמתנה.
+      */
+    const hasActiveLoan = await loanQueries.hasActiveLoanForBook(
+      bookId,
+      userId,
+    );
+
+    if (hasActiveLoan) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "You already have an active loan for this book and cannot join the waiting list.",
       });
     }
 
     /*
       userId נלקח מה-Session.
-
-      כך משתמש אינו יכול להוסיף משתמש אחר
-      לרשימת ההמתנה באמצעות שינוי הבקשה.
       */
     const result = await waitingListService.joinBookWaitingList(
       bookId,
-      req.session.user.userId,
+      userId,
       reservationId,
     );
 
@@ -97,7 +108,6 @@ router.post("/books/:bookId", requireAuth, async (req, res) => {
 
     return res.status(500).json({
       success: false,
-
       message: "Internal server error.",
     });
   }

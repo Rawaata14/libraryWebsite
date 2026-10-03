@@ -25,4 +25,5 @@ export const bookPropType = PropTypes.shape({
   category: PropTypes.string,
   available_quantity: PropTypes.number,
   book_image_name: PropTypes.string,
+  userHasActiveLoan: PropTypes.bool,
 });

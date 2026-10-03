@@ -127,19 +127,34 @@ export default function BookCard({
         להצטרפות לרשימת ההמתנה.
         */}
         {!isLibrarian && onReserve && (
-          <Button
-            variant={isAvailable ? "success" : "secondary"}
-            onClick={onReserve}
-            aria-label={
-              isAvailable
-                ? `Reserve ${book.title}`
-                : `Join the waiting list for ${book.title}`
-            }
-          >
-            {isAvailable ? "Reserve" : "Join Waiting List"}
-          </Button>
+          <>
+            {book.userHasActiveLoan && !isAvailable ? (
+              <span
+                className="userHasLoanMessage"
+                style={{
+                  color: "#d9534f",
+                  fontSize: "0.9rem",
+                  display: "block",
+                  margin: "8px 0",
+                }}
+              >
+                You currently have this book on loan
+              </span>
+            ) : (
+              <Button
+                variant={isAvailable ? "success" : "secondary"}
+                onClick={onReserve}
+                aria-label={
+                  isAvailable
+                    ? `Reserve ${book.title}`
+                    : `Join the waiting list for ${book.title}`
+                }
+              >
+                {isAvailable ? "Reserve" : "Join Waiting List"}
+              </Button>
+            )}
+          </>
         )}
-
         {/*
         כפתור העריכה מוצג רק לספרנית ורק אם
         הקומפוננטה ההורה העבירה פעולת onEdit.
@@ -188,4 +203,5 @@ BookCard.propTypes = {
   onEdit: PropTypes.func,
   onDelete: PropTypes.func,
   isDeleting: PropTypes.bool,
+  isLibrarian: PropTypes.bool,
 };
