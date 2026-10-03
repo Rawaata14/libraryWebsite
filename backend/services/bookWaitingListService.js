@@ -552,10 +552,63 @@ async function cancelBookWaitingEntry(waitingId, userId) {
   };
 }
 
+/*
+---------------------------------------------------------
+cancelBookEntryByLibrarianService
+
+תפקיד:
+ביטול רשומת המתנה לספר על ידי ספרנית, 
+והצעת הספר באופן אוטומטי למשתמש הבא בתור.
+---------------------------------------------------------
+*/
+async function cancelBookEntryByLibrarianService(queueBookId) {
+  const normalizedWaitingId = Number(queueBookId);
+
+  if (!Number.isInteger(normalizedWaitingId) || normalizedWaitingId <= 0) {
+    return {
+      success: false,
+      statusCode: 400,
+      message: "Invalid waiting-list entry ID",
+    };
+  }
+
+  /*
+  1. שליפת פרטי הרשומה לפני הביטול, כדי לדעת איזה ספר (bookId) לשחרר לבא בתור.
+     (נניח שהפונקציה קיימת בשאילתות שלך או שאפשר לשלוף לפי מזהה תור)
+  */
+  const entry = await bookWaitingListQueries.getBookEntryById(normalizedWaitingId);
+
+  // קריאה לפונקציית השאילתה לביטול במסד הנתונים
+  const result =
+    await bookWaitingListQueries.cancelBookEntryByLibrarian(
+      normalizedWaitingId,
+    );
+
+  if (result.affectedRows !== 1) {
+    return {
+      success: false,
+      statusCode: 404,
+      message: "Book waiting entry not found.",
+    };
+  }
+
+  /*
+  2. אם בוטלה רשומה והיה ספר מקושר, מציעים אותו מיד למשתמש הבא בתור!
+  */
+  if (entry && entry.bookId) {
+    await offerNextBook(entry.bookId);
+  }
+
+  return {
+    success: true,
+    message: "Waiting list entry successfully cancelled by librarian, and next user notified.",
+  };
+}
 module.exports = {
   BOOK_OFFER_MINUTES,
   joinBookWaitingList,
   offerNextBook,
   validateBookOfferAccess,
   cancelBookWaitingEntry,
+  cancelBookEntryByLibrarianService,
 };

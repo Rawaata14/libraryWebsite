@@ -167,6 +167,41 @@ async function offerBookToNextWaitingUser(bookId) {
 
 /*
 ---------------------------------------------------------
+handleCancelBookEntryByLibrarian
+
+תפקיד:
+מטפלת בבקשת HTTP מצד הספרנית לביטול רשומת המתנה לספר.
+---------------------------------------------------------
+*/
+async function handleCancelBookEntryByLibrarian(req, res) {
+  try {
+    const { queueBookId } = req.params;
+
+    // קריאה לשירות שהכנו (שנמצא דרך waitingListService או bookWaitingListService)
+    const result = await waitingListService.cancelBookEntryByLibrarianService(queueBookId);
+
+    if (!result.success) {
+      return res.status(result.statusCode || 400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+    });
+  } catch (error) {
+    console.error("Error in handleCancelBookEntryByLibrarian:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while cancelling book waiting entry.",
+    });
+  }
+}
+
+/*
+---------------------------------------------------------
 POST /books/add-book
 
 תפקיד:
@@ -559,6 +594,53 @@ router.delete("/:id", async (req, res) => {
     });
   } catch (error) {
     console.error("Error deleting book:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+});
+
+/*
+---------------------------------------------------------
+PATCH /books/waiting-lists/librarian/:queueBookId/cancel
+
+תפקיד:
+ביטול רשומת המתנה לספר על ידי ספרנית (שינוי סטטוס ל-'cancelled').
+
+גישה:
+רק ספרנית מחוברת רשאית לבצע את הפעולה.
+---------------------------------------------------------
+*/
+router.patch("/waiting-lists/librarian/:queueBookId/cancel", async (req, res) => {
+  try {
+    /*
+    1. בדיקה שהמשתמש מחובר
+    */
+    if (!req.session?.user) {
+      return res.status(401).json({
+        success: false,
+        message: "User is not authenticated.",
+      });
+    }
+
+    /*
+    2. בדיקה שהמשתמש הוא אכן ספרן/מנהל
+    */
+    if (req.session.user.role !== "librarian") {
+      return res.status(403).json({
+        success: false,
+        message: "Librarian privileges are required.",
+      });
+    }
+
+    /*
+    3. הפעלת בקר הביטול שכבר כתבנו למעלה
+    */
+    return await handleCancelBookEntryByLibrarian(req, res);
+  } catch (error) {
+    console.error("Error in librarian cancel waiting list route:", error);
 
     return res.status(500).json({
       success: false,

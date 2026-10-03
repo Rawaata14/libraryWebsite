@@ -347,9 +347,10 @@ export default function MyWaitingListsPage() {
             <div className="waitingListsItems">
               {displayedEntries.map((entry) => {
                 const waitingId =
-                  selectedType === "book"
+                  entry.waitingId ||
+                  (selectedType === "book"
                     ? entry.queueBookId
-                    : entry.queueSeatId;
+                    : entry.queueSeatId);
 
                 const entryKey = `${selectedType}-${waitingId}`;
 

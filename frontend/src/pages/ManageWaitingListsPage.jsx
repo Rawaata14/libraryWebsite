@@ -26,7 +26,10 @@ import PageShell from "../components/layout/PageShell";
 
 import WaitingListItem from "../components/waiting-lists/WaitingListItem";
 
-import { getAllWaitingLists } from "../services/waitingListService";
+import {
+  getAllWaitingLists,
+  staffCancelBookWaitingEntry,
+} from "../services/waitingListService";
 
 /*
 ---------------------------------------------------------
@@ -247,6 +250,42 @@ export default function ManageWaitingListsPage() {
     setStatusFilter("all");
   };
 
+  /*
+  ---------------------------------------------------------
+  handleCancelEntry
+
+  תפקיד:
+  מאפשרת לספרנית לבטל רשומת המתנה לספר (או למקום).
+  ---------------------------------------------------------
+  */
+  const [cancellingId, setCancellingId] = useState(null);
+
+  const handleCancelEntry = async (type, waitingId) => {
+    if (type !== "book") {
+      // כרגע ממומש לספרים בלבד לפי הדרישה
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "האם את בטוחה שברצונך לבטל את רשומת ההמתנה הזו?",
+    );
+    if (!confirmed) return;
+
+    setCancellingId(waitingId);
+    try {
+      const result = await staffCancelBookWaitingEntry(waitingId);
+      if (result.success) {
+        // טעינה מחדש של הרשימות כדי שהסטטוס יעודכן ל-'cancelled'
+        await loadWaitingLists();
+      }
+    } catch (error) {
+      console.error("Failed to cancel waiting entry:", error);
+      alert(getErrorMessage(error, "Failed to cancel waiting entry."));
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
   return (
     <PageShell>
       <PageBanner title="Manage Waiting Lists" />
@@ -419,6 +458,8 @@ export default function ManageWaitingListsPage() {
                     entry={entry}
                     type={selectedType}
                     showUser
+                    isCancelling={cancellingId === waitingId}
+                    onCancel={handleCancelEntry}
                   />
                 );
               })}

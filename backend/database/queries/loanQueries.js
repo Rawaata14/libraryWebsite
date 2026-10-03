@@ -23,6 +23,7 @@ const {
   normalizeDate,
   normalizeTime,
 } = require("../../utils/formatters");
+const { offerNextBook } = require("../../services/waitingListService");
 
 /*
 ---------------------------------------------------------
@@ -217,14 +218,10 @@ async function reserveBook(userId, bookId, seatReservationId) {
     */
     if (users.length > 0) {
       const user = users[0];
-      sendBookLoanEmail(
-        user.email,
-        user.fullName,
-        book.title,
-        cleanStartTime,
-        cleanTime,
-        cleanDate,
-      );
+      sendBookLoanEmail(user.email, user.fullName, {
+        bookTitle: book.title,
+        dueDate: dueDateTime,
+      });
     }
 
     return {
@@ -336,6 +333,15 @@ async function returnBookByLibrarian(loanId) {
     );
 
     await connection.commit();
+
+    try {
+      await offerNextBook(loan.bookId);
+    } catch (waitingListError) {
+      console.error(
+        "Error offering next book from waiting list:",
+        waitingListError,
+      );
+    }
 
     return {
       success: true,

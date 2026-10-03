@@ -275,6 +275,7 @@ module.exports = {
 
   hasActiveBookOffer: bookWaitingListQueries.hasActiveBookOffer,
 
+  cancelBookEntryByLibrarian: bookWaitingListQueries.cancelBookEntryByLibrarian,
   /*
   שאילתות המתנת מקום.
   */

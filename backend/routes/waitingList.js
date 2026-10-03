@@ -278,7 +278,9 @@ router.delete("/:type/:waitingId", requireAuth, async (req, res) => {
         message: "Invalid waiting-list ID.",
       });
     }
-
+    console.log(
+      `User ${req.session.user.userId} is leaving waiting list ${req.params.type} with ID ${waitingId}`,
+    );
     const result = await waitingListService.cancelWaitingEntry(
       req.params.type,
       waitingId,

@@ -168,11 +168,9 @@ getWaitingId
 ---------------------------------------------------------
 */
 function getWaitingId(entry, type) {
-  if (type === "book") {
-    return entry.queueBookId;
-  }
-
-  return entry.queueSeatId;
+  return (
+    entry.waitingId || (type === "book" ? entry.queueBookId : entry.queueSeatId)
+  );
 }
 
 /*
@@ -419,9 +417,11 @@ export default function WaitingListItem({
               >
                 {isCancelling
                   ? "Cancelling..."
-                  : normalizedStatus === "offered"
-                    ? "Decline Offer"
-                    : "Leave Waiting List"}
+                  : showUser
+                    ? "Remove from Waiting List"
+                    : normalizedStatus === "offered"
+                      ? "Decline Offer"
+                      : "Leave Waiting List"}
               </Button>
             )}
           </div>
@@ -443,51 +443,31 @@ WaitingListItem.propTypes
 WaitingListItem.propTypes = {
   entry: PropTypes.shape({
     queueBookId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-
     queueSeatId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-
     bookId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-
     seatId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-
     userId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-
     title: PropTypes.string,
     author: PropTypes.string,
     location: PropTypes.string,
     seatType: PropTypes.string,
-
     fullName: PropTypes.string,
     userFullName: PropTypes.string,
     email: PropTypes.string,
     userEmail: PropTypes.string,
-
     reservationDate: PropTypes.string,
-
     startTime: PropTypes.string,
-
     endTime: PropTypes.string,
-
     requestedDate: PropTypes.string,
-
     requestedStartTime: PropTypes.string,
-
     requestedEndTime: PropTypes.string,
-
     position: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-
     status: PropTypes.string.isRequired,
-
     createdAt: PropTypes.string,
-
     offerExpiresAt: PropTypes.string,
   }).isRequired,
-
   type: PropTypes.oneOf(["book", "seat"]).isRequired,
-
   showUser: PropTypes.bool,
-
   isCancelling: PropTypes.bool,
-
   onCancel: PropTypes.func,
 };

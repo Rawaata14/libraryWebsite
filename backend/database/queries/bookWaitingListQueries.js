@@ -459,6 +459,13 @@ async function getAllBookWaitingLists() {
 
       waiting.seatReservationId,
 
+      ROW_Number() OVER (
+        PARTITION BY waiting.bookId
+        ORDER BY
+          waiting.createdAt ASC,
+          waiting.queueBookId ASC
+      ) AS position,
+       
       book.title,
 
       user.userId,
@@ -563,6 +570,36 @@ async function cancelBookEntry(waitingId, userId, cancelledAt) {
   `;
 
   return doQuery(sql, [cancelledAt, waitingId, userId]);
+}
+
+/*
+---------------------------------------------------------
+cancelBookEntryByLibrarian
+
+תפקיד:
+מעדכנת את סטטוס רשומת ההמתנה לספר ל-'cancelled' 
+על ידי ספרנית (ביטול ידני/ניהולי).
+
+הפעולה אינה מוחקת את השורה פיזית ממסד הנתונים, 
+אלא משנה את הסטטוס כדי לשמור על היסטוריה, 
+לוג פעולות ושלמות נתונים במערכת.
+
+@param {number} queueBookId
+מזהה רשומת ההמתנה לספר.
+
+@returns {Promise<Object>}
+תוצאת ההרצה של שאילתת ה-UPDATE מול מסד הנתונים.
+---------------------------------------------------------
+*/
+async function cancelBookEntryByLibrarian(queueBookId) {
+  const sql = `
+    UPDATE waiting_list_book
+    SET
+      status = 'cancelled'
+    WHERE queueBookId = ?
+  `;
+
+  return doQuery(sql, [queueBookId]);
 }
 
 /*
@@ -776,4 +813,5 @@ module.exports = {
   getBookOffer,
   hasActiveBookOffer,
   hasActiveLoanForBook,
+  cancelBookEntryByLibrarian,
 };
