@@ -1,15 +1,17 @@
 /*
 =========================================================
-formatters.js (או timeUtils.js)
+formatters.js
 
 תיאור הקובץ:
-אוסף פונקציות עזר (Helpers) לניהול, נרמול ואימות של תאריכים ושעות במערכת.
+אוסף פונקציות עזר (Helpers) מרוכז לצד השרת (Backend)
+לניהול, נרמול, אימות וחישובי זמנים לפי שעון ישראל.
 
 אחריות:
-- שליפת התאריך והשעה הנוכחיים המקומיים בהתאם לשעון ישראל (Asia/Jerusalem).
-- נרמול מחרוזות תאריך ובדיקת תקינותן הקלנדרית מול UTC.
-- נרמול מחרוזות שעה (תמיכה בדקות ושניות) ואימות טווחים חוקיים (00-23).
-- מתן פונקציות אימות ייעודיות (isValidDate, isValidTime) לשימוש בבדיקות תקינות קלט (Validation).
+- שליפת תאריך ושעה נוכחיים ברזולוציה מלאה (כולל שניות ו-sqlDateTime) לפי שעון ישראל (Asia/Jerusalem).
+- הוספת דקות למועד קיים (לצורך חישוב תפוגת הצעות).
+- נרמול מחרוזות תאריך ובדיקת תקינותן הקלנדרית.
+- נרמול מחרוזות שעה ואימות טווחים חוקיים (00-23).
+- מתן פונקציות אימות ייעודיות (isValidDate, isValidTime).
 =========================================================
 */
 
@@ -20,7 +22,8 @@ const LIBRARY_TIME_ZONE = "Asia/Jerusalem";
 getLibraryDateTime
 
 תפקיד:
-מחזירה תאריך ושעה נוכחיים לפי שעון ישראל.
+מחזירה את התאריך והשעה הנוכחיים לפי שעון
+הספרייה בישראל ברזולוציה מלאה (כולל שניות ופורמט ל-SQL).
 ---------------------------------------------------------
 */
 function getLibraryDateTime() {
@@ -31,6 +34,7 @@ function getLibraryDateTime() {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
     hourCycle: "h23",
   });
 
@@ -42,13 +46,44 @@ function getLibraryDateTime() {
   }, {});
 
   const date = `${parts.year}-${parts.month}-${parts.day}`;
-  const time = `${parts.hour}:${parts.minute}`;
+  const time = `${parts.hour}:${parts.minute}:${parts.second}`;
 
   return {
     date,
     time,
-    dateTimeKey: `${date}T${time}`,
+    sqlDateTime: `${date} ${time}`,
+    dateTimeKey: `${date}T${parts.hour}:${parts.minute}`,
   };
+}
+
+/*
+---------------------------------------------------------
+addMinutesToSqlDateTime
+
+תפקיד:
+מוסיפה מספר דקות למועד בפורמט MySQL בצורה מדויקת
+ללא תלות באזור הזמן של השרת.
+---------------------------------------------------------
+*/
+function addMinutesToSqlDateTime(sqlDateTime, minutes) {
+  const [datePart, timePart] = sqlDateTime.split(" ");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hours, minute, seconds] = timePart.split(":").map(Number);
+
+  const date = new Date(
+    Date.UTC(year, month - 1, day, hours, minute + minutes, seconds),
+  );
+
+  const pad = (value) => String(value).padStart(2, "0");
+
+  return (
+    `${date.getUTCFullYear()}-` +
+    `${pad(date.getUTCMonth() + 1)}-` +
+    `${pad(date.getUTCDate())} ` +
+    `${pad(date.getUTCHours())}:` +
+    `${pad(date.getUTCMinutes())}:` +
+    `${pad(date.getUTCSeconds())}`
+  );
 }
 
 /*
@@ -56,7 +91,7 @@ function getLibraryDateTime() {
 normalizeDate
 
 תפקיד:
-מנרמלת תאריך לפורמט YYYY-MM-DD ומוודאת שהוא תאריך אמיתי (כולל בדיקת UTC).
+מנרמלת תאריך לפורמט YYYY-MM-DD ומוודאת שהוא תאריך אמיתי.
 ---------------------------------------------------------
 */
 function normalizeDate(value) {
@@ -78,11 +113,7 @@ function normalizeDate(value) {
     date.getUTCMonth() === month - 1 &&
     date.getUTCDate() === day;
 
-  if (!isValidDate) {
-    return "";
-  }
-
-  return `${match[1]}-${match[2]}-${match[3]}`;
+  return isValidDate ? `${match[1]}-${match[2]}-${match[3]}` : "";
 }
 
 /*
@@ -117,36 +148,29 @@ function normalizeTime(value) {
     return "";
   }
 
-  // מחזיר HH:MM:SS אם צוין, או HH:MM תקני
   return `${match[1]}:${match[2]}` + (match[3] ? `:${match[3]}` : "");
 }
 
 /*
 ---------------------------------------------------------
-isValidDate
+isValidDate & isValidTime
 
 תפקיד:
-בודקת שמבנה התאריך תקין ושזהו תאריך אמיתי וקיים בקלנדר.
+בדיקת תקינות קלנדרית של תאריכים ושעות.
 ---------------------------------------------------------
 */
 function isValidDate(value) {
   return normalizeDate(value) !== "";
 }
 
-/*
----------------------------------------------------------
-isValidTime
-
-תפקיד:
-בודקת שמבנה השעה תקין ונופל בטווח השעות החוקי (00-23).
----------------------------------------------------------
-*/
 function isValidTime(value) {
   return normalizeTime(value) !== "";
 }
 
 module.exports = {
+  LIBRARY_TIME_ZONE,
   getLibraryDateTime,
+  addMinutesToSqlDateTime,
   normalizeDate,
   normalizeTime,
   isValidDate,

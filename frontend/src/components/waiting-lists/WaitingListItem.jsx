@@ -222,7 +222,11 @@ export default function WaitingListItem({
 
   const isBook = type === "book";
 
-  const title = isBook ? entry.title || "Unknown Book" : `Seat ${entry.seatId}`;
+  const title = isBook
+    ? entry.title || "Unknown Book"
+    : entry.seatId
+      ? `Seat ${entry.seatId}`
+      : `General Seat Queue (${formatDate(entry.requestedDate)})`;
 
   const icon = isBook ? "📚" : "🪑";
 

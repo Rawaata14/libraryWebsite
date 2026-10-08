@@ -364,8 +364,10 @@ async function getUserSeatWaitingLists(userId) {
           FROM waiting_list_seat
             AS earlier
 
-          WHERE earlier.seatId =
-              waiting.seatId
+          WHERE (
+              (waiting.seatId IS NULL AND earlier.seatId IS NULL)
+              OR (earlier.seatId = waiting.seatId)
+            )
 
             AND earlier.requestedDate =
               waiting.requestedDate
@@ -402,7 +404,7 @@ async function getUserSeatWaitingLists(userId) {
     FROM waiting_list_seat
       AS waiting
 
-    INNER JOIN seat
+    LEFT JOIN seat
       ON seat.seatId =
         waiting.seatId
 
@@ -616,7 +618,7 @@ async function getFirstWaitingForSeat(
     FROM waiting_list_seat
       AS waiting
 
-    INNER JOIN seat
+    LEFT JOIN seat
       ON seat.seatId =
         waiting.seatId
 
@@ -624,7 +626,7 @@ async function getFirstWaitingForSeat(
       ON user.userId =
         waiting.userId
 
-    WHERE waiting.seatId = ?
+    WHERE (waiting.seatId IS NULL OR waiting.seatId = ?)
       AND waiting.requestedDate = ?
       AND waiting.requestedStartTime = ?
       AND waiting.requestedEndTime = ?
@@ -819,6 +821,129 @@ async function hasActiveSeatOffer(
   ]);
 
   return offers.length > 0;
+}
+
+/*
+---------------------------------------------------------
+processNextInGeneralQueue
+
+תפקיד:
+נקראת כאשר מתפנה מקום (עקב ביטול הזמנה). 
+מחפשת את הממתין הראשון בתור הכללי (seatId IS NULL) 
+לחלון הזמן המבוקש, מקצה לו כיסא פנוי, מעדכנת ל-offered 
+ושולחת לו מייל התראה.
+---------------------------------------------------------
+*/
+async function processNextInGeneralQueue(reservationDate, startTime, endTime) {
+  try {
+    // 1. איתור הממתין הראשון בתור הכללי לחלון הזמן הזה
+    const findNextSQL = `
+      SELECT
+        waiting.queueSeatId,
+        waiting.userId,
+        user.fullName,
+        user.email
+      FROM waiting_list_seat AS waiting
+      INNER JOIN user AS user ON waiting.userId = user.userId
+      WHERE waiting.seatId IS NULL
+        AND waiting.requestedDate = ?
+        AND waiting.requestedStartTime = ?
+        AND waiting.requestedEndTime = ?
+        AND waiting.status = 'waiting'
+      ORDER BY waiting.createdAt ASC, waiting.queueSeatId ASC
+      LIMIT 1
+    `;
+
+    const nextEntries = await doQuery(findNextSQL, [
+      reservationDate,
+      startTime,
+      endTime,
+    ]);
+
+    if (nextEntries.length === 0) {
+      return { success: true, processed: false }; // אין ממתינים בתור הכללי
+    }
+
+    const nextUserInQueue = nextEntries[0];
+
+    // 2. מציאת כיסא פנוי פיזי בספרייה שלא תפוס באותו חלון זמן
+    const findAvailableSeatSQL = `
+      SELECT seatId
+      FROM seat
+      WHERE seatId NOT IN (
+        SELECT seatId
+        FROM seat_reservation
+        WHERE reservationDate = ?
+          AND LOWER(status) NOT IN ('cancelled', 'canceled')
+          AND startTime < ?
+          AND endTime > ?
+      )
+      LIMIT 1
+    `;
+
+    const availableSeats = await doQuery(findAvailableSeatSQL, [
+      reservationDate,
+      endTime,
+      startTime,
+    ]);
+
+    if (availableSeats.length === 0) {
+      return {
+        success: false,
+        message: "No available physical seats to offer.",
+      };
+    }
+
+    const assignedSeatId = availableSeats[0].seatId;
+
+    // 3. הגדרת זמן תפוגה להצעה (למשל שעתיים מעכשיו)
+    const libraryNow = getLibraryDateTime();
+    // חישוב פשוט או הוספת שעתיים לפי הפורמט של השרת
+    const offerExpiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 19)
+      .replace("T", " ");
+
+    const offeredAt = libraryNow.dateTimeKey.replace("T", " ");
+
+    // 4. עדכון רשומת ההמתנה: הפיכה ל-offered, הצמדת הכיסא שהתפנה, והגדרת תפוגה
+    const updateSQL = `
+      UPDATE waiting_list_seat
+      SET
+        status = 'offered',
+        seatId = ?,
+        offeredAt = ?,
+        offerExpiresAt = ?
+      WHERE queueSeatId = ?
+        AND status = 'waiting'
+    `;
+
+    const updateResult = await doQuery(updateSQL, [
+      assignedSeatId,
+      offeredAt,
+      offerExpiresAt,
+      nextUserInQueue.queueSeatId,
+    ]);
+
+    if (updateResult.affectedRows > 0 && nextUserInQueue.email) {
+      // 5. שליחת מייל אוטומטי למשתמש
+      await sendSeatWaitingListOfferEmail(
+        nextUserInQueue.email,
+        nextUserInQueue.fullName,
+        {
+          requestedDate: reservationDate,
+          requestedStartTime: startTime,
+          requestedEndTime: endTime,
+          offerExpiresAt,
+        },
+      );
+    }
+
+    return { success: true, processed: true, assignedSeatId };
+  } catch (error) {
+    console.error("Error processing next in general queue:", error);
+    return { success: false, error: error.message };
+  }
 }
 
 module.exports = {

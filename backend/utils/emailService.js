@@ -244,6 +244,43 @@ async function sendSeatCancellationEmail(
   }
 }
 
+/*
+---------------------------------------------------------
+sendSeatWaitingListOfferEmail
+
+תפקיד:
+שולחת התראה למשתמש שהתפנה מקום בספרייה וההצעה ממתינה לו.
+---------------------------------------------------------
+*/
+async function sendSeatWaitingListOfferEmail(
+  userEmail,
+  fullName,
+  offerDetails,
+) {
+  const subject = "A Library Seat is Available for You! 🪑✨";
+
+  const htmlMessage = `
+    <div dir="ltr" style="font-family: Arial, sans-serif; text-align: left; color: #333;">
+      <h2>Hello ${escapeHtml(fullName)},</h2>
+      <p>Good news! A seat has become available for you in the library queue.</p>
+      <p><b>Reservation Details:</b></p>
+      <ul>
+        <li><b>Date:</b> ${escapeHtml(offerDetails.requestedDate)}</li>
+        <li><b>Time:</b> ${escapeHtml(offerDetails.requestedStartTime)} - ${escapeHtml(offerDetails.requestedEndTime)}</li>
+        <li><b>Expires At:</b> ${escapeHtml(offerDetails.offerExpiresAt || "Please check your dashboard")}</li>
+      </ul>
+      <p>Please log in to your account and go to your <b>My Waiting Lists</b> page to claim your seat before the offer expires.</p>
+      <br>
+      <p>Best regards,</p>
+      <p><b>The Library Team</b></p>
+    </div>
+  `;
+
+  const textMessage = `Hello ${fullName}, A library seat is available for you on ${offerDetails.requestedDate} from ${offerDetails.requestedStartTime} to ${offerDetails.requestedEndTime}. Please check your dashboard to claim it.`;
+
+  return sendOptionalEmail(userEmail, subject, htmlMessage, textMessage);
+}
+
 module.exports = {
   escapeHtml,
   sendOptionalEmail,
@@ -251,4 +288,5 @@ module.exports = {
   sendSeatReservationEmail,
   sendBookLoanEmail,
   sendSeatCancellationEmail,
+  sendSeatWaitingListOfferEmail,
 };

@@ -15,6 +15,10 @@ seatQueries.js
 */
 
 const doQuery = require("../query");
+const seatWaitingListQueries = require("./seatWaitingListQueries");
+const sendSeatWaitingListOfferEmail =
+  require("../../utils/emailService").sendSeatWaitingListOfferEmail;
+const getLibraryDateTime = require("../../utils/formatters").getLibraryDateTime;
 
 /*
 ---------------------------------------------------------
@@ -113,6 +117,70 @@ async function updateSeat(seatId, seatDetails) {
       normalizedType,
       seatId,
     ]);
+    if (result.affectedRows === 0) {
+      return { success: false, message: "Seat not found" };
+    }
+
+    if (normalizedStatus.toLowerCase() === "available") {
+      try {
+        // 1. שליפת הממתין הראשון ברשימת ההמתנה לכיסא הספציפי הזה
+        const findWaitingSQL = `
+          SELECT
+            waiting.queueSeatId,
+            waiting.userId,
+            waiting.requestedDate,
+            waiting.requestedStartTime,
+            waiting.requestedEndTime,
+            user.fullName,
+            user.email
+          FROM waiting_list_seat AS waiting
+          INNER JOIN user AS user ON waiting.userId = user.userId
+          WHERE (waiting.seatId IS NULL OR waiting.seatId = ?)
+            AND waiting.status = 'waiting'
+          ORDER BY waiting.createdAt ASC, waiting.queueSeatId ASC
+          LIMIT 1
+        `;
+
+        const waitingEntries = await doQuery(findWaitingSQL, [seatId]);
+
+        if (waitingEntries.length > 0) {
+          const nextUser = waitingEntries[0];
+
+          const libraryNow = getLibraryDateTime(); // ודאי שהפונקציה זמינה בקובץ או ייבאי אותה
+          const offeredAt = libraryNow.dateTimeKey.replace("T", " ");
+          const offerExpiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000)
+            .toISOString()
+            .slice(0, 19)
+            .replace("T", " ");
+
+          // 2. עדכון הסטטוס ל-offered
+          await seatWaitingListQueries.offerSeatEntry(
+            nextUser.queueSeatId,
+            offeredAt,
+            offerExpiresAt,
+          );
+
+          // 3. שליחת מייל למשתמש
+          if (nextUser.email) {
+            await sendSeatWaitingListOfferEmail(
+              nextUser.email,
+              nextUser.fullName,
+              {
+                requestedDate: nextUser.requestedDate,
+                requestedStartTime: nextUser.requestedStartTime,
+                requestedEndTime: nextUser.requestedEndTime,
+                offerExpiresAt,
+              },
+            );
+          }
+        }
+      } catch (queueError) {
+        console.error(
+          "Error processing waiting list after seat update:",
+          queueError,
+        );
+      }
+    }
     return { success: true, data: result };
   } catch (error) {
     console.error("Error in updating seat:", error);

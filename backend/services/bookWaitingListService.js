@@ -29,7 +29,7 @@ const notificationQueries = require("../database/queries/notificationQueries");
 const {
   getLibraryDateTime,
   addMinutesToSqlDateTime,
-} = require("../utils/libraryDateTime");
+} = require("../utils/formatters");
 
 const { escapeHtml, sendOptionalEmail } = require("../utils/emailService");
 
@@ -576,7 +576,8 @@ async function cancelBookEntryByLibrarianService(queueBookId) {
   1. שליפת פרטי הרשומה לפני הביטול, כדי לדעת איזה ספר (bookId) לשחרר לבא בתור.
      (נניח שהפונקציה קיימת בשאילתות שלך או שאפשר לשלוף לפי מזהה תור)
   */
-  const entry = await bookWaitingListQueries.getBookEntryById(normalizedWaitingId);
+  const entry =
+    await bookWaitingListQueries.getBookEntryById(normalizedWaitingId);
 
   // קריאה לפונקציית השאילתה לביטול במסד הנתונים
   const result =
@@ -601,7 +602,8 @@ async function cancelBookEntryByLibrarianService(queueBookId) {
 
   return {
     success: true,
-    message: "Waiting list entry successfully cancelled by librarian, and next user notified.",
+    message:
+      "Waiting list entry successfully cancelled by librarian, and next user notified.",
   };
 }
 module.exports = {

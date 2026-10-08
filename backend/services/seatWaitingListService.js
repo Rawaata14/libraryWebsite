@@ -25,14 +25,14 @@ const seatWaitingListQueries = require("../database/queries/seatWaitingListQueri
 
 const notificationQueries = require("../database/queries/notificationQueries");
 
-const {
-  getLibraryDateTime,
-  addMinutesToSqlDateTime,
-} = require("../utils/libraryDateTime");
-
 const { escapeHtml, sendOptionalEmail } = require("../utils/emailService");
 
-const { normalizeDate, normalizeTime } = require("../utils/formatters");
+const {
+  normalizeDate,
+  normalizeTime,
+  getLibraryDateTime,
+  addMinutesToSqlDateTime,
+} = require("../utils/formatters");
 /*
 משך הזמן שבו הצעת מקום שמורה למשתמש
 הראשון בתור.

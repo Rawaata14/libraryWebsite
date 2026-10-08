@@ -34,7 +34,7 @@ const waitingListQueries = require("../database/queries/waitingListQueries");
 
 const waitingListMaintenanceQueries = require("../database/queries/waitingListMaintenanceQueries");
 
-const { getLibraryDateTime } = require("../utils/libraryDateTime");
+const { getLibraryDateTime } = require("../utils/formatters");
 
 const { offerNextBook } = require("./bookWaitingListService");
 

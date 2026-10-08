@@ -31,7 +31,10 @@ import {
   getAvailableReservationSlots,
 } from "../services/reservationService";
 
-import { joinSeatWaitingList } from "../services/waitingListService";
+import {
+  joinSeatWaitingList,
+  joinGeneralSeatWaitingList,
+} from "../services/waitingListService";
 
 import {
   getLibraryDateTimeKey,
@@ -520,27 +523,20 @@ export default function useSeatReservation() {
       } else {
         /*
           ---------------------------------------------------
-          הצטרפות לרשימת המתנה עבור מקום תפוס
-
-          השרת בודק מחדש:
-          - שהמקום קיים.
-          - שהמקום אכן תפוס בטווח שנבחר.
-          - שאין למשתמש הזמנה חופפת.
-          - שאין כבר רשומת המתנה פעילה זהה.
+          הצטרפות לרשימת המתנה כללית למקומות ישיבה
           ---------------------------------------------------
           */
-        const result = await joinSeatWaitingList({
-          seatId: selectedSeat.id,
-          date: selectedDate,
-          startTime,
-          endTime,
+        const result = await joinGeneralSeatWaitingList({
+          requestedDate: selectedDate,
+          requestedStartTime: startTime,
+          requestedEndTime: endTime,
         });
 
         setReservationFeedback({
           type: "success",
           message:
             result.message ||
-            `You joined the waiting list for seat ${selectedSeat.id}.`,
+            `You successfully joined the waiting list for ${selectedDate}, ${startTime} - ${endTime}.`,
         });
       }
 

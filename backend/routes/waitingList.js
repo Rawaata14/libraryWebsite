@@ -309,4 +309,133 @@ router.delete("/:type/:waitingId", requireAuth, async (req, res) => {
   }
 });
 
+/*
+---------------------------------------------------------
+POST /waiting-lists/general-seats
+
+תפקיד:
+מצרף את המשתמש המחובר לרשימת המתנה כללית למקומות ישיבה
+עבור תאריך ושעה שבהם כל מקומות הספרייה מלאים.
+
+ה-Frontend שולח:
+{
+  "requestedDate": "2026-09-10",
+  "requestedStartTime": "10:00",
+  "requestedEndTime": "12:00"
+}
+---------------------------------------------------------
+*/
+router.post("/general-seats", requireAuth, async (req, res) => {
+  try {
+    const { requestedDate, requestedStartTime, requestedEndTime } = req.body;
+
+    if (!requestedDate || !requestedStartTime || !requestedEndTime) {
+      return res.status(400).json({
+        success: false,
+        message: "Date, start time, and end time are required.",
+      });
+    }
+
+    const userId = req.session.user.userId;
+
+    // 1. בדיקת סך כל הכיסאות הפעילים (הניתנים להזמנה) בספרייה
+    const sqlTotalSeats = `
+      SELECT COUNT(*) AS count
+      FROM seat
+      WHERE LOWER(status) <> 'blocked'
+        AND type IN ('seat', 'seat-to-add', 'single-seat', 'computer-seat')
+    `;
+    const totalSeatsResult = await require("../database/query")(sqlTotalSeats);
+    const reservableCount = Number(totalSeatsResult[0]?.count) || 0;
+
+    // 2. בדיקת כמה מקומות תפוסים בפועל באותו חלון זמן
+    const sqlCheckOccupied = `
+      SELECT COUNT(*) AS bookedCount
+      FROM seat_reservation
+      WHERE reservationDate = ?
+        AND startTime = ?
+        AND endTime = ?
+        AND LOWER(status) <> 'cancelled'
+    `;
+    const occupiedResult = await require("../database/query")(
+      sqlCheckOccupied,
+      [requestedDate, requestedStartTime, requestedEndTime],
+    );
+    const bookedCount = Number(occupiedResult[0]?.bookedCount) || 0;
+
+    // אם הספרייה עדיין לא מלאה לחלוטין, לא מאפשרים להיכנס לתור הכללי
+    if (bookedCount < reservableCount) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "There are still available seats for this time slot. Please choose an available seat instead.",
+      });
+    }
+
+    // 3. בדיקה האם המשתמש כבר נמצא ברשימת המתנה פעילה לאותה שעה בדיוק
+    const sqlCheckExisting = `
+      SELECT queueSeatId
+      FROM waiting_list_seat
+      WHERE userId = ?
+        AND requestedDate = ?
+        AND requestedStartTime = ?
+        AND requestedEndTime = ?
+        AND seatId IS NULL
+        AND status IN ('waiting', 'offered')
+    `;
+    const existingEntry = await require("../database/query")(sqlCheckExisting, [
+      userId,
+      requestedDate,
+      requestedStartTime,
+      requestedEndTime,
+    ]);
+
+    if (existingEntry.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "You are already on the waiting list for this time slot.",
+      });
+    }
+
+    // 4. הוספת המשתמש לרשימת ההמתנה הכללית (seatId מוגדר כ-NULL)
+    const sqlInsert = `
+      INSERT INTO waiting_list_seat (
+        seatId,
+        userId,
+        requestedDate,
+        requestedStartTime,
+        requestedEndTime,
+        status
+      )
+      VALUES (NULL, ?, ?, ?, ?, 'waiting')
+    `;
+    const insertResult = await require("../database/query")(sqlInsert, [
+      userId,
+      requestedDate,
+      requestedStartTime,
+      requestedEndTime,
+    ]);
+
+    // שליחת התראה למשתמש
+    const notificationQueries = require("../database/queries/notificationQueries");
+    await notificationQueries.addNotification(
+      userId,
+      `You have successfully joined the general waiting list for seats on ${requestedDate} from ${requestedStartTime} to ${requestedEndTime}.`,
+      "waiting_list_joined",
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Successfully joined the waiting list",
+      queueSeatId: insertResult.insertId,
+    });
+  } catch (error) {
+    console.error("Error joining general seat waiting list:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+});
+
 module.exports = router;

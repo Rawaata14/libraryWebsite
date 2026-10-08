@@ -18,6 +18,7 @@ const doQuery = require("../query");
 const {
   sendSeatReservationEmail,
   sendSeatCancellationEmail,
+  sendSeatWaitingListOfferEmail,
 } = require("../../utils/emailService");
 const {
   isValidDate,
@@ -26,6 +27,7 @@ const {
   normalizeTime,
   getLibraryDateTime,
 } = require("../../utils/formatters");
+const seatWaitingListQueries = require("./waitingListQueries");
 
 const RESERVATION_TIME_SLOTS = [
   "08:00 - 10:00",
@@ -494,7 +496,47 @@ async function cancelReservation(reservationId, userId) {
         false,
       );
     }
+    try {
+      const nextUser = await seatWaitingListQueries.getFirstWaitingForSeat(
+        reservation.seatId,
+        reservationDate,
+        reservationStartTime,
+        normalizeTime(reservation.endTime),
+      );
 
+      if (nextUser) {
+        const libraryNow = getLibraryDateTime();
+        const offeredAt = libraryNow.dateTimeKey.replace("T", " ");
+        const offerExpiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 19)
+          .replace("T", " ");
+
+        await seatWaitingListQueries.offerSeatEntry(
+          nextUser.queueSeatId,
+          offeredAt,
+          offerExpiresAt,
+        );
+
+        if (nextUser.email) {
+          await sendSeatWaitingListOfferEmail(
+            nextUser.email,
+            nextUser.fullName,
+            {
+              requestedDate: reservationDate,
+              requestedStartTime: reservationStartTime,
+              requestedEndTime: normalizeTime(reservation.endTime),
+              offerExpiresAt,
+            },
+          );
+        }
+      }
+    } catch (queueError) {
+      console.error(
+        "Error processing waiting list after cancellation:",
+        queueError,
+      );
+    }
     return {
       success: true,
       data: {
@@ -618,6 +660,48 @@ async function cancelReservationByLibrarian(
         },
         true,
         cancellationReason, // העברת הסיבה לפונקציית המייל
+      );
+    }
+
+    try {
+      const nextUser = await seatWaitingListQueries.getFirstWaitingForSeat(
+        reservation.seatId,
+        normalizeDate(reservation.reservationDate),
+        normalizeTime(reservation.startTime),
+        normalizeTime(reservation.endTime),
+      );
+
+      if (nextUser) {
+        const libraryNow = getLibraryDateTime();
+        const offeredAt = libraryNow.dateTimeKey.replace("T", " ");
+        const offerExpiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000)
+          .toISOString()
+          .slice(0, 19)
+          .replace("T", " ");
+
+        await seatWaitingListQueries.offerSeatEntry(
+          nextUser.queueSeatId,
+          offeredAt,
+          offerExpiresAt,
+        );
+
+        if (nextUser.email) {
+          await sendSeatWaitingListOfferEmail(
+            nextUser.email,
+            nextUser.fullName,
+            {
+              requestedDate: normalizeDate(reservation.reservationDate),
+              requestedStartTime: normalizeTime(reservation.startTime),
+              requestedEndTime: normalizeTime(reservation.endTime),
+              offerExpiresAt,
+            },
+          );
+        }
+      }
+    } catch (queueError) {
+      console.error(
+        "Error processing waiting list after cancellation:",
+        queueError,
       );
     }
 

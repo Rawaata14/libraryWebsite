@@ -201,3 +201,38 @@ export async function staffCancelBookWaitingEntry(queueBookId) {
 
   return response.data;
 }
+
+/*
+---------------------------------------------------------
+joinGeneralSeatWaitingList
+
+תפקיד:
+מצרפת את המשתמש המחובר לרשימת ההמתנה הכללית
+למקומות ישיבה, כאשר כל המקומות בספרייה מלאים
+בחלון הזמן המבוקש.
+
+פרמטרים:
+- requestedDate: התאריך המבוקש (YYYY-MM-DD).
+- requestedStartTime: שעת התחלה (HH:MM).
+- requestedEndTime: שעת סיום (HH:MM).
+---------------------------------------------------------
+*/
+export async function joinGeneralSeatWaitingList({
+  requestedDate,
+  requestedStartTime,
+  requestedEndTime,
+}) {
+  const response = await axios.post(
+    buildApiUrl("/waiting-lists/general-seats"),
+    {
+      requestedDate,
+      requestedStartTime,
+      requestedEndTime,
+    },
+    {
+      withCredentials: true,
+    },
+  );
+
+  return response.data;
+}
