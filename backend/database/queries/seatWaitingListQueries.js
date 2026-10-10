@@ -466,12 +466,12 @@ async function getAllSeatWaitingLists() {
       ) AS requestedDate,
 
       TIME_FORMAT(
-        waiting.requestedStartTime,
+        requestedStartTime,
         '%H:%i:%s'
       ) AS requestedStartTime,
 
       TIME_FORMAT(
-        waiting.requestedEndTime,
+        requestedEndTime,
         '%H:%i:%s'
       ) AS requestedEndTime,
 
@@ -479,29 +479,32 @@ async function getAllSeatWaitingLists() {
 
       waiting.createdAt,
 
-      waiting.offerExpiresAt
+      waiting.offerExpiresAt,
+
+      -- חישוב המיקום בתור למקומות (לפי מקום וחלון זמן, או תור כללי אם seatId ריק)
+      ROW_NUMBER() OVER (
+        PARTITION BY waiting.seatId, waiting.requestedDate, waiting.requestedStartTime, waiting.requestedEndTime
+        ORDER BY
+          waiting.createdAt ASC,
+          waiting.queueSeatId ASC
+      ) AS position
 
     FROM waiting_list_seat
       AS waiting
 
-    INNER JOIN seat
+    LEFT JOIN seat
       ON seat.seatId =
         waiting.seatId
 
-    INNER JOIN user
+    LEFT JOIN user
       ON user.userId =
         waiting.userId
 
-    WHERE waiting.status IN (
-      'waiting',
-      'offered'
-    )
-
     ORDER BY
-      waiting.requestedDate ASC,
-      waiting.requestedStartTime ASC,
-      waiting.createdAt ASC,
-      waiting.queueSeatId ASC
+      waiting.requestedDate DESC,
+      waiting.requestedStartTime DESC,
+      waiting.createdAt DESC,
+      waiting.queueSeatId DESC
   `;
 
   return doQuery(sql);
@@ -946,6 +949,32 @@ async function processNextInGeneralQueue(reservationDate, startTime, endTime) {
   }
 }
 
+/*
+---------------------------------------------------------
+cancelSeatEntryByLibrarian
+
+תפקיד:
+מעדכנת את סטטוס רשומת ההמתנה למקום ל-'cancelled' 
+על ידי ספרנית (ביטול ידני/ניהולי).
+
+@param {number} queueSeatId
+מזהה רשומת ההמתנה למקום.
+
+@returns {Promise<Object>}
+תוצאת ההרצה של שאילתת ה-UPDATE מול מסד הנתונים.
+---------------------------------------------------------
+*/
+async function cancelSeatEntryByLibrarian(queueSeatId) {
+  const sql = `
+    UPDATE waiting_list_seat
+    SET
+      status = 'cancelled'
+    WHERE queueSeatId = ?
+  `;
+
+  return doQuery(sql, [queueSeatId]);
+}
+
 module.exports = {
   getSeat,
   hasSeatReservation,
@@ -958,4 +987,6 @@ module.exports = {
   offerSeatEntry,
   getSeatOffer,
   hasActiveSeatOffer,
+  cancelSeatEntryByLibrarian,
+  processNextInGeneralQueue,
 };

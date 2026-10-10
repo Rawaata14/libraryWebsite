@@ -289,6 +289,10 @@ module.exports = {
 
   cancelSeatEntry: seatWaitingListQueries.cancelSeatEntry,
 
+  cancelSeatEntryByLibrarian: seatWaitingListQueries.cancelSeatEntryByLibrarian,
+
+  processNextInGeneralQueue: seatWaitingListQueries.processNextInGeneralQueue,
+
   getFirstWaitingForSeat: seatWaitingListQueries.getFirstWaitingForSeat,
 
   offerSeatEntry: seatWaitingListQueries.offerSeatEntry,

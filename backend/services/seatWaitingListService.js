@@ -656,10 +656,41 @@ async function cancelSeatWaitingEntry(waitingId, userId) {
   };
 }
 
+async function cancelSeatEntryByLibrarianService(queueSeatId) {
+  const normalizedWaitingId = Number(queueSeatId);
+
+  if (!Number.isInteger(normalizedWaitingId) || normalizedWaitingId <= 0) {
+    return {
+      success: false,
+      statusCode: 400,
+      message: "Invalid waiting-list ID.",
+    };
+  }
+
+  const result =
+    await seatWaitingListQueries.cancelSeatEntryByLibrarian(
+      normalizedWaitingId,
+    );
+
+  if (result.affectedRows === 0) {
+    return {
+      success: false,
+      statusCode: 404,
+      message: "Waiting entry not found.",
+    };
+  }
+
+  return {
+    success: true,
+    message: "Seat waiting entry successfully cancelled by librarian.",
+  };
+}
+
 module.exports = {
   SEAT_OFFER_MINUTES,
   joinSeatWaitingList,
   offerNextSeat,
   validateSeatOfferAccess,
   cancelSeatWaitingEntry,
+  cancelSeatEntryByLibrarianService,
 };

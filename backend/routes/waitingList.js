@@ -438,4 +438,62 @@ router.post("/general-seats", requireAuth, async (req, res) => {
   }
 });
 
+/*
+---------------------------------------------------------
+DELETE /waiting-lists/librarian/:type/:waitingId
+
+תפקיד:
+ביטול ניהולי של רשימת המתנה (ספר או מקום) על ידי ספרנית.
+
+גישה:
+רק משתמשת מחוברת בעלת תפקיד librarian.
+---------------------------------------------------------
+*/
+router.delete("/librarian/:type/:waitingId", requireLibrarian, async (req, res) => {
+  try {
+    const waitingId = Number(req.params.waitingId);
+    const type = req.params.type;
+
+    if (!["book", "seat"].includes(type)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid waiting-list type.",
+      });
+    }
+
+    if (!Number.isInteger(waitingId) || waitingId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid waiting-list ID.",
+      });
+    }
+
+    // שימוש בשירות הניהולי של הספרנית כדי שגם יבטל וגם יקדם את הבא בתור
+    let result;
+    if (type === "book") {
+      result = await waitingListService.cancelBookEntryByLibrarianService(waitingId);
+    } else {
+      result = await waitingListService.cancelSeatEntryByLibrarianService(waitingId);
+    }
+
+    if (!result.success) {
+      return res.status(result.statusCode || 400).json({
+        success: false,
+        message: result.message || "Failed to cancel waiting entry.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: result.message || "Waiting entry successfully cancelled by librarian.",
+    });
+  } catch (error) {
+    console.error("Error cancelling waiting entry by librarian:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+});
+
 module.exports = router;

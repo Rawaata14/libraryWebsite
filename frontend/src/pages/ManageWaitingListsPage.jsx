@@ -28,7 +28,7 @@ import WaitingListItem from "../components/waiting-lists/WaitingListItem";
 
 import {
   getAllWaitingLists,
-  staffCancelBookWaitingEntry,
+  staffCancelWaitingEntry,
 } from "../services/waitingListService";
 
 /*
@@ -150,6 +150,9 @@ export default function ManageWaitingListsPage() {
     try {
       const result = await getAllWaitingLists();
 
+      console.log("Book waiting lists from server:", result.books);
+      console.log("Seat waiting lists from server:", result.seats);
+
       setBookWaitingLists(Array.isArray(result.books) ? result.books : []);
 
       setSeatWaitingLists(Array.isArray(result.seats) ? result.seats : []);
@@ -261,11 +264,6 @@ export default function ManageWaitingListsPage() {
   const [cancellingId, setCancellingId] = useState(null);
 
   const handleCancelEntry = async (type, waitingId) => {
-    if (type !== "book") {
-      // כרגע ממומש לספרים בלבד לפי הדרישה
-      return;
-    }
-
     const confirmed = window.confirm(
       "האם את בטוחה שברצונך לבטל את רשומת ההמתנה הזו?",
     );
@@ -273,7 +271,8 @@ export default function ManageWaitingListsPage() {
 
     setCancellingId(waitingId);
     try {
-      const result = await staffCancelBookWaitingEntry(waitingId);
+      // שימוש בסוג (book או seat) כדי לפנות לנתיב הניהולי המתאים בשרת
+      const result = await staffCancelWaitingEntry(type, waitingId);
       if (result.success) {
         // טעינה מחדש של הרשימות כדי שהסטטוס יעודכן ל-'cancelled'
         await loadWaitingLists();
@@ -448,9 +447,10 @@ export default function ManageWaitingListsPage() {
             <div className="waitingListsItems">
               {filteredEntries.map((entry) => {
                 const waitingId =
-                  selectedType === "book"
+                  entry.waitingId ||
+                  (selectedType === "book"
                     ? entry.queueBookId
-                    : entry.queueSeatId;
+                    : entry.queueSeatId);
 
                 return (
                   <WaitingListItem

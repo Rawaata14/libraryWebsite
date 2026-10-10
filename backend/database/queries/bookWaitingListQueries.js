@@ -511,15 +511,10 @@ async function getAllBookWaitingLists() {
       ON reservation.reservationId =
         waiting.seatReservationId
 
-    WHERE waiting.status IN (
-      'waiting',
-      'offered'
-    )
-
     ORDER BY
-      book.title ASC,
-      waiting.createdAt ASC,
-      waiting.queueBookId ASC
+      book.title DESC,
+      waiting.createdAt DESC,
+      waiting.queueBookId DESC
   `;
 
   return doQuery(sql);

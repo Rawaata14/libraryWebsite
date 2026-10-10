@@ -414,7 +414,7 @@ async function getTodaysLoansListForLibrarian() {
     LEFT JOIN user u ON l.userId = u.userId
     WHERE sr.reservationDate = CURDATE()
       AND l.status = 'active'
-    ORDER BY sr.startTime ASC, l.loanDate DESC
+    ORDER BY sr.startTime DESC, l.loanDate ASC
   `;
   return await doQuery(sql);
 }
@@ -467,7 +467,7 @@ async function getAllLoansListForLibrarian(
     queryParams.push(selectedTime);
   }
 
-  sql += ` ORDER BY l.loanDate DESC, sr.startTime ASC LIMIT 100 `;
+  sql += ` ORDER BY l.loanDate DESC, l.loanId DESC, sr.startTime ASC LIMIT 100 `;
 
   return await doQuery(sql, queryParams);
 }

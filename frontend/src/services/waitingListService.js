@@ -176,24 +176,19 @@ export async function cancelWaitingEntry(type, waitingId) {
 
 /*
 ---------------------------------------------------------
-staffCancelBookWaitingEntry
+staffCancelWaitingEntry
 
 תפקיד:
-מבטלת רשומת המתנה לספר על ידי ספרנית 
-(מעדכנת את הסטטוס ל-'cancelled').
+מבטלת רשומת המתנה (ספר או מקום) על ידי ספרנית.
 
-פרמטר:
-- queueBookId:
-  מזהה רשומת ההמתנה לספר.
-
-אבטחה:
-הנתיב בשרת דורש אימות והרשאת ספרנית (librarian).
+פרמטרים:
+- type: "book" או "seat"
+- waitingId: מזהה רשומת ההמתנה
 ---------------------------------------------------------
 */
-export async function staffCancelBookWaitingEntry(queueBookId) {
-  const response = await axios.patch(
-    buildApiUrl(`/books/waiting-lists/librarian/${queueBookId}/cancel`),
-    {},
+export async function staffCancelWaitingEntry(type, waitingId) {
+  const response = await axios.delete(
+    buildApiUrl(`/waiting-lists/librarian/${type}/${waitingId}`),
     {
       withCredentials: true,
     },
