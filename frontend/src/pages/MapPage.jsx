@@ -50,6 +50,10 @@ export default function MapPage() {
     handleDateChange,
     handleTimeChange,
     handleConfirmReservation,
+    isTable,
+    groupSize,
+    setGroupSize,
+    items,
   } = useSeatReservation();
 
   return (
@@ -200,6 +204,10 @@ export default function MapPage() {
           isSubmitting={isSubmitting}
           onConfirm={handleConfirmReservation}
           onClose={closeReservationDialog}
+          isTable={isTable}
+          groupSize={groupSize}
+          onGroupSizeChange={setGroupSize}
+          items={items}
         />
       )}
     </PageShell>

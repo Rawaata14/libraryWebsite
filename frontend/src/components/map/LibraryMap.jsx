@@ -40,6 +40,8 @@ const RESERVABLE_ITEM_TYPES = [
   "seat-to-add",
   "single-seat",
   "computer-seat",
+  "table-4",
+  "table-8",
 ];
 
 /*

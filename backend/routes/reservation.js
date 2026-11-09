@@ -745,6 +745,111 @@ router.post("/:reservationId/message", async (req, res) => {
 
 /*
 ---------------------------------------------------------
+POST /reservations/reserve-table
+
+תפקיד:
+הזמנה קבוצתית לשולחן עם הגנת "הכול או כלום" (All-or-Nothing).
+---------------------------------------------------------
+*/
+router.post("/reserve-table", async (req, res) => {
+  try {
+    if (!req.session?.user) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
+
+    const { tableId, groupSize, date, startTime, endTime } = req.body;
+
+    if (!tableId || !groupSize || !date || !startTime || !endTime) {
+      return res.status(400).json({
+        message: "Table ID, group size, date, and time range are required",
+      });
+    }
+
+    // 1. שליפת מצב כל הכסאות במפה לחלון הזמן המבוקש[cite: 1]
+    const mapResult = await seatQueries.getMapSeatsByTimeSlot(
+      date,
+      startTime,
+      endTime,
+    );
+
+    if (!mapResult.success) {
+      return res.status(500).json({
+        message: "Failed to check seat availability",
+      });
+    }
+
+    // 2. סינון הכסאות הפנויים ששייכים לשולחן הספציפי
+    const availableTableSeats = mapResult.map.filter(
+      (seat) =>
+        String(seat.tableId) === String(tableId) && seat.status === "available",
+    );
+
+    // 3. בדיקה ראשונית: האם יש בכלל מספיק מקומות פנויים כרגע
+    if (availableTableSeats.length < groupSize) {
+      return res.status(409).json({
+        message: `Not enough available seats at this table. Requested: ${groupSize}, Available: ${availableTableSeats.length}`,
+      });
+    }
+
+    // 4. לוקחים בדיוק את כמות הכסאות שהקבוצה צריכה מתוך הפנויים
+    const seatsToReserve = availableTableSeats.slice(0, groupSize);
+    const successfullyReserved = [];
+    let hasFailed = false;
+
+    // 5. מנסים להזמין את הכסאות אחד-אחד[cite: 2]
+    for (const seat of seatsToReserve) {
+      const reservationResult = await reservationQueries.reserveSeat({
+        userId: req.session.user.userId,
+        seatId: seat.seatId,
+        reservationDate: date,
+        startTime,
+        endTime,
+        status: "occupied",
+      });
+
+      if (reservationResult.success) {
+        // נשמור גם את ה-reservationId כדי שנוכל לבטל במקרה הצורך
+        successfullyReserved.push({
+          seatId: seat.seatId,
+          reservationId: reservationResult.data.insertId,
+        });
+      } else {
+        // אחד הכסאות נתפס בזמן ההזמנה! נסמן כישלון ונעצור מיד
+        hasFailed = true;
+        break;
+      }
+    }
+
+    // 6. אם היה כישלון באמצע (Race Condition) – מבטלים את כל מה שהצלחנו לתפוס עבור הקבוצה הזו
+    if (hasFailed) {
+      for (const item of successfullyReserved) {
+        await reservationQueries.cancelReservation(
+          item.reservationId,
+          req.session.user.userId,
+        );
+      }
+
+      return res.status(409).json({
+        message:
+          "מישהו תפס חלק מהכיסאות בשולחן ברגע האחרון. ההזמנה הקבוצתית בוטלה, אנא נסי שוב.",
+      });
+    }
+
+    return res.status(201).json({
+      message: "Table group reservation completed successfully",
+      reservedSeatIds: successfullyReserved.map((i) => i.seatId),
+    });
+  } catch (error) {
+    console.error("Error in group table reservation:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+});
+/*
+---------------------------------------------------------
 ייצוא הנתיבים
 ---------------------------------------------------------
 */

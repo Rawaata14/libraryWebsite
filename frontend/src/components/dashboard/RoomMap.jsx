@@ -68,15 +68,28 @@ export default function RoomMap({
   */
   const handleSeatSelect = useCallback(
     (seatData) => {
-      const newSeatId = seatData ? (seatData.seatId ?? seatData.id) : null;
+      // טיפול במקרה שבו מתקבל ישירות אובייקט או מזהה (מספר/מחרוזת)
+      let targetItem = null;
+
+      if (typeof seatData === "object" && seatData !== null) {
+        targetItem = seatData;
+      } else if (seatData !== null && seatData !== undefined) {
+        targetItem = items.find(
+          (item) => String(item.seatId ?? item.id) === String(seatData),
+        );
+      }
+
+      const newSeatId = targetItem
+        ? (targetItem.seatId ?? targetItem.id)
+        : null;
 
       setInternalSelectedSeatId(newSeatId);
 
       if (onSeatSelect) {
-        onSeatSelect(seatData);
+        onSeatSelect(targetItem);
       }
     },
-    [onSeatSelect],
+    [onSeatSelect, items],
   );
 
   /*

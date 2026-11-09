@@ -114,18 +114,13 @@ getAvailableReservationSlots
 עבור התאריך שנבחר.
 ---------------------------------------------------------
 */
-export const getAvailableReservationSlots = async (
-  date,
-) => {
-  return axios.get(
-    buildApiUrl("/reservations/available-slots"),
-    {
-      params: {
-        date,
-      },
-      withCredentials: true,
+export const getAvailableReservationSlots = async (date) => {
+  return axios.get(buildApiUrl("/reservations/available-slots"), {
+    params: {
+      date,
     },
-  );
+    withCredentials: true,
+  });
 };
 
 /*
@@ -149,6 +144,36 @@ export const createSeatReservation = async ({
     buildApiUrl("/reservations/reserve-seat"),
     {
       seatId,
+      date,
+      startTime,
+      endTime,
+    },
+    {
+      withCredentials: true,
+    },
+  );
+};
+
+/*
+---------------------------------------------------------
+createTableReservation
+
+תפקיד:
+שולחת לשרת בקשה ליצירת הזמנה קבוצתית לשולחן שלם.
+---------------------------------------------------------
+*/
+export const createTableReservation = async ({
+  tableId,
+  groupSize,
+  date,
+  startTime,
+  endTime,
+}) => {
+  return axios.post(
+    buildApiUrl("/reservations/reserve-table"),
+    {
+      tableId,
+      groupSize,
       date,
       startTime,
       endTime,
