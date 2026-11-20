@@ -66,7 +66,14 @@ async function getConnection() {
 
       console.log("Connected to MySQL successfully.");
     } catch (error) {
+      const failedPool = connectionPool;
       connectionPool = null;
+
+      try {
+        await failedPool.end();
+      } catch (endError) {
+        console.error("Failed to close the connection pool:", endError.message);
+      }
 
       console.error("Failed to connect to MySQL:", error.message);
 

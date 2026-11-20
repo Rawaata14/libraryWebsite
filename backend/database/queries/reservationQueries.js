@@ -15,6 +15,7 @@ reservationQueries.js
 */
 
 const doQuery = require("../query");
+const { getConnection } = require("../dbSingleton");
 const {
   sendSeatReservationEmail,
   sendSeatCancellationEmail,
@@ -150,106 +151,164 @@ reserveSeat
 ובדיקה שהמשתמש עצמו אינו מחזיק בהזמנה חופפת אחרת.
 ---------------------------------------------------------
 */
+
 async function reserveSeat(reservationDetails) {
-  const { userId, seatId, reservationDate, startTime, endTime, status } =
-    reservationDetails;
+  const {
+    userId,
+    seatId,
+    reservationDate,
+    startTime,
+    endTime,
+    status = "occupied",
+  } = reservationDetails;
+
+  // 1. אימות תאריך ושעות
+  const validation = validateReservationTime(
+    reservationDate,
+    startTime,
+    endTime,
+  );
+
+  if (!validation.success) {
+    return validation;
+  }
+
+  let connection;
 
   try {
-    const validation = validateReservationTime(
-      reservationDate,
-      startTime,
-      endTime,
+    const pool = await getConnection();
+    connection = await pool.getConnection();
+
+    await connection.beginTransaction();
+
+    // 2. נעילת המשתמש למניעת הזמנות חופפות
+    const [users] = await connection.query(
+      `SELECT userId, email, fullName
+       FROM user
+       WHERE userId = ?
+       FOR UPDATE`,
+      [userId],
     );
 
-    if (!validation.success) {
-      return validation;
+    if (users.length === 0) {
+      const error = new Error("User not found");
+      error.conflict = true;
+      throw error;
     }
 
-    // 1. בדיקה האם הכיסא הספציפי תפוס בחלון הזמן הזה
-    const overlapResult = await checkReservationOverlap(
-      seatId,
-      validation.reservationDate,
-      validation.startTime,
-      validation.endTime,
+    // 3. נעילת הכיסא המבוקש
+    const [seats] = await connection.query(
+      `SELECT seatId,type, status
+       FROM seat
+       WHERE seatId = ?
+       FOR UPDATE`,
+      [seatId],
     );
 
-    if (!overlapResult.success) {
-      return overlapResult;
+    if (seats.length === 0) {
+      const error = new Error("Seat not found");
+      error.conflict = true;
+      throw error;
     }
 
-    if (overlapResult.hasOverlap) {
-      return {
-        success: false,
-        conflict: true,
-        message: "This seat is already reserved during the selected time.",
-      };
-    }
-
-    // 2. בדיקה מערכתית: האם למשתמש עצמו כבר יש הזמנה פעילה אחרת באותו חלון זמן
-    const userOverlapSQL = `
-      SELECT reservationId 
-      FROM seat_reservation
-      WHERE userId = ?
-        AND reservationDate = ?
-        AND LOWER(status) NOT IN ('cancelled', 'canceled')
-        AND startTime < ?
-        AND endTime > ?
-      LIMIT 1
-    `;
-
-    const userExistingReservations = await doQuery(userOverlapSQL, [
-      userId,
-      validation.reservationDate,
-      validation.endTime,
-      validation.startTime,
-    ]);
-
-    if (userExistingReservations.length > 0) {
-      return {
-        success: false,
-        conflict: true,
-        message:
-          "You already have an active seat reservation during this time slot.",
-      };
-    }
-
-    const insertSQL = `
-      INSERT INTO seat_reservation
-        (
-          userId,
-          seatId,
-          reservationDate,
-          startTime,
-          endTime,
-          status
-        )
-      VALUES (?, ?, ?, ?, ?, ?)
-    `;
-
-    const result = await doQuery(insertSQL, [
-      userId,
-      seatId,
-      validation.reservationDate,
-      validation.startTime,
-      validation.endTime,
-      status,
-    ]);
-
-    if (result.affectedRows > 0) {
-      const users = await doQuery(
-        `SELECT email, fullName FROM user WHERE userId = ?`,
-        [userId],
+    if (seats[0].type === "table-4" || seats[0].type === "table-8") {
+      const error = new Error(
+        "A table cannot be reserved as an individual seat",
       );
+      error.conflict = true;
+      throw error;
+    }
 
-      if (users.length > 0) {
-        const user = users[0];
-        sendSeatReservationEmail(user.email, user.fullName, {
-          reservationDate: validation.reservationDate,
-          startTime: validation.startTime,
-          endTime: validation.endTime,
-          seatId,
-        });
-      }
+    if (String(seats[0].status).toLowerCase() === "blocked") {
+      const error = new Error("This seat is blocked");
+      error.conflict = true;
+      throw error;
+    }
+
+    // 4. בדיקת הזמנות חופפות של המשתמש
+    const [userReservations] = await connection.query(
+      `SELECT reservationId
+       FROM seat_reservation
+       WHERE userId = ?
+         AND reservationDate = ?
+         AND LOWER(status) NOT IN ('cancelled', 'canceled')
+         AND startTime < ?
+         AND endTime > ?
+       LIMIT 1
+       FOR UPDATE`,
+      [
+        userId,
+        validation.reservationDate,
+        validation.endTime,
+        validation.startTime,
+      ],
+    );
+
+    if (userReservations.length > 0) {
+      const error = new Error(
+        "You already have an active seat reservation during this time slot.",
+      );
+      error.conflict = true;
+      throw error;
+    }
+
+    // 5. בדיקת הזמנות חופפות של הכיסא
+    const [seatReservations] = await connection.query(
+      `SELECT reservationId
+       FROM seat_reservation
+       WHERE seatId = ?
+         AND reservationDate = ?
+         AND LOWER(status) NOT IN ('cancelled', 'canceled')
+         AND startTime < ?
+         AND endTime > ?
+       LIMIT 1
+       FOR UPDATE`,
+      [
+        seatId,
+        validation.reservationDate,
+        validation.endTime,
+        validation.startTime,
+      ],
+    );
+
+    if (seatReservations.length > 0) {
+      const error = new Error(
+        "This seat is already reserved during the selected time.",
+      );
+      error.conflict = true;
+      throw error;
+    }
+
+    // 6. שמירת ההזמנה
+    const [result] = await connection.query(
+      `INSERT INTO seat_reservation
+        (userId, seatId, reservationDate,
+         startTime, endTime, status)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        seatId,
+        validation.reservationDate,
+        validation.startTime,
+        validation.endTime,
+        status,
+      ],
+    );
+
+    await connection.commit();
+    connection.release();
+    connection = null;
+
+    // 7. שליחת מייל רק לאחר שמירה מוצלחת
+    try {
+      await sendSeatReservationEmail(users[0].email, users[0].fullName, {
+        reservationDate: validation.reservationDate,
+        startTime: validation.startTime,
+        endTime: validation.endTime,
+        seatId,
+      });
+    } catch (emailError) {
+      console.error("Reservation saved, but email failed:", emailError);
     }
 
     return {
@@ -257,12 +316,278 @@ async function reserveSeat(reservationDetails) {
       data: result,
     };
   } catch (error) {
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error("Reservation rollback failed:", rollbackError);
+      }
+    }
+
     console.error("Error in reserving seat:", error);
 
     return {
       success: false,
-      message: "Failed to reserve seat",
+      conflict: error.conflict === true,
+      message: error.conflict ? error.message : "Failed to reserve seat",
     };
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+}
+
+/*
+---------------------------------------------------------
+reserveGroupSeats
+
+תפקיד:
+שמירת מספר כיסאות של שולחן קבוצתי
+ב-Transaction אחת.
+---------------------------------------------------------
+*/
+async function reserveGroupSeats(reservationDetails) {
+  const {
+    userId,
+    tableId,
+    seatIds,
+    reservationDate,
+    startTime,
+    endTime,
+    status = "occupied",
+  } = reservationDetails;
+
+  const validation = validateReservationTime(
+    reservationDate,
+    startTime,
+    endTime,
+  );
+
+  if (!validation.success) {
+    return validation;
+  }
+
+  if (
+    !Array.isArray(seatIds) ||
+    seatIds.length === 0 ||
+    seatIds.length > 8 ||
+    new Set(seatIds.map(String)).size !== seatIds.length
+  ) {
+    return {
+      success: false,
+      message: "Invalid group seat selection",
+    };
+  }
+
+  let connection;
+
+  try {
+    const pool = await getConnection();
+    connection = await pool.getConnection();
+
+    await connection.beginTransaction();
+
+    // נעילת המשתמש כדי לסנכרן הזמנות קבוצתיות שלו
+    const [users] = await connection.query(
+      "SELECT userId, email, fullName FROM user WHERE userId = ? FOR UPDATE",
+      [userId],
+    );
+
+    if (users.length === 0) {
+      throw new Error("User not found");
+    }
+
+    const [tables] = await connection.query(
+      `SELECT seatId, type
+   FROM seat
+   WHERE seatId = ?
+   FOR UPDATE`,
+      [tableId],
+    );
+
+    if (
+      tables.length !== 1 ||
+      !["table-4", "table-8"].includes(tables[0].type)
+    ) {
+      const error = new Error("Invalid table");
+      error.conflict = true;
+      throw error;
+    }
+
+    const minSeats = tables[0].type === "table-8" ? 5 : 1;
+    const maxSeats = tables[0].type === "table-8" ? 8 : 4;
+
+    if (seatIds.length < minSeats || seatIds.length > maxSeats) {
+      const error = new Error(
+        `This table requires between ${minSeats} and ${maxSeats} seats`,
+      );
+      error.conflict = true;
+      throw error;
+    }
+
+    // נעילת הכיסאות בסדר קבוע
+    const orderedSeatIds = [...seatIds].sort((a, b) => Number(a) - Number(b));
+
+    for (const seatId of orderedSeatIds) {
+      const [seats] = await connection.query(
+        `SELECT seatId, tableId, type, status
+        FROM seat
+        WHERE seatId = ?
+        FOR UPDATE`,
+        [seatId],
+      );
+
+      if (seats.length !== 1 || String(seats[0].tableId) !== String(tableId)) {
+        const error = new Error(
+          "A selected seat does not belong to this table",
+        );
+        error.conflict = true;
+        throw error;
+      }
+
+      if (seats[0].type !== "seat") {
+        const error = new Error(`Seat ${seatId} is not a valid chair`);
+        error.conflict = true;
+        throw error;
+      }
+
+      if (String(seats[0].status).toLowerCase() === "blocked") {
+        const error = new Error(`Seat ${seatId} is blocked`);
+        error.conflict = true;
+        throw error;
+      }
+    }
+
+    // בדיקת חפיפה של המשתמש פעם אחת
+    const [userReservations] = await connection.query(
+      `SELECT reservationId
+       FROM seat_reservation
+       WHERE userId = ?
+         AND reservationDate = ?
+         AND LOWER(status) NOT IN ('cancelled', 'canceled')
+         AND startTime < ?
+         AND endTime > ?
+       LIMIT 1
+       FOR UPDATE`,
+      [
+        userId,
+        validation.reservationDate,
+        validation.endTime,
+        validation.startTime,
+      ],
+    );
+
+    if (userReservations.length > 0) {
+      const error = new Error(
+        "You already have an active reservation during this time",
+      );
+      error.conflict = true;
+      throw error;
+    }
+
+    // בדיקה שכל הכיסאות פנויים בחלון הזמן
+    for (const seatId of orderedSeatIds) {
+      const [overlaps] = await connection.query(
+        `SELECT reservationId
+         FROM seat_reservation
+         WHERE seatId = ?
+           AND reservationDate = ?
+           AND LOWER(status) NOT IN ('cancelled', 'canceled')
+           AND startTime < ?
+           AND endTime > ?
+         LIMIT 1
+         FOR UPDATE`,
+        [
+          seatId,
+          validation.reservationDate,
+          validation.endTime,
+          validation.startTime,
+        ],
+      );
+
+      if (overlaps.length > 0) {
+        const error = new Error(`Seat ${seatId} is already reserved`);
+        error.conflict = true;
+        throw error;
+      }
+    }
+
+    // שמירת כל הכיסאות באותה Transaction
+    const reservationIds = [];
+
+    for (const seatId of orderedSeatIds) {
+      const [result] = await connection.query(
+        `INSERT INTO seat_reservation
+          (userId, seatId, reservationDate,
+           startTime, endTime, status)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          seatId,
+          validation.reservationDate,
+          validation.startTime,
+          validation.endTime,
+          status,
+        ],
+      );
+
+      reservationIds.push(result.insertId);
+    }
+
+    await connection.commit();
+    connection.release();
+    connection = null;
+
+    try {
+      const emailSent = await sendSeatReservationEmail(
+        users[0].email,
+        users[0].fullName,
+        {
+          reservationDate: validation.reservationDate,
+          startTime: validation.startTime,
+          endTime: validation.endTime,
+          tableId,
+          seatIds: orderedSeatIds,
+        },
+      );
+
+      if (!emailSent) {
+        console.error(
+          "Group reservation saved, but confirmation email was not sent",
+        );
+      }
+    } catch (emailError) {
+      console.error("Group reservation saved, but email failed:", emailError);
+    }
+
+    return {
+      success: true,
+      data: {
+        reservationIds,
+        reservedSeatIds: orderedSeatIds,
+      },
+    };
+  } catch (error) {
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error("Rollback failed:", rollbackError);
+      }
+    }
+
+    console.error("Group reservation failed:", error);
+
+    return {
+      success: false,
+      conflict: error.conflict === true,
+      message: error.conflict ? error.message : "Failed to reserve group seats",
+    };
+  } finally {
+    if (connection) {
+      connection.release();
+    }
   }
 }
 
@@ -929,6 +1254,7 @@ async function getRecentTodayReservations() {
 
 module.exports = {
   reserveSeat,
+  reserveGroupSeats,
   getAllReservations,
   getReservationsByUser,
   getReservationById,

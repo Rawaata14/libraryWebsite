@@ -119,23 +119,42 @@ sendSeatReservationEmail
 שולחת אישור הזמנת מקום ישיבה עם פרטי ההזמנה.
 ---------------------------------------------------------
 */
+
 async function sendSeatReservationEmail(userEmail, fullName, reservation) {
   try {
+    const isGroupReservation =
+      Array.isArray(reservation.seatIds) && reservation.seatIds.length > 0;
+
+    const seatDetails = isGroupReservation
+      ? `<li><b>Table ID:</b> ${escapeHtml(reservation.tableId)}</li>
+         <li><b>Seats:</b> ${reservation.seatIds
+           .map((id) => escapeHtml(id))
+           .join(", ")}</li>`
+      : `<li><b>Seat ID / Location:</b> ${escapeHtml(
+          reservation.seatId ?? reservation.location ?? "N/A",
+        )}</li>`;
+
     const mailOptions = {
       from: `"Library Management System" <${process.env.EMAIL_USER}>`,
       to: userEmail,
-      subject: "Seat Reservation Confirmation 🪑",
+      subject: isGroupReservation
+        ? "Group Reservation Confirmation"
+        : "Seat Reservation Confirmation",
       html: `
-        <div dir="ltr" style="font-family: Arial, sans-serif; text-align: left; color: #333;">
-          <h2>Hello ${fullName},</h2>
-          <p>Your seat has been successfully reserved!</p>
+        <div dir="ltr" style="font-family: Arial, sans-serif; color: #333;">
+          <h2>Hello ${escapeHtml(fullName)},</h2>
+          <p>Your ${
+            isGroupReservation ? "group reservation has" : "seat has"
+          } been successfully reserved!</p>
+
           <p><b>Reservation Details:</b></p>
           <ul>
-            <li><b>Date:</b> ${reservation.reservationDate}</li>
-            <li><b>Time:</b> ${reservation.startTime} - ${reservation.endTime}</li>
-            <li><b>Seat ID / Location:</b> ${reservation.seatId || reservation.location || "N/A"}</li>
+            <li><b>Date:</b> ${escapeHtml(reservation.reservationDate)}</li>
+            <li><b>Time:</b> ${escapeHtml(reservation.startTime)} -
+              ${escapeHtml(reservation.endTime)}</li>
+            ${seatDetails}
           </ul>
-          <br>
+
           <p>Best regards,</p>
           <p><b>The Library Team</b></p>
         </div>
@@ -143,10 +162,11 @@ async function sendSeatReservationEmail(userEmail, fullName, reservation) {
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`Seat reservation email sent successfully to: ${userEmail}`);
+
+    console.log(`Reservation email sent successfully to: ${userEmail}`);
     return true;
   } catch (error) {
-    console.error("Error sending seat reservation email:", error);
+    console.error("Error sending reservation email:", error);
     return false;
   }
 }

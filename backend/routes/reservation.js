@@ -23,6 +23,7 @@ const reservationQueries = require("../database/queries/reservationQueries");
 const notificationQueries = require("../database/queries/notificationQueries");
 const waitingListService = require("../services/waitingListService");
 const { sendLibraryEmail } = require("../utils/mailer");
+const seatQueries = require("../database/queries/seatQueries");
 const router = express.Router();
 
 /*
@@ -826,51 +827,27 @@ router.post("/reserve-table", async (req, res) => {
 
     // 4. לוקחים בדיוק את כמות הכסאות שהקבוצה צריכה מתוך הפנויים
     const seatsToReserve = availableTableSeats.slice(0, groupSize);
-    const successfullyReserved = [];
-    let hasFailed = false;
 
-    // 5. מנסים להזמין את הכסאות אחד-אחד[cite: 2]
-    for (const seat of seatsToReserve) {
-      const reservationResult = await reservationQueries.reserveSeat({
-        userId: req.session.user.userId,
-        seatId: seat.seatId,
-        reservationDate: date,
-        startTime,
-        endTime,
-        status: "occupied",
-      });
+    const reservationResult = await reservationQueries.reserveGroupSeats({
+      userId: req.session.user.userId,
+      tableId,
+      seatIds: seatsToReserve.map((seat) => seat.seatId),
+      reservationDate: date,
+      startTime,
+      endTime,
+      status: "occupied",
+    });
 
-      if (reservationResult.success) {
-        // נשמור גם את ה-reservationId כדי שנוכל לבטל במקרה הצורך
-        successfullyReserved.push({
-          seatId: seat.seatId,
-          reservationId: reservationResult.data.insertId,
-        });
-      } else {
-        // אחד הכסאות נתפס בזמן ההזמנה! נסמן כישלון ונעצור מיד
-        hasFailed = true;
-        break;
-      }
-    }
-
-    // 6. אם היה כישלון באמצע (Race Condition) – מבטלים את כל מה שהצלחנו לתפוס עבור הקבוצה הזו
-    if (hasFailed) {
-      for (const item of successfullyReserved) {
-        await reservationQueries.cancelReservation(
-          item.reservationId,
-          req.session.user.userId,
-        );
-      }
-
-      return res.status(409).json({
-        message:
-          "מישהו תפס חלק מהכיסאות בשולחן ברגע האחרון. ההזמנה הקבוצתית בוטלה, אנא נסי שוב.",
+    if (!reservationResult.success) {
+      return res.status(reservationResult.conflict ? 409 : 400).json({
+        message: reservationResult.message,
       });
     }
 
     return res.status(201).json({
       message: "Table group reservation completed successfully",
-      reservedSeatIds: successfullyReserved.map((i) => i.seatId),
+      reservedSeatIds: reservationResult.data.reservedSeatIds,
+      reservationIds: reservationResult.data.reservationIds,
     });
   } catch (error) {
     console.error("Error in group table reservation:", error);

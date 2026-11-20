@@ -65,21 +65,23 @@ getMapSeatsByTimeSlot
 async function getMapSeatsByTimeSlot(reservationDate, startTime, endTime) {
   try {
     const getMapSQL = `
-      SELECT
-        s.*,
-        CASE
-          WHEN s.status = 'blocked' THEN 'blocked'
-          WHEN sr.reservationId IS NOT NULL THEN 'occupied'
-          ELSE 'available'
-        END AS status
-      FROM seat s
-      LEFT JOIN seat_reservation sr
-        ON s.seatId = sr.seatId
-        AND sr.reservationDate = ?
-        AND sr.status <> 'cancelled'
-        AND sr.startTime < ?
-        AND sr.endTime > ?
-    `;
+    SELECT
+      s.*,
+      CASE
+        WHEN s.status = 'blocked' THEN 'blocked'
+        WHEN EXISTS (
+          SELECT 1
+          FROM seat_reservation sr
+          WHERE sr.seatId = s.seatId
+            AND sr.reservationDate = ?
+            AND LOWER(sr.status) NOT IN ('cancelled', 'canceled')
+            AND sr.startTime < ?
+            AND sr.endTime > ?
+        ) THEN 'occupied'
+        ELSE 'available'
+      END AS status
+    FROM seat s
+  `;
 
     const mapSeats = await doQuery(getMapSQL, [
       reservationDate,
