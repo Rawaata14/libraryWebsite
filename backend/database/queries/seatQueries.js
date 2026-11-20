@@ -14,7 +14,7 @@ seatQueries.js
 =========================================================
 */
 
-const doQuery = require("../query");
+const {doQuery} = require("../query");
 const seatWaitingListQueries = require("./seatWaitingListQueries");
 const sendSeatWaitingListOfferEmail =
   require("../../utils/emailService").sendSeatWaitingListOfferEmail;

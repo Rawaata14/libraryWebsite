@@ -49,4 +49,45 @@ async function doQuery(sql, params = []) {
   }
 }
 
-module.exports = doQuery;
+
+/*
+---------------------------------------------------------
+withTransaction
+
+תפקיד:
+מריצה מספר פעולות SQL באותה טרנזקציה.
+
+אם כל הפעולות מצליחות - COMMIT.
+אם אחת נכשלת - ROLLBACK.
+---------------------------------------------------------
+*/
+async function withTransaction(callback) {
+  const pool = await getConnection();
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const result = await callback(connection);
+
+    await connection.commit();
+
+    return result;
+  } catch (error) {
+    try {
+      await connection.rollback();
+    } catch (rollbackError) {
+      console.error("Transaction rollback failed:", rollbackError);
+    }
+
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+
+module.exports = {
+  doQuery,
+  withTransaction
+};

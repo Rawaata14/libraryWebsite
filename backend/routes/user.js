@@ -27,7 +27,10 @@ const {
   getAllUsers,
   updateUserStatus,
   getUserDashboardStats,
+  createPasswordResetToken,
+  resetUserPassword,
 } = require("../database/queries/authorization");
+const { sendPasswordResetEmail } = require("../utils/emailService");
 
 const { requireAuth, requireLibrarian } = require("../middleware/auth");
 
@@ -119,6 +122,88 @@ const uploadProfileImage = multer({
 Routes ציבוריים
 =========================================================
 */
+
+/*
+---------------------------------------------------------
+POST /user/forgot-password
+
+תפקיד:
+יוצר אסימון שחזור ושולח קישור לאימייל.
+---------------------------------------------------------
+*/
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (typeof email !== "string" || !email.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid email is required",
+      });
+    }
+
+    const resetData = await createPasswordResetToken(email);
+
+    if (resetData) {
+      await sendPasswordResetEmail(resetData.email, resetData.token);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "If an account exists with this email, a password reset link will be sent.",
+    });
+  } catch (error) {
+    console.error("Error requesting password reset:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Could not process password reset request",
+    });
+  }
+});
+
+/*
+---------------------------------------------------------
+POST /user/reset-password
+
+תפקיד:
+מקבל אסימון שחזור וסיסמה חדשה,
+מאמת את האסימון ומעדכן את הסיסמה.
+---------------------------------------------------------
+*/
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (
+      typeof token !== "string" ||
+      typeof newPassword !== "string" ||
+      !token ||
+      !newPassword
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Token and new password are required",
+      });
+    }
+
+    const result = await resetUserPassword(token, newPassword);
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error resetting password:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Could not reset password",
+    });
+  }
+});
 
 /*
 ---------------------------------------------------------

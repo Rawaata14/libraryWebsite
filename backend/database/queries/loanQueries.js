@@ -14,7 +14,7 @@ loanQueries.js
 =========================================================
 */
 
-const doQuery = require("../query");
+const {doQuery} = require("../query");
 const { getConnection } = require("../dbSingleton");
 const { sendBookLoanEmail } = require("../../utils/emailService");
 const {

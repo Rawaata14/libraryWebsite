@@ -301,6 +301,52 @@ async function sendSeatWaitingListOfferEmail(
   return sendOptionalEmail(userEmail, subject, htmlMessage, textMessage);
 }
 
+/*
+---------------------------------------------------------
+sendPasswordResetEmail
+
+תפקיד:
+שולחת למשתמש קישור זמני לשחזור הסיסמה.
+---------------------------------------------------------
+*/
+async function sendPasswordResetEmail(userEmail, token) {
+  const frontendUrl = process.env.FRONTEND_URL;
+
+  if (!frontendUrl) {
+    throw new Error("FRONTEND_URL is not configured");
+  }
+
+  const resetLink = `${frontendUrl.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
+
+  const mailOptions = {
+    from: `"Library Management System" <${process.env.EMAIL_USER}>`,
+    to: userEmail,
+    subject: "Reset Your Library Account Password",
+    text:
+      `You requested a password reset.\n\n` +
+      `Use this link to set a new password:\n${resetLink}\n\n` +
+      `This link expires in 30 minutes.\n` +
+      `If you did not request this, you can ignore this email.`,
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #333;">
+        <h2>Password Reset</h2>
+        <p>You requested to reset your library account password.</p>
+        <p>
+          <a href="${escapeHtml(resetLink)}">
+            Reset My Password
+          </a>
+        </p>
+        <p>This link expires in 30 minutes.</p>
+        <p>If you did not request this, you can ignore this email.</p>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+
+  return true;
+}
+
 module.exports = {
   escapeHtml,
   sendOptionalEmail,
@@ -309,4 +355,5 @@ module.exports = {
   sendBookLoanEmail,
   sendSeatCancellationEmail,
   sendSeatWaitingListOfferEmail,
+  sendPasswordResetEmail,
 };

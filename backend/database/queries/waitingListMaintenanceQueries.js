@@ -21,7 +21,7 @@ waitingListMaintenanceQueries.js
 =========================================================
 */
 
-const doQuery = require("../query");
+const {doQuery} = require("../query");
 
 const { getConnection } = require("../dbSingleton");
 

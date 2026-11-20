@@ -14,7 +14,7 @@ notificationQueries.js
 =========================================================
 */
 
-const doQuery = require("../query");
+const {doQuery} = require("../query");
 
 /*
 ---------------------------------------------------------

@@ -14,7 +14,7 @@ reservationQueries.js
 =========================================================
 */
 
-const doQuery = require("../query");
+const { doQuery, withTransaction } = require("../query");
 const { getConnection } = require("../dbSingleton");
 const {
   sendSeatReservationEmail,
@@ -173,61 +173,55 @@ async function reserveSeat(reservationDetails) {
     return validation;
   }
 
-  let connection;
-
   try {
-    const pool = await getConnection();
-    connection = await pool.getConnection();
-
-    await connection.beginTransaction();
-
-    // 2. נעילת המשתמש למניעת הזמנות חופפות
-    const [users] = await connection.query(
-      `SELECT userId, email, fullName
+    const transactionResult = await withTransaction(async (connection) => {
+      // 2. נעילת המשתמש למניעת הזמנות חופפות
+      const [users] = await connection.query(
+        `SELECT userId, email, fullName
        FROM user
        WHERE userId = ?
        FOR UPDATE`,
-      [userId],
-    );
+        [userId],
+      );
 
-    if (users.length === 0) {
-      const error = new Error("User not found");
-      error.conflict = true;
-      throw error;
-    }
+      if (users.length === 0) {
+        const error = new Error("User not found");
+        error.conflict = true;
+        throw error;
+      }
 
-    // 3. נעילת הכיסא המבוקש
-    const [seats] = await connection.query(
-      `SELECT seatId,type, status
+      // 3. נעילת הכיסא המבוקש
+      const [seats] = await connection.query(
+        `SELECT seatId,type, status
        FROM seat
        WHERE seatId = ?
        FOR UPDATE`,
-      [seatId],
-    );
-
-    if (seats.length === 0) {
-      const error = new Error("Seat not found");
-      error.conflict = true;
-      throw error;
-    }
-
-    if (seats[0].type === "table-4" || seats[0].type === "table-8") {
-      const error = new Error(
-        "A table cannot be reserved as an individual seat",
+        [seatId],
       );
-      error.conflict = true;
-      throw error;
-    }
 
-    if (String(seats[0].status).toLowerCase() === "blocked") {
-      const error = new Error("This seat is blocked");
-      error.conflict = true;
-      throw error;
-    }
+      if (seats.length === 0) {
+        const error = new Error("Seat not found");
+        error.conflict = true;
+        throw error;
+      }
 
-    // 4. בדיקת הזמנות חופפות של המשתמש
-    const [userReservations] = await connection.query(
-      `SELECT reservationId
+      if (seats[0].type === "table-4" || seats[0].type === "table-8") {
+        const error = new Error(
+          "A table cannot be reserved as an individual seat",
+        );
+        error.conflict = true;
+        throw error;
+      }
+
+      if (String(seats[0].status).toLowerCase() === "blocked") {
+        const error = new Error("This seat is blocked");
+        error.conflict = true;
+        throw error;
+      }
+
+      // 4. בדיקת הזמנות חופפות של המשתמש
+      const [userReservations] = await connection.query(
+        `SELECT reservationId
        FROM seat_reservation
        WHERE userId = ?
          AND reservationDate = ?
@@ -236,25 +230,25 @@ async function reserveSeat(reservationDetails) {
          AND endTime > ?
        LIMIT 1
        FOR UPDATE`,
-      [
-        userId,
-        validation.reservationDate,
-        validation.endTime,
-        validation.startTime,
-      ],
-    );
-
-    if (userReservations.length > 0) {
-      const error = new Error(
-        "You already have an active seat reservation during this time slot.",
+        [
+          userId,
+          validation.reservationDate,
+          validation.endTime,
+          validation.startTime,
+        ],
       );
-      error.conflict = true;
-      throw error;
-    }
 
-    // 5. בדיקת הזמנות חופפות של הכיסא
-    const [seatReservations] = await connection.query(
-      `SELECT reservationId
+      if (userReservations.length > 0) {
+        const error = new Error(
+          "You already have an active seat reservation during this time slot.",
+        );
+        error.conflict = true;
+        throw error;
+      }
+
+      // 5. בדיקת הזמנות חופפות של הכיסא
+      const [seatReservations] = await connection.query(
+        `SELECT reservationId
        FROM seat_reservation
        WHERE seatId = ?
          AND reservationDate = ?
@@ -263,45 +257,49 @@ async function reserveSeat(reservationDetails) {
          AND endTime > ?
        LIMIT 1
        FOR UPDATE`,
-      [
-        seatId,
-        validation.reservationDate,
-        validation.endTime,
-        validation.startTime,
-      ],
-    );
-
-    if (seatReservations.length > 0) {
-      const error = new Error(
-        "This seat is already reserved during the selected time.",
+        [
+          seatId,
+          validation.reservationDate,
+          validation.endTime,
+          validation.startTime,
+        ],
       );
-      error.conflict = true;
-      throw error;
-    }
 
-    // 6. שמירת ההזמנה
-    const [result] = await connection.query(
-      `INSERT INTO seat_reservation
+      if (seatReservations.length > 0) {
+        const error = new Error(
+          "This seat is already reserved during the selected time.",
+        );
+        error.conflict = true;
+        throw error;
+      }
+
+      // 6. שמירת ההזמנה
+      const [result] = await connection.query(
+        `INSERT INTO seat_reservation
         (userId, seatId, reservationDate,
          startTime, endTime, status)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        userId,
-        seatId,
-        validation.reservationDate,
-        validation.startTime,
-        validation.endTime,
-        status,
-      ],
-    );
+        [
+          userId,
+          seatId,
+          validation.reservationDate,
+          validation.startTime,
+          validation.endTime,
+          status,
+        ],
+      );
 
-    await connection.commit();
-    connection.release();
-    connection = null;
+      return {
+        result,
+        user: users[0],
+      };
+    });
+
+    const { result, user } = transactionResult;
 
     // 7. שליחת מייל רק לאחר שמירה מוצלחת
     try {
-      await sendSeatReservationEmail(users[0].email, users[0].fullName, {
+      await sendSeatReservationEmail(user.email, user.fullName, {
         reservationDate: validation.reservationDate,
         startTime: validation.startTime,
         endTime: validation.endTime,
@@ -316,14 +314,6 @@ async function reserveSeat(reservationDetails) {
       data: result,
     };
   } catch (error) {
-    if (connection) {
-      try {
-        await connection.rollback();
-      } catch (rollbackError) {
-        console.error("Reservation rollback failed:", rollbackError);
-      }
-    }
-
     console.error("Error in reserving seat:", error);
 
     return {
@@ -331,10 +321,6 @@ async function reserveSeat(reservationDetails) {
       conflict: error.conflict === true,
       message: error.conflict ? error.message : "Failed to reserve seat",
     };
-  } finally {
-    if (connection) {
-      connection.release();
-    }
   }
 }
 
@@ -380,88 +366,85 @@ async function reserveGroupSeats(reservationDetails) {
     };
   }
 
-  let connection;
-
   try {
-    const pool = await getConnection();
-    connection = await pool.getConnection();
+    const transactionResult = await withTransaction(async (connection) => {
+      // נעילת המשתמש כדי לסנכרן הזמנות קבוצתיות שלו
+      const [users] = await connection.query(
+        "SELECT userId, email, fullName FROM user WHERE userId = ? FOR UPDATE",
+        [userId],
+      );
 
-    await connection.beginTransaction();
+      if (users.length === 0) {
+        throw new Error("User not found");
+      }
 
-    // נעילת המשתמש כדי לסנכרן הזמנות קבוצתיות שלו
-    const [users] = await connection.query(
-      "SELECT userId, email, fullName FROM user WHERE userId = ? FOR UPDATE",
-      [userId],
-    );
-
-    if (users.length === 0) {
-      throw new Error("User not found");
-    }
-
-    const [tables] = await connection.query(
-      `SELECT seatId, type
+      const [tables] = await connection.query(
+        `SELECT seatId, type
    FROM seat
    WHERE seatId = ?
    FOR UPDATE`,
-      [tableId],
-    );
-
-    if (
-      tables.length !== 1 ||
-      !["table-4", "table-8"].includes(tables[0].type)
-    ) {
-      const error = new Error("Invalid table");
-      error.conflict = true;
-      throw error;
-    }
-
-    const minSeats = tables[0].type === "table-8" ? 5 : 1;
-    const maxSeats = tables[0].type === "table-8" ? 8 : 4;
-
-    if (seatIds.length < minSeats || seatIds.length > maxSeats) {
-      const error = new Error(
-        `This table requires between ${minSeats} and ${maxSeats} seats`,
-      );
-      error.conflict = true;
-      throw error;
-    }
-
-    // נעילת הכיסאות בסדר קבוע
-    const orderedSeatIds = [...seatIds].sort((a, b) => Number(a) - Number(b));
-
-    for (const seatId of orderedSeatIds) {
-      const [seats] = await connection.query(
-        `SELECT seatId, tableId, type, status
-        FROM seat
-        WHERE seatId = ?
-        FOR UPDATE`,
-        [seatId],
+        [tableId],
       );
 
-      if (seats.length !== 1 || String(seats[0].tableId) !== String(tableId)) {
+      if (
+        tables.length !== 1 ||
+        !["table-4", "table-8"].includes(tables[0].type)
+      ) {
+        const error = new Error("Invalid table");
+        error.conflict = true;
+        throw error;
+      }
+
+      const minSeats = tables[0].type === "table-8" ? 5 : 1;
+      const maxSeats = tables[0].type === "table-8" ? 8 : 4;
+
+      if (seatIds.length < minSeats || seatIds.length > maxSeats) {
         const error = new Error(
-          "A selected seat does not belong to this table",
+          `This table requires between ${minSeats} and ${maxSeats} seats`,
         );
         error.conflict = true;
         throw error;
       }
 
-      if (seats[0].type !== "seat") {
-        const error = new Error(`Seat ${seatId} is not a valid chair`);
-        error.conflict = true;
-        throw error;
+      // נעילת הכיסאות בסדר קבוע
+      const orderedSeatIds = [...seatIds].sort((a, b) => Number(a) - Number(b));
+
+      for (const seatId of orderedSeatIds) {
+        const [seats] = await connection.query(
+          `SELECT seatId, tableId, type, status
+        FROM seat
+        WHERE seatId = ?
+        FOR UPDATE`,
+          [seatId],
+        );
+
+        if (
+          seats.length !== 1 ||
+          String(seats[0].tableId) !== String(tableId)
+        ) {
+          const error = new Error(
+            "A selected seat does not belong to this table",
+          );
+          error.conflict = true;
+          throw error;
+        }
+
+        if (seats[0].type !== "seat") {
+          const error = new Error(`Seat ${seatId} is not a valid chair`);
+          error.conflict = true;
+          throw error;
+        }
+
+        if (String(seats[0].status).toLowerCase() === "blocked") {
+          const error = new Error(`Seat ${seatId} is blocked`);
+          error.conflict = true;
+          throw error;
+        }
       }
 
-      if (String(seats[0].status).toLowerCase() === "blocked") {
-        const error = new Error(`Seat ${seatId} is blocked`);
-        error.conflict = true;
-        throw error;
-      }
-    }
-
-    // בדיקת חפיפה של המשתמש פעם אחת
-    const [userReservations] = await connection.query(
-      `SELECT reservationId
+      // בדיקת חפיפה של המשתמש פעם אחת
+      const [userReservations] = await connection.query(
+        `SELECT reservationId
        FROM seat_reservation
        WHERE userId = ?
          AND reservationDate = ?
@@ -470,26 +453,26 @@ async function reserveGroupSeats(reservationDetails) {
          AND endTime > ?
        LIMIT 1
        FOR UPDATE`,
-      [
-        userId,
-        validation.reservationDate,
-        validation.endTime,
-        validation.startTime,
-      ],
-    );
-
-    if (userReservations.length > 0) {
-      const error = new Error(
-        "You already have an active reservation during this time",
+        [
+          userId,
+          validation.reservationDate,
+          validation.endTime,
+          validation.startTime,
+        ],
       );
-      error.conflict = true;
-      throw error;
-    }
 
-    // בדיקה שכל הכיסאות פנויים בחלון הזמן
-    for (const seatId of orderedSeatIds) {
-      const [overlaps] = await connection.query(
-        `SELECT reservationId
+      if (userReservations.length > 0) {
+        const error = new Error(
+          "You already have an active reservation during this time",
+        );
+        error.conflict = true;
+        throw error;
+      }
+
+      // בדיקה שכל הכיסאות פנויים בחלון הזמן
+      for (const seatId of orderedSeatIds) {
+        const [overlaps] = await connection.query(
+          `SELECT reservationId
          FROM seat_reservation
          WHERE seatId = ?
            AND reservationDate = ?
@@ -498,51 +481,56 @@ async function reserveGroupSeats(reservationDetails) {
            AND endTime > ?
          LIMIT 1
          FOR UPDATE`,
-        [
-          seatId,
-          validation.reservationDate,
-          validation.endTime,
-          validation.startTime,
-        ],
-      );
+          [
+            seatId,
+            validation.reservationDate,
+            validation.endTime,
+            validation.startTime,
+          ],
+        );
 
-      if (overlaps.length > 0) {
-        const error = new Error(`Seat ${seatId} is already reserved`);
-        error.conflict = true;
-        throw error;
+        if (overlaps.length > 0) {
+          const error = new Error(`Seat ${seatId} is already reserved`);
+          error.conflict = true;
+          throw error;
+        }
       }
-    }
 
-    // שמירת כל הכיסאות באותה Transaction
-    const reservationIds = [];
+      // שמירת כל הכיסאות באותה Transaction
+      const reservationIds = [];
 
-    for (const seatId of orderedSeatIds) {
-      const [result] = await connection.query(
-        `INSERT INTO seat_reservation
+      for (const seatId of orderedSeatIds) {
+        const [result] = await connection.query(
+          `INSERT INTO seat_reservation
           (userId, seatId, reservationDate,
            startTime, endTime, status)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [
-          userId,
-          seatId,
-          validation.reservationDate,
-          validation.startTime,
-          validation.endTime,
-          status,
-        ],
-      );
+          [
+            userId,
+            seatId,
+            validation.reservationDate,
+            validation.startTime,
+            validation.endTime,
+            status,
+          ],
+        );
 
-      reservationIds.push(result.insertId);
-    }
+        reservationIds.push(result.insertId);
+      }
 
-    await connection.commit();
-    connection.release();
-    connection = null;
+      return {
+        reservationIds,
+        orderedSeatIds,
+        user: users[0],
+      };
+    });
+
+    const { reservationIds, orderedSeatIds, user } = transactionResult;
 
     try {
       const emailSent = await sendSeatReservationEmail(
-        users[0].email,
-        users[0].fullName,
+        user.email,
+        user.fullName,
         {
           reservationDate: validation.reservationDate,
           startTime: validation.startTime,
@@ -569,14 +557,6 @@ async function reserveGroupSeats(reservationDetails) {
       },
     };
   } catch (error) {
-    if (connection) {
-      try {
-        await connection.rollback();
-      } catch (rollbackError) {
-        console.error("Rollback failed:", rollbackError);
-      }
-    }
-
     console.error("Group reservation failed:", error);
 
     return {
@@ -584,10 +564,6 @@ async function reserveGroupSeats(reservationDetails) {
       conflict: error.conflict === true,
       message: error.conflict ? error.message : "Failed to reserve group seats",
     };
-  } finally {
-    if (connection) {
-      connection.release();
-    }
   }
 }
 

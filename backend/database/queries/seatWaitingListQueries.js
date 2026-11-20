@@ -23,7 +23,7 @@ requestedStartTime + requestedEndTime
 =========================================================
 */
 
-const doQuery = require("../query");
+const {doQuery} = require("../query");
 
 /*
 ---------------------------------------------------------

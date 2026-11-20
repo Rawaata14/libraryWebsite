@@ -53,6 +53,8 @@ import ProtectedRoute from "../components/common/ProtectedRoute";
 import RoleRoute from "../components/common/RoleRoute";
 
 import PageShell from "../components/layout/PageShell";
+import ForgotPasswordPage from "../pages/ForgotPasswordPage";
+import ResetPasswordPage from "../pages/ResetPasswordPage";
 
 /*
 ---------------------------------------------------------
@@ -102,6 +104,17 @@ export default function AppRoutes() {
         <Route path="/about" element={<AboutPage />} />
 
         {/* ===== דפים לאורחים בלבד ===== */}
+
+        <Route
+          path="/forgot-password"
+          element={
+            <GuestRoute>
+              <ForgotPasswordPage />
+            </GuestRoute>
+          }
+        />
+
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         <Route
           path="/login"

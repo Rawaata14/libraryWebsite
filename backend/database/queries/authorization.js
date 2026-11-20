@@ -20,8 +20,9 @@ authorization.js
 =========================================================
 */
 
-const doQuery = require("../query");
+const { doQuery , withTransaction} = require("../query");
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
 const { sendWelcomeEmail } = require("../../utils/emailService");
 
 /*
@@ -580,6 +581,154 @@ async function getUserDashboardStats(userId) {
   }
 }
 
+/*
+---------------------------------------------------------
+createPasswordResetToken
+
+תפקיד:
+יוצרת אסימון שחזור סיסמה זמני למשתמש קיים.
+שומרת במסד הנתונים רק את גיבוב האסימון.
+---------------------------------------------------------
+*/
+async function createPasswordResetToken(email) {
+  const normalizedEmail = email?.trim().toLowerCase();
+
+  if (!normalizedEmail) {
+    throw new Error("Email is required");
+  }
+
+  const users = await doQuery(
+    "SELECT userId FROM `user` WHERE email = ? AND status = 'active'",
+    [normalizedEmail],
+  );
+
+  // אין לחשוף אם כתובת האימייל רשומה במערכת
+  if (users.length === 0) {
+    return null;
+  }
+
+  const userId = users[0].userId;
+
+  // יצירת אסימון אקראי
+  const token = crypto.randomBytes(32).toString("hex");
+
+  // יצירת גיבוב לשמירה במסד הנתונים
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+  // תוקף של 30 דקות
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+  // ביטול קישורי שחזור קודמים של המשתמש
+  await doQuery("DELETE FROM password_reset_tokens WHERE userId = ?", [userId]);
+
+  // שמירת האסימון החדש
+  await doQuery(
+    `INSERT INTO password_reset_tokens
+       (userId, tokenHash, expiresAt)
+     VALUES (?, ?, ?)`,
+    [userId, tokenHash, expiresAt],
+  );
+
+  return {
+    token,
+    email: normalizedEmail,
+  };
+}
+
+/*
+---------------------------------------------------------
+resetUserPassword
+
+תפקיד:
+מאמתת אסימון שחזור ומעדכנת את סיסמת המשתמש.
+---------------------------------------------------------
+*/
+
+async function resetUserPassword(token, newPassword) {
+  if (
+    typeof token !== "string" ||
+    !/^[a-f0-9]{64}$/.test(token) ||
+    typeof newPassword !== "string"
+  ) {
+    return {
+      success: false,
+      message: "Invalid password reset request",
+    };
+  }
+
+  if (newPassword.length < 6 || newPassword.length > 20) {
+    return {
+      success: false,
+      message: "Password must be between 6 and 20 characters",
+    };
+  }
+
+  const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+  try {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await withTransaction(async (connection) => {
+      const [tokens] = await connection.query(
+        `SELECT userId
+         FROM password_reset_tokens
+         WHERE tokenHash = ?
+           AND expiresAt > NOW()
+         FOR UPDATE`,
+        [tokenHash],
+      );
+
+      if (tokens.length === 0) {
+        const error = new Error("Reset link is invalid or has expired");
+        error.invalidToken = true;
+        throw error;
+      }
+
+      const userId = tokens[0].userId;
+
+      const [updateResult] = await connection.query(
+        `UPDATE \`user\`
+         SET passwordHash = ?
+         WHERE userId = ?
+           AND status = 'active'`,
+        [hashedPassword, userId],
+      );
+
+      if (updateResult.affectedRows !== 1) {
+        const error = new Error("Reset link is invalid or has expired");
+        error.invalidToken = true;
+        throw error;
+      }
+
+      await connection.query(
+        `DELETE FROM password_reset_tokens
+         WHERE userId = ?`,
+        [userId],
+      );
+    });
+
+    return {
+      success: true,
+      message: "Password reset successfully",
+    };
+  } catch (error) {
+    if (error.invalidToken) {
+      return {
+        success: false,
+        message: error.message,
+      };
+    }
+
+    console.error("Error resetting password:", error);
+
+    return {
+      success: false,
+      message: "Failed to reset password",
+    };
+  }
+}
+
+
 module.exports = {
   registerUser,
   loginUser,
@@ -588,4 +737,6 @@ module.exports = {
   getAllUsers,
   updateUserStatus,
   getUserDashboardStats,
+  createPasswordResetToken,
+  resetUserPassword,
 };

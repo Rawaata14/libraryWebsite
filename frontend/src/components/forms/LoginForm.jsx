@@ -129,6 +129,12 @@ export default function LoginForm() {
             required
           />
 
+          <p className="authSwitchText">
+            <Link to="/forgot-password" className="authSwitchLink">
+              Forgot Password?
+            </Link>
+          </p>
+
           <Button type="submit" variant="primary" disabled={isSubmitting}>
             {isSubmitting ? "Signing in..." : "Sign In"}
           </Button>
