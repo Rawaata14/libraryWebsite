@@ -257,6 +257,8 @@ export default function useLibraryMap({
       id: clickedItem.seatId,
       status: clickedItem.status,
       location: clickedItem.location,
+      type: clickedItem.type,
+      tableId: clickedItem.tableId,
     });
   };
 

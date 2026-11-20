@@ -117,6 +117,7 @@ export default function SeatReservationSummary({
 
   // אם יש מידע על כיסאות השולחן נשתמש בהם, אחרת ניפול לבררת מחדל לפי סוג השולחן
   const maxTableCapacity = selectedSeat?.type === "table-8" ? 8 : 4;
+  const minTableCapacity = selectedSeat?.type === "table-8" ? 5 : 1;
 
   return (
     <div className="seatReservationOverlay" onMouseDown={handleOverlayClick}>
@@ -188,8 +189,8 @@ export default function SeatReservationSummary({
                 className="groupSizeSelect"
               >
                 {Array.from(
-                  { length: maxTableCapacity },
-                  (_, index) => index + 1,
+                  { length: maxTableCapacity - minTableCapacity + 1 },
+                  (_, index) => index + minTableCapacity,
                 ).map((num) => (
                   <option key={num} value={num}>
                     {num} {num === 1 ? "Person" : "People"}

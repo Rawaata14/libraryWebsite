@@ -30,13 +30,13 @@ addSeat
 ---------------------------------------------------------
 */
 async function addSeat(seatDetails) {
-  const { location, status, rotation, x, y, type } = seatDetails;
+  const { location, status, rotation, x, y, type, tableId } = seatDetails;
   const normalizedStatus = status || "available"; // Default status is "available"
   const normalizedType = type || "single-seat"; // Default type is "single-seat"
 
   try {
     const insertSeatSQL =
-      "INSERT INTO seat (location, status, rotation, x, y, type) VALUES (?, ?, ?, ?, ?, ?)";
+      "INSERT INTO seat (location, status, rotation, x, y, type, tableId) VALUES (?, ?, ?, ?, ?, ?, ?)";
     const result = await doQuery(insertSeatSQL, [
       location,
       normalizedStatus,
@@ -44,6 +44,7 @@ async function addSeat(seatDetails) {
       x,
       y,
       normalizedType,
+      tableId ?? null, // Use null if tableId is undefined
     ]);
     return { success: true, data: result };
   } catch (error) {
@@ -102,12 +103,21 @@ updateSeat
 ---------------------------------------------------------
 */
 async function updateSeat(seatId, seatDetails) {
-  const { location, status, rotation, x, y, type } = seatDetails;
+  const { location, status, rotation, x, y, type, tableId } = seatDetails;
   const normalizedStatus = status || "available";
   const normalizedType = type || "single-seat";
   try {
-    const updateSeatSQL =
-      "UPDATE seat SET location = ?, status = ?, rotation = ?, x = ?, y = ?, type = ? WHERE seatId = ?";
+    const updateSeatSQL = `
+  UPDATE seat
+  SET location = ?,
+      status = ?,
+      rotation = ?,
+      x = ?,
+      y = ?,
+      type = ?,
+      tableId = COALESCE(?, tableId)
+  WHERE seatId = ?
+`;
     const result = await doQuery(updateSeatSQL, [
       location,
       normalizedStatus,
@@ -115,6 +125,7 @@ async function updateSeat(seatId, seatDetails) {
       x,
       y,
       normalizedType,
+      seatDetails.tableId === undefined ? null : tableId,
       seatId,
     ]);
     if (result.affectedRows === 0) {

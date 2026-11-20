@@ -767,6 +767,13 @@ router.post("/reserve-table", async (req, res) => {
       });
     }
 
+    // בדיקה שמספר המשתתפים הוא מספר שלם וחיובי
+    if (!Number.isInteger(groupSize) || groupSize < 1 || groupSize > 8) {
+      return res.status(400).json({
+        message: "Group size must be an integer between 1 and 8",
+      });
+    }
+
     // 1. שליפת מצב כל הכסאות במפה לחלון הזמן המבוקש[cite: 1]
     const mapResult = await seatQueries.getMapSeatsByTimeSlot(
       date,
@@ -777,6 +784,30 @@ router.post("/reserve-table", async (req, res) => {
     if (!mapResult.success) {
       return res.status(500).json({
         message: "Failed to check seat availability",
+      });
+    }
+
+    // מציאת השולחן המבוקש במפה
+    const selectedTable = mapResult.map.find(
+      (seat) => String(seat.seatId) === String(tableId),
+    );
+
+    if (
+      !selectedTable ||
+      !["table-4", "table-8"].includes(selectedTable.type)
+    ) {
+      return res.status(404).json({
+        message: "Table not found",
+      });
+    }
+
+    // קביעת טווח המשתתפים לפי סוג השולחן
+    const minGroupSize = selectedTable.type === "table-8" ? 5 : 1;
+    const maxGroupSize = selectedTable.type === "table-8" ? 8 : 4;
+
+    if (groupSize < minGroupSize || groupSize > maxGroupSize) {
+      return res.status(400).json({
+        message: `This table allows ${minGroupSize} to ${maxGroupSize} people`,
       });
     }
 

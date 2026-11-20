@@ -273,7 +273,8 @@ export default function useSeatReservation({
 
     // איפוס גודל הקבוצה לברירת מחדל של 2 אנשים בבחירת שולחן חדש
     if (isItemTable) {
-      setGroupSize(2);
+      const defaultGroupSize = seat.type === "table-8" ? 5 : 2;
+      setGroupSize(defaultGroupSize);
     }
   };
 
