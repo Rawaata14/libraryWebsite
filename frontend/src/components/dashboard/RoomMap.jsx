@@ -34,6 +34,7 @@ RoomMap
 export default function RoomMap({
   selectedSeatId = null,
   onSeatSelect,
+  onItemsChange,
   selectedDate = "",
   selectedTime = "",
 }) {
@@ -120,12 +121,13 @@ export default function RoomMap({
         (Array.isArray(response.data) ? response.data : []);
 
       setItems(mapData);
+      onItemsChange?.(mapData);
     } catch (error) {
       console.error("Error fetching library map:", error);
 
       setItems([]);
     }
-  }, [selectedDate, selectedTime]);
+  }, [selectedDate, selectedTime, onItemsChange]);
 
   /*
   ---------------------------------------------------------

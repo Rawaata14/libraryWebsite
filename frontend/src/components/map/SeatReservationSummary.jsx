@@ -119,6 +119,12 @@ export default function SeatReservationSummary({
   const maxTableCapacity = selectedSeat?.type === "table-8" ? 8 : 4;
   const minTableCapacity = selectedSeat?.type === "table-8" ? 5 : 1;
 
+  const maxAvailableGroupSize = Math.min(
+    maxTableCapacity,
+    availableSeatsForTable.length,
+  );
+  const canReserveGroup = maxAvailableGroupSize >= minTableCapacity;
+
   return (
     <div className="seatReservationOverlay" onMouseDown={handleOverlayClick}>
       <section
@@ -189,7 +195,12 @@ export default function SeatReservationSummary({
                 className="groupSizeSelect"
               >
                 {Array.from(
-                  { length: maxTableCapacity - minTableCapacity + 1 },
+                  {
+                    length: Math.max(
+                      0,
+                      maxAvailableGroupSize - minTableCapacity + 1,
+                    ),
+                  },
                   (_, index) => index + minTableCapacity,
                 ).map((num) => (
                   <option key={num} value={num}>
@@ -201,11 +212,21 @@ export default function SeatReservationSummary({
           )}
         </div>
 
-        {isSeatAvailable ? (
+        {isTable ? (
+          <div
+            className={`mapAvailabilityBanner ${
+              canReserveGroup ? "availableBanner" : "waitingListBanner"
+            }`}
+          >
+            {canReserveGroup
+              ? `${maxAvailableGroupSize} Seats Available for Group Reservation`
+              : maxAvailableGroupSize === 0
+                ? "Table Fully Booked — No Seats Available"
+                : `Only ${maxAvailableGroupSize} Seats Available — Group Reservation Unavailable`}
+          </div>
+        ) : isSeatAvailable ? (
           <div className="mapAvailabilityBanner availableBanner">
-            {isTable
-              ? "Table Available for Group Reservation"
-              : "Available for Reservation"}
+            Available for Reservation
           </div>
         ) : (
           <>
@@ -226,7 +247,14 @@ export default function SeatReservationSummary({
             variant={isSeatAvailable ? "primary" : "secondary"}
             className="confirmSeatReservationButton"
             onClick={onConfirm}
-            disabled={isSubmitting || !selectedTime}
+            disabled={
+              isSubmitting ||
+              !selectedTime ||
+              (isTable &&
+                (!canReserveGroup ||
+                  groupSize < minTableCapacity ||
+                  groupSize > maxAvailableGroupSize))
+            }
           >
             {isSubmitting
               ? isSeatAvailable

@@ -23,6 +23,7 @@ import PageShell from "../components/layout/PageShell";
 import RoomMap from "../components/dashboard/RoomMap";
 import SeatReservationSummary from "../components/map/SeatReservationSummary";
 import useSeatReservation from "../hooks/useSeatReservation";
+import { useState } from "react";
 
 /*
 ---------------------------------------------------------
@@ -34,6 +35,7 @@ MapPage
 ---------------------------------------------------------
 */
 export default function MapPage() {
+  const [mapItems, setMapItems] = useState([]);
   const {
     minimumDate,
     selectedDate,
@@ -54,7 +56,7 @@ export default function MapPage() {
     groupSize,
     setGroupSize,
     items,
-  } = useSeatReservation();
+  } = useSeatReservation({ items: mapItems });
 
   return (
     <PageShell>
@@ -173,6 +175,7 @@ export default function MapPage() {
             <RoomMap
               key={mapRefreshKey}
               onSeatSelect={handleSeatSelect}
+              onItemsChange={setMapItems}
               selectedSeatId={selectedSeat?.id || offeredSeatId}
               selectedDate={selectedDate}
               selectedTime={selectedTime}

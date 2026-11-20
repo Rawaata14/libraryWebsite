@@ -271,12 +271,25 @@ export default function useSeatReservation({
     setReservationFeedback(null);
     setSelectedSeat(seat);
 
-    // איפוס גודל הקבוצה לברירת מחדל של 2 אנשים בבחירת שולחן חדש
+    // התאמת גודל הקבוצה למספר הכיסאות הפנויים
     if (isItemTable) {
-      const defaultGroupSize = seat.type === "table-8" ? 5 : 2;
+      const minGroupSize = seat.type === "table-8" ? 5 : 1;
+      const preferredGroupSize = seat.type === "table-8" ? 5 : 2;
+
+      const availableSeatsCount = items.filter(
+        (item) =>
+          String(item.tableId) === String(seat.id ?? seat.seatId) &&
+          String(item.status).toLowerCase() === "available",
+      ).length;
+
+      const defaultGroupSize =
+        availableSeatsCount >= minGroupSize
+          ? Math.min(preferredGroupSize, availableSeatsCount)
+          : 0;
+
       setGroupSize(defaultGroupSize);
     }
-  };
+  };;
 
   /*
   ---------------------------------------------------------
