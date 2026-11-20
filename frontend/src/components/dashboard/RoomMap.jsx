@@ -37,11 +37,13 @@ export default function RoomMap({
   onItemsChange,
   selectedDate = "",
   selectedTime = "",
+  onConnectionErrorChange,
 }) {
   const { isLibrarian } = useContext(AuthContext);
   const location = useLocation();
 
   const [items, setItems] = useState([]);
+  const [isConnectionError, setIsConnectionError] = useState(false);
   const [internalSelectedSeatId, setInternalSelectedSeatId] =
     useState(selectedSeatId);
 
@@ -122,12 +124,14 @@ export default function RoomMap({
 
       setItems(mapData);
       onItemsChange?.(mapData);
+      setIsConnectionError(false);
+      onConnectionErrorChange?.(false);
     } catch (error) {
       console.error("Error fetching library map:", error);
-
-      setItems([]);
+      setIsConnectionError(true);
+      onConnectionErrorChange?.(true);
     }
-  }, [selectedDate, selectedTime, onItemsChange]);
+  }, [selectedDate, selectedTime, onItemsChange, onConnectionErrorChange]);
 
   /*
   ---------------------------------------------------------
@@ -140,6 +144,12 @@ export default function RoomMap({
   */
   useEffect(() => {
     fetchSeats();
+
+    const intervalId = setInterval(() => {
+      fetchSeats();
+    }, 10000);
+
+    return () => clearInterval(intervalId);
   }, [fetchSeats]);
 
   const isManagementMapPage =
@@ -148,14 +158,32 @@ export default function RoomMap({
   const canManageMap = isLibrarian && isManagementMapPage;
 
   return (
-    <LibraryMap
-      isLibrarian={canManageMap}
-      items={items}
-      setItems={setItems}
-      fetchLatestSeats={fetchSeats}
-      selectedSeatId={internalSelectedSeatId}
-      onSeatSelect={handleSeatSelect}
-    />
+    <>
+      {isConnectionError && !selectedSeatId && (
+        <div
+          role="alert"
+          style={{
+            backgroundColor: "#fff3cd",
+            color: "#856404",
+            padding: "12px",
+            borderRadius: "8px",
+            marginBottom: "12px",
+            textAlign: "center",
+          }}
+        >
+          Connection lost. Seat availability may be outdated. Please wait for
+          the connection to be restored.
+        </div>
+      )}
+      <LibraryMap
+        isLibrarian={canManageMap}
+        items={items}
+        setItems={setItems}
+        fetchLatestSeats={fetchSeats}
+        selectedSeatId={internalSelectedSeatId}
+        onSeatSelect={handleSeatSelect}
+      />
+    </>
   );
 }
 

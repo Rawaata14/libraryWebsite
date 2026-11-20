@@ -32,6 +32,8 @@ export default function SeatReservationSummary({
   selectedTime,
   isSeatAvailable,
   isSubmitting,
+  reservationFeedback,
+  isConnectionError = false,
   onConfirm,
   onClose,
   isTable = false,
@@ -219,10 +221,14 @@ export default function SeatReservationSummary({
             }`}
           >
             {canReserveGroup
-              ? `${maxAvailableGroupSize} Seats Available for Group Reservation`
+              ? `${maxAvailableGroupSize} ${
+                  maxAvailableGroupSize === 1 ? "Seat" : "Seats"
+                } Available for Group Reservation`
               : maxAvailableGroupSize === 0
                 ? "Table Fully Booked — No Seats Available"
-                : `Only ${maxAvailableGroupSize} Seats Available — Group Reservation Unavailable`}
+                : `Only ${maxAvailableGroupSize} ${
+                    maxAvailableGroupSize === 1 ? "Seat" : "Seats"
+                  } Available — Group Reservation Unavailable`}
           </div>
         ) : isSeatAvailable ? (
           <div className="mapAvailabilityBanner availableBanner">
@@ -242,6 +248,37 @@ export default function SeatReservationSummary({
           </>
         )}
 
+        {isConnectionError && (
+          <div
+            role="alert"
+            style={{
+              backgroundColor: "#fff3cd",
+              color: "#856404",
+              padding: "12px",
+              borderRadius: "8px",
+              marginTop: "12px",
+              textAlign: "center",
+              fontWeight: "bold",
+            }}
+          >
+            Connection lost. Seat availability may be outdated. Please wait for
+            the connection to be restored.
+          </div>
+        )}
+
+        {reservationFeedback && (
+          <div
+            className={`mapReservationFeedback ${
+              reservationFeedback.type === "success"
+                ? "mapReservationSuccess"
+                : "mapReservationError"
+            }`}
+            role={reservationFeedback.type === "error" ? "alert" : "status"}
+            aria-live="polite"
+          >
+            {reservationFeedback.message}
+          </div>
+        )}
         <div className="mapSummaryButtonRow">
           <Button
             variant={isSeatAvailable ? "primary" : "secondary"}
@@ -250,6 +287,8 @@ export default function SeatReservationSummary({
             disabled={
               isSubmitting ||
               !selectedTime ||
+              reservationFeedback?.type === "success" ||
+              isConnectionError ||
               (isTable &&
                 (!canReserveGroup ||
                   groupSize < minTableCapacity ||
@@ -262,7 +301,9 @@ export default function SeatReservationSummary({
                 : "Joining..."
               : isSeatAvailable
                 ? isTable
-                  ? `Reserve Table (${groupSize} Seats)`
+                  ? `Reserve Table (${groupSize} ${
+                      groupSize === 1 ? "Seat" : "Seats"
+                    })`
                   : "Confirm Reservation"
                 : "Join Waiting List"}
           </Button>
@@ -300,4 +341,9 @@ SeatReservationSummary.propTypes = {
   groupSize: PropTypes.number,
   onGroupSizeChange: PropTypes.func,
   items: PropTypes.array,
+  reservationFeedback: PropTypes.shape({
+    type: PropTypes.oneOf(["success", "error"]),
+    message: PropTypes.string,
+  }),
+  isConnectionError: PropTypes.bool,
 };

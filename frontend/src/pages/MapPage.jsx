@@ -36,6 +36,7 @@ MapPage
 */
 export default function MapPage() {
   const [mapItems, setMapItems] = useState([]);
+  const [isMapConnectionError, setIsMapConnectionError] = useState(false);
   const {
     minimumDate,
     selectedDate,
@@ -56,7 +57,10 @@ export default function MapPage() {
     groupSize,
     setGroupSize,
     items,
-  } = useSeatReservation({ items: mapItems });
+  } = useSeatReservation({
+    items: mapItems,
+    isMapConnectionError,
+  });
 
   return (
     <PageShell>
@@ -100,7 +104,7 @@ export default function MapPage() {
           הודעת הצלחה או שגיאה
           =================================================
           */}
-          {reservationFeedback && (
+          {reservationFeedback && !selectedSeat && (
             <div
               className={`mapReservationFeedback ${
                 reservationFeedback.type === "success"
@@ -179,6 +183,7 @@ export default function MapPage() {
               selectedSeatId={selectedSeat?.id || offeredSeatId}
               selectedDate={selectedDate}
               selectedTime={selectedTime}
+              onConnectionErrorChange={setIsMapConnectionError}
             />
           </div>
         </div>
@@ -205,6 +210,8 @@ export default function MapPage() {
           selectedTime={selectedTime}
           isSeatAvailable={isSelectedSeatAvailable}
           isSubmitting={isSubmitting}
+          reservationFeedback={reservationFeedback}
+          isConnectionError={isMapConnectionError}
           onConfirm={handleConfirmReservation}
           onClose={closeReservationDialog}
           isTable={isTable}

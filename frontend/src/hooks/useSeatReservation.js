@@ -20,7 +20,14 @@ Custom Hook לניהול הזמנת מקום והצטרפות
 =========================================================
 */
 
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+} from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 
@@ -119,6 +126,7 @@ useSeatReservation
 export default function useSeatReservation({
   items = [],
   fetchLatestSeats,
+  isMapConnectionError = false,
 } = {}) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -144,6 +152,7 @@ export default function useSeatReservation({
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedTime, setSelectedTime] = useState(initialTime);
   const [selectedSeat, setSelectedSeat] = useState(null);
+  const previousConnectionError = useRef(isMapConnectionError);
 
   /*
   ---------------------------------------------------------
@@ -202,6 +211,22 @@ export default function useSeatReservation({
   useEffect(() => {
     fetchAvailableSlots(selectedDate);
   }, [fetchAvailableSlots, selectedDate]);
+
+  // טעינת שעות כאשר התאריך משתנה
+  useEffect(() => {
+    fetchAvailableSlots(selectedDate);
+  }, [fetchAvailableSlots, selectedDate]);
+
+  // טעינת שעות מחדש לאחר חזרת החיבור
+  useEffect(() => {
+    const wasDisconnected = previousConnectionError.current;
+
+    previousConnectionError.current = isMapConnectionError;
+
+    if (wasDisconnected && !isMapConnectionError && selectedDate) {
+      fetchAvailableSlots(selectedDate);
+    }
+  }, [isMapConnectionError, selectedDate, fetchAvailableSlots]);
 
   /*
   ---------------------------------------------------------
@@ -289,7 +314,7 @@ export default function useSeatReservation({
 
       setGroupSize(defaultGroupSize);
     }
-  };;
+  };
 
   /*
   ---------------------------------------------------------
@@ -442,7 +467,6 @@ export default function useSeatReservation({
         }
       }
 
-      setSelectedSeat(null);
       setOfferedSeatId(null);
       setMapRefreshKey((currentKey) => currentKey + 1);
       if (fetchLatestSeats) {
