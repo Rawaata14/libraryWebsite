@@ -32,8 +32,6 @@ initialProfileForm
 const initialProfileForm = {
   fullName: "",
   email: "",
-  phone: "",
-  address: "",
   password: "",
   confirmPassword: "",
 };
@@ -74,8 +72,6 @@ export default function useProfile({ user, updateUser }) {
       ...previousForm,
       fullName: user.fullName || user.name || "",
       email: user.email || "",
-      phone: user.phone || "",
-      address: user.address || "",
     }));
   }, [user]);
 
@@ -190,8 +186,6 @@ export default function useProfile({ user, updateUser }) {
       const response = await updateProfileDetails({
         fullName: profileForm.fullName,
         email: profileForm.email,
-        phone: profileForm.phone,
-        address: profileForm.address,
         password: profileForm.password,
       });
 

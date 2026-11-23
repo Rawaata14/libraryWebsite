@@ -40,8 +40,6 @@ export default function RegisterForm() {
     fullName: "",
     email: "",
     password: "",
-    phone: "",
-    address: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,8 +90,6 @@ export default function RegisterForm() {
         fullName: formData.fullName.trim(),
         email: formData.email.trim(),
         password: formData.password,
-        phone: formData.phone.trim(),
-        address: formData.address.trim(),
       });
 
       register(response.data.user);
@@ -147,25 +143,6 @@ export default function RegisterForm() {
             placeholder="Enter your password"
             autoComplete="new-password"
             required
-          />
-
-          <InputField
-            label="Phone Number"
-            type="tel"
-            name="phone"
-            value={formData.phone}
-            onChange={handleChange}
-            placeholder="Enter your phone number"
-            autoComplete="tel"
-          />
-
-          <InputField
-            label="Address"
-            name="address"
-            value={formData.address}
-            onChange={handleChange}
-            placeholder="Enter your address"
-            autoComplete="street-address"
           />
 
           <Button type="submit" variant="primary" disabled={isSubmitting}>

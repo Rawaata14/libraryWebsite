@@ -20,7 +20,7 @@ authorization.js
 =========================================================
 */
 
-const { doQuery , withTransaction} = require("../query");
+const { doQuery, withTransaction } = require("../query");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const { sendWelcomeEmail } = require("../../utils/emailService");
@@ -44,8 +44,6 @@ function createSafeUser(user) {
     userId: user.userId,
     fullName: user.fullName,
     email: user.email,
-    phone: user.phone,
-    address: user.address,
     role: user.role,
     status: user.status,
     createdAt: user.createdAt,
@@ -72,8 +70,6 @@ registerUser
 async function registerUser(detailsToInsert) {
   const fullName = detailsToInsert.fullName?.trim();
   const email = detailsToInsert.email?.trim().toLowerCase();
-  const phone = detailsToInsert.phone?.trim() || null;
-  const address = detailsToInsert.address?.trim() || null;
   const password = detailsToInsert.password;
 
   if (!fullName || !email || !password) {
@@ -107,9 +103,9 @@ async function registerUser(detailsToInsert) {
 
     const insertResult = await doQuery(
       `INSERT INTO \`user\`
-        (fullName, email, phone, passwordHash, role, status)
-       VALUES (?, ?, ?, ?, 'reader', 'active')`,
-      [fullName, email, phone, hashedPassword],
+        (fullName, email, passwordHash, role, status)
+       VALUES (?, ?, ?, 'reader', 'active')`,
+      [fullName, email, hashedPassword],
     );
 
     const createdUsers = await doQuery(
@@ -294,8 +290,6 @@ updateUserProfile
 async function updateUserProfile(currentEmail, updatedData) {
   const fullName = updatedData.fullName?.trim();
   const email = updatedData.email?.trim().toLowerCase();
-  const phone = updatedData.phone?.trim() || null;
-  const address = updatedData.address?.trim() || null;
   const password = updatedData.password?.trim() || "";
 
   if (!fullName || !email) {
@@ -330,12 +324,10 @@ async function updateUserProfile(currentEmail, updatedData) {
     let updateSQL = `
       UPDATE \`user\`
       SET fullName = ?,
-          email = ?,
-          phone = ?,
-          address = ?
+          email = ?
     `;
 
-    const params = [fullName, email, phone, address];
+    const params = [fullName, email];
 
     if (password) {
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -387,7 +379,7 @@ getAllUsers
 async function getAllUsers() {
   try {
     const sql =
-      "SELECT fullName, email, phone, role, status, createdAt, lastLoginAt, profile_image_name FROM `user` ORDER BY createdAt DESC";
+      "SELECT fullName, email, role, status, createdAt, lastLoginAt, profile_image_name FROM `user` ORDER BY createdAt DESC";
 
     const users = await doQuery(sql);
 
@@ -727,7 +719,6 @@ async function resetUserPassword(token, newPassword) {
     };
   }
 }
-
 
 module.exports = {
   registerUser,

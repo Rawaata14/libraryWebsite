@@ -148,7 +148,6 @@ handleStatusChange
                   <th>Profile</th>
                   <th>Full Name</th>
                   <th>Email</th>
-                  <th>Phone</th>
                   <th>Role</th>
                   <th>Status</th>
                   <th>Created At</th>

@@ -61,31 +61,6 @@ export default function ProfileForm({
         </div>
 
         <div className="profileField">
-          <label>Phone Number</label>
-          <input
-            type="text"
-            name="phone"
-            value={profileForm.phone}
-            onChange={handleProfileFormChange}
-            placeholder="Enter your phone number"
-          />
-        </div>
-
-        <div className="profileField">
-          <label htmlFor="profile-address">Address</label>
-
-          <input
-            id="profile-address"
-            type="text"
-            name="address"
-            value={profileForm.address}
-            onChange={handleProfileFormChange}
-            placeholder="Enter your address"
-            autoComplete="street-address"
-          />
-        </div>
-
-        <div className="profileField">
           <label>New Password</label>
           <input
             type="password"

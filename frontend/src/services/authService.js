@@ -61,10 +61,7 @@ loginUser
 ומחזירה את המשתמש המחובר.
 ---------------------------------------------------------
 */
-export const loginUser = async ({
-  email,
-  password,
-}) => {
+export const loginUser = async ({ email, password }) => {
   return axios.post(
     buildApiUrl("/user/login"),
     {
@@ -86,21 +83,13 @@ registerUser
 ומחזירה את המשתמש שנוצר והתחבר.
 ---------------------------------------------------------
 */
-export const registerUser = async ({
-  fullName,
-  email,
-  password,
-  phone,
-  address,
-}) => {
+export const registerUser = async ({ fullName, email, password }) => {
   return axios.post(
     buildApiUrl("/user/register"),
     {
       fullName,
       email,
       password,
-      phone,
-      address,
     },
     {
       withCredentials: true,

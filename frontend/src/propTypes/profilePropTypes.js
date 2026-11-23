@@ -24,8 +24,6 @@ export const userPropType = PropTypes.shape({
   fullName: PropTypes.string,
   name: PropTypes.string,
   email: PropTypes.string,
-  phone: PropTypes.string,
-  address: PropTypes.string,
   role: PropTypes.string,
   profileImage: PropTypes.string,
   profile_image_name: PropTypes.string,
@@ -45,8 +43,6 @@ profileFormPropType
 export const profileFormPropType = PropTypes.shape({
   fullName: PropTypes.string.isRequired,
   email: PropTypes.string.isRequired,
-  phone: PropTypes.string.isRequired,
-  address: PropTypes.string.isRequired,
   password: PropTypes.string.isRequired,
   confirmPassword: PropTypes.string.isRequired,
 });
