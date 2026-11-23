@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import PageShell from "../components/layout/PageShell";
 import InputField from "../components/common/InputField";
 import Button from "../components/common/Button";
+import AlertMessage from "../components/common/AlertMessage";
 import axios from "axios";
 
 export default function ForgotPasswordPage() {
@@ -59,8 +60,8 @@ export default function ForgotPasswordPage() {
               autoComplete="email"
               required
             />
-            {message && <p role="status">{message}</p>}
-            {error && <p role="alert">{error}</p>}
+            <AlertMessage type="success" message={message} />
+            <AlertMessage type="error" message={error} />
 
             <Button type="submit" variant="primary" disabled={isSubmitting}>
               {isSubmitting ? "Sending..." : "Send Reset Link"}

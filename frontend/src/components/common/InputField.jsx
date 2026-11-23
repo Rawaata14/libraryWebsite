@@ -14,6 +14,8 @@ InputField.jsx
 */
 
 import PropTypes from "prop-types";
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
 /*
 ---------------------------------------------------------
@@ -43,6 +45,8 @@ export default function InputField({
   ...restInputProps
 }) {
   const inputId = id || name;
+  const [showPassword, setShowPassword] = useState(false);
+  const isPasswordField = type === "password";
 
   return (
     <div className="formGroup">
@@ -52,17 +56,32 @@ export default function InputField({
         </label>
       )}
 
-      <input
-        {...restInputProps}
-        id={inputId}
-        className="input"
-        type={type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        required={required}
-      />
+      <div className={isPasswordField ? "passwordInputWrapper" : undefined}>
+        <input
+          {...restInputProps}
+          id={inputId}
+          className="input"
+          type={isPasswordField && showPassword ? "text" : type}
+          name={name}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          required={required}
+        />
+
+        {isPasswordField && (
+          <button
+            type="button"
+            className="passwordToggleButton"
+            onClick={() => setShowPassword((prev) => !prev)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+            aria-controls={inputId}
+          >
+            {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -81,10 +100,7 @@ InputField.propTypes = {
   id: PropTypes.string,
   type: PropTypes.string,
   name: PropTypes.string.isRequired,
-  value: PropTypes.oneOfType([
-    PropTypes.string,
-    PropTypes.number,
-  ]).isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   onChange: PropTypes.func.isRequired,
   placeholder: PropTypes.string,
   required: PropTypes.bool,

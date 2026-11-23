@@ -1,0 +1,45 @@
+
+.alertMessage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  margin: 0;
+
+  background: transparent;
+  border: none;
+
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.alertMessage__icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.alertMessage__text {
+  min-width: 0;
+}
+
+/* Error */
+.alertMessage--error {
+  color: #f2b6a5;
+}
+
+/* Success */
+.alertMessage--success {
+  color: #a7d9b2;
+}
+
+/* Warning */
+.alertMessage--warning {
+  color: #e9c48d;
+}

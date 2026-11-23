@@ -20,6 +20,7 @@ import Button from "../common/Button";
 import BackButton from "../common/BackButton";
 import { AuthContext } from "../../context/AuthContext";
 import { loginUser } from "../../services/authService";
+import AlertMessage from "../common/AlertMessage";
 
 /*
 ---------------------------------------------------------
@@ -39,6 +40,7 @@ export default function LoginForm() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   /*
   ---------------------------------------------------------
@@ -70,6 +72,7 @@ export default function LoginForm() {
     event.preventDefault();
 
     if (isSubmitting) return;
+    setErrorMessage("");
 
     setIsSubmitting(true);
 
@@ -92,7 +95,7 @@ export default function LoginForm() {
       const message =
         error.response?.data?.message || "Could not connect to the server";
 
-      alert(message);
+      setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -138,6 +141,8 @@ export default function LoginForm() {
           <Button type="submit" variant="primary" disabled={isSubmitting}>
             {isSubmitting ? "Signing in..." : "Sign In"}
           </Button>
+
+          <AlertMessage type="error" message={errorMessage} />
         </div>
 
         <p className="authSwitchText">

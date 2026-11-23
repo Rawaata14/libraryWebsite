@@ -10,6 +10,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import PageShell from "../components/layout/PageShell";
 import InputField from "../components/common/InputField";
 import Button from "../components/common/Button";
+import AlertMessage from "../components/common/AlertMessage";
 import axios from "axios";
 
 export default function ResetPasswordPage() {
@@ -93,7 +94,10 @@ export default function ResetPasswordPage() {
           <p>Enter your new password below.</p>
 
           {!token ? (
-            <p role="alert">This password reset link is invalid.</p>
+            <AlertMessage
+              type="error"
+              message="This password reset link is invalid."
+            />
           ) : (
             <div className="stackCol">
               <InputField
@@ -118,8 +122,8 @@ export default function ResetPasswordPage() {
                 required
               />
 
-              {error && <p role="alert">{error}</p>}
-              {success && <p role="status">{success}</p>}
+              <AlertMessage type="error" message={error} />
+              <AlertMessage type="success" message={success} />
 
               <Button
                 type="submit"
