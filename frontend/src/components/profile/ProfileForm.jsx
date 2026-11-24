@@ -27,6 +27,7 @@ ProfileForm
 
 import PropTypes from "prop-types";
 import { profileFormPropType } from "../../propTypes/profilePropTypes";
+import InputField from "../common/InputField";
 
 export default function ProfileForm({
   profileForm,
@@ -61,24 +62,26 @@ export default function ProfileForm({
         </div>
 
         <div className="profileField">
-          <label>New Password</label>
-          <input
+          <InputField
+            label="New Password"
             type="password"
             name="password"
             value={profileForm.password}
             onChange={handleProfileFormChange}
             placeholder="Enter new password"
+            autoComplete="new-password"
           />
         </div>
 
         <div className="profileField">
-          <label>Confirm Password</label>
-          <input
+          <InputField
+            label="Confirm Password"
             type="password"
             name="confirmPassword"
             value={profileForm.confirmPassword}
             onChange={handleProfileFormChange}
             placeholder="Confirm new password"
+            autoComplete="new-password"
           />
         </div>
       </div>

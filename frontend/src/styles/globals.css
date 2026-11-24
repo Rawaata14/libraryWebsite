@@ -58,9 +58,16 @@ img {
   transition: 0.2s;
 }
 
-.btn:hover {
+.btn:not(:disabled):hover {
   opacity: 0.95;
   transform: translateY(-1px);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-primary {

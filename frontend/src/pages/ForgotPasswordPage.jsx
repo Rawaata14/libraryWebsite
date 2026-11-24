@@ -4,6 +4,7 @@ import PageShell from "../components/layout/PageShell";
 import InputField from "../components/common/InputField";
 import Button from "../components/common/Button";
 import AlertMessage from "../components/common/AlertMessage";
+import { isValidEmail } from "../utils/validators";
 import axios from "axios";
 
 export default function ForgotPasswordPage() {
@@ -19,6 +20,12 @@ export default function ForgotPasswordPage() {
 
     setMessage("");
     setError("");
+
+    if (!isValidEmail(email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -34,7 +41,8 @@ export default function ForgotPasswordPage() {
       );
     } catch (err) {
       setError(
-        "Unable to process your request right now. Please try again later.",
+        err.response?.data?.message ||
+          "Unable to process your request right now. Please try again later.",
       );
     } finally {
       setIsSubmitting(false);
@@ -44,7 +52,7 @@ export default function ForgotPasswordPage() {
   return (
     <PageShell>
       <div className="authPage">
-        <form className="authCard" onSubmit={handleSubmit}>
+        <form className="authCard" onSubmit={handleSubmit} noValidate>
           <h1>Forgot Password?</h1>
 
           <p>Enter your email address to receive a password reset link.</p>

@@ -21,6 +21,7 @@ import BackButton from "../common/BackButton";
 import { AuthContext } from "../../context/AuthContext";
 import { loginUser } from "../../services/authService";
 import AlertMessage from "../common/AlertMessage";
+import { isValidEmail } from "../../utils/validators";
 
 /*
 ---------------------------------------------------------
@@ -72,7 +73,18 @@ export default function LoginForm() {
     event.preventDefault();
 
     if (isSubmitting) return;
+
     setErrorMessage("");
+
+    if (!formData.email.trim() || !formData.password) {
+      setErrorMessage("Email and password are required");
+      return;
+    }
+
+    if (!isValidEmail(formData.email)) {
+      setErrorMessage("Invalid email or password");
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -105,7 +117,7 @@ export default function LoginForm() {
     <div className="authPage">
       <BackButton />
 
-      <form className="authCard" onSubmit={handleSubmit}>
+      <form className="authCard" onSubmit={handleSubmit} noValidate>
         <h1>Welcome Back</h1>
         <p>Login to the Library System</p>
 

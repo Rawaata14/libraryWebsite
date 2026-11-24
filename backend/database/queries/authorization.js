@@ -24,6 +24,7 @@ const { doQuery, withTransaction } = require("../query");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
 const { sendWelcomeEmail } = require("../../utils/emailService");
+const { isValidEmail, isValidPassword } = require("../../utils/formatters");
 
 /*
 ---------------------------------------------------------
@@ -79,10 +80,18 @@ async function registerUser(detailsToInsert) {
     };
   }
 
-  if (password.length < 6 || password.length > 20) {
+  if (!isValidEmail(email)) {
     return {
       success: false,
-      message: "Password must be between 6 and 20 characters long",
+      message: "Please enter a valid email address",
+    };
+  }
+
+  if (!isValidPassword(password)) {
+    return {
+      success: false,
+      message:
+        "Password must be 6-20 characters long and include at least one letter and one number.",
     };
   }
 
@@ -154,6 +163,13 @@ async function loginUser(email, password) {
     return {
       success: false,
       message: "Email and password are required",
+    };
+  }
+
+  if (!isValidEmail(normalizedEmail)) {
+    return {
+      success: false,
+      message: "Invalid email or password",
     };
   }
 
@@ -290,7 +306,7 @@ updateUserProfile
 async function updateUserProfile(currentEmail, updatedData) {
   const fullName = updatedData.fullName?.trim();
   const email = updatedData.email?.trim().toLowerCase();
-  const password = updatedData.password?.trim() || "";
+  const password = updatedData.password ?? "";
 
   if (!fullName || !email) {
     return {
@@ -299,10 +315,18 @@ async function updateUserProfile(currentEmail, updatedData) {
     };
   }
 
-  if (password && (password.length < 6 || password.length > 20)) {
+  if (!isValidEmail(email)) {
     return {
       success: false,
-      message: "Password must be between 6 and 20 characters long",
+      message: "Please enter a valid email address",
+    };
+  }
+
+  if (password && !isValidPassword(password)) {
+    return {
+      success: false,
+      message:
+        "Password must be 6-20 characters long and include at least one letter and one number.",
     };
   }
 
@@ -648,10 +672,11 @@ async function resetUserPassword(token, newPassword) {
     };
   }
 
-  if (newPassword.length < 6 || newPassword.length > 20) {
+  if (!isValidPassword(newPassword)) {
     return {
       success: false,
-      message: "Password must be between 6 and 20 characters",
+      message:
+        "Password must be 6-20 characters long and include at least one letter and one number.",
     };
   }
 

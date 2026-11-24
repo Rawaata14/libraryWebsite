@@ -33,6 +33,7 @@ const {
 const { sendPasswordResetEmail } = require("../utils/emailService");
 
 const { requireAuth, requireLibrarian } = require("../middleware/auth");
+const { isValidEmail } = require("../utils/formatters");
 
 const router = express.Router();
 
@@ -117,6 +118,37 @@ const uploadProfileImage = multer({
   },
 });
 
+function handleProfileImageUpload(req, res, next) {
+  uploadProfileImage.single("profileImage")(req, res, (error) => {
+    if (!error) {
+      return next();
+    }
+
+    if (error instanceof multer.MulterError) {
+      if (error.code === "LIMIT_FILE_SIZE") {
+        return res.status(400).json({
+          success: false,
+          message: "Image size must not exceed 5MB",
+        });
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: "Invalid image upload",
+      });
+    }
+
+    if (error.message === "Only image files are allowed") {
+      return res.status(400).json({
+        success: false,
+        message: "Only image files are allowed",
+      });
+    }
+
+    return next(error);
+  });
+}
+
 /*
 =========================================================
 Routes ציבוריים
@@ -135,10 +167,10 @@ router.post("/forgot-password", async (req, res) => {
   try {
     const { email } = req.body;
 
-    if (typeof email !== "string" || !email.trim()) {
+    if (!isValidEmail(email)) {
       return res.status(400).json({
         success: false,
-        message: "Valid email is required",
+        message: "Please enter a valid email address",
       });
     }
 
@@ -329,7 +361,7 @@ PUT /user/profile-image
 router.put(
   "/profile-image",
   requireAuth,
-  uploadProfileImage.single("profileImage"),
+  handleProfileImageUpload,
   async (req, res) => {
     try {
       if (!req.file) {

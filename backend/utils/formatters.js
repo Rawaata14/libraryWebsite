@@ -167,6 +167,48 @@ function isValidTime(value) {
   return normalizeTime(value) !== "";
 }
 
+/*
+---------------------------------------------------------
+isValidEmail
+
+תפקיד:
+בודקת האם כתובת האימייל תקינה מבחינת המבנה שלה.
+---------------------------------------------------------
+*/
+function isValidEmail(value) {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  const email = value.trim();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  return emailRegex.test(email);
+}
+
+/*
+---------------------------------------------------------
+isValidPassword
+
+תפקיד:
+בודקת האם הסיסמה עומדת בדרישות האבטחה של המערכת.
+
+דרישות:
+- אורך בין 6 ל-20 תווים.
+- לפחות אות אחת באנגלית.
+- לפחות ספרה אחת.
+---------------------------------------------------------
+*/
+function isValidPassword(value) {
+  if (typeof value !== "string") {
+    return false;
+  }
+
+  const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{6,20}$/;
+
+  return passwordRegex.test(value);
+}
+
 module.exports = {
   LIBRARY_TIME_ZONE,
   getLibraryDateTime,
@@ -175,4 +217,6 @@ module.exports = {
   normalizeTime,
   isValidDate,
   isValidTime,
+  isValidEmail,
+  isValidPassword,
 };

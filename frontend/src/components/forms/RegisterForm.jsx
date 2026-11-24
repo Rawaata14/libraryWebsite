@@ -21,8 +21,8 @@ import Button from "../common/Button";
 import BackButton from "../common/BackButton";
 import { AuthContext } from "../../context/AuthContext";
 import { registerUser } from "../../services/authService";
-
-const PASSWORD_PATTERN = /^(?=.*[a-zA-Z])(?=.*\d).{6,20}$/;
+import { isValidEmail, isValidPassword } from "../../utils/validators";
+import AlertMessage from "../common/AlertMessage";
 
 /*
 ---------------------------------------------------------
@@ -43,6 +43,7 @@ export default function RegisterForm() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   /*
   ---------------------------------------------------------
@@ -75,11 +76,22 @@ export default function RegisterForm() {
 
     if (isSubmitting) return;
 
-    if (!PASSWORD_PATTERN.test(formData.password)) {
-      alert(
+    setErrorMessage("");
+
+    if (!formData.fullName.trim()) {
+      setErrorMessage("Full name is required");
+      return;
+    }
+
+    if (!isValidEmail(formData.email)) {
+      setErrorMessage("Please enter a valid email address");
+      return;
+    }
+
+    if (!isValidPassword(formData.password)) {
+      setErrorMessage(
         "Password must be 6-20 characters long and include at least one letter and one number.",
       );
-
       return;
     }
 
@@ -98,7 +110,7 @@ export default function RegisterForm() {
       const message =
         error.response?.data?.message || "Could not connect to the server";
 
-      alert(message);
+      setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -108,7 +120,7 @@ export default function RegisterForm() {
     <div className="authPage">
       <BackButton />
 
-      <form className="authCard" onSubmit={handleSubmit}>
+      <form className="authCard" onSubmit={handleSubmit} noValidate>
         <h1>Join the Library</h1>
         <p>Create a new account to access the library system.</p>
 
@@ -148,6 +160,7 @@ export default function RegisterForm() {
           <Button type="submit" variant="primary" disabled={isSubmitting}>
             {isSubmitting ? "Signing up..." : "Sign Up"}
           </Button>
+          <AlertMessage type="error" message={errorMessage} />
         </div>
 
         <p className="authSwitchText">

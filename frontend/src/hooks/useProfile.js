@@ -20,6 +20,7 @@ import {
   updateProfileDetails,
   updateProfileImage,
 } from "../services/userService";
+import { isValidEmail, isValidPassword } from "../utils/validators";
 
 /*
 ---------------------------------------------------------
@@ -53,6 +54,10 @@ export default function useProfile({ user, updateUser }) {
   const [profileImagePreview, setProfileImagePreview] = useState(null);
 
   const [profileForm, setProfileForm] = useState(initialProfileForm);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [imageErrorMessage, setImageErrorMessage] = useState("");
+  const [imageSuccessMessage, setImageSuccessMessage] = useState("");
 
   /*
   ---------------------------------------------------------
@@ -104,14 +109,26 @@ export default function useProfile({ user, updateUser }) {
   const handleProfileImageChange = (event) => {
     const file = event.target.files?.[0] || null;
 
+    setImageErrorMessage("");
+    setImageSuccessMessage("");
+
     if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setSelectedProfileImage(null);
+      setProfileImagePreview(null);
+
+      event.target.value = "";
+
+      setImageErrorMessage("Only image files are allowed");
       return;
     }
 
     setSelectedProfileImage(file);
     setProfileImagePreview(URL.createObjectURL(file));
   };
-
   /*
   ---------------------------------------------------------
   handleSaveProfileImage
@@ -122,6 +139,9 @@ export default function useProfile({ user, updateUser }) {
   ---------------------------------------------------------
   */
   const handleSaveProfileImage = async () => {
+    setImageErrorMessage("");
+    setImageSuccessMessage("");
+
     if (!selectedProfileImage) {
       return;
     }
@@ -130,7 +150,9 @@ export default function useProfile({ user, updateUser }) {
       const response = await updateProfileImage(selectedProfileImage);
 
       if (!response.data.success) {
-        window.alert(response.data.message || "Failed to update profile image");
+        setImageErrorMessage(
+          response.data.message || "Failed to update profile image",
+        );
         return;
       }
 
@@ -139,11 +161,11 @@ export default function useProfile({ user, updateUser }) {
       setSelectedProfileImage(null);
       setProfileImagePreview(null);
 
-      window.alert("Profile image updated successfully");
+      setImageSuccessMessage("Profile image updated successfully");
     } catch (error) {
       console.error("Profile image upload error:", error);
 
-      window.alert(
+      setImageErrorMessage(
         error.response?.data?.message ||
           "Server error while uploading profile image",
       );
@@ -177,8 +199,28 @@ export default function useProfile({ user, updateUser }) {
   ---------------------------------------------------------
   */
   const handleSaveProfileDetails = async () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    if (!profileForm.fullName.trim() || !profileForm.email.trim()) {
+      setErrorMessage("Full name and email are required");
+      return;
+    }
+
+    if (!isValidEmail(profileForm.email)) {
+      setErrorMessage("Please enter a valid email address");
+      return;
+    }
+
     if (profileForm.password !== profileForm.confirmPassword) {
-      window.alert("Password and confirm password do not match");
+      setErrorMessage("Password and confirm password do not match");
+      return;
+    }
+
+    if (profileForm.password !== "" && !isValidPassword(profileForm.password)) {
+      setErrorMessage(
+        "Password must be 6-20 characters long and include at least one letter and one number.",
+      );
       return;
     }
 
@@ -190,7 +232,7 @@ export default function useProfile({ user, updateUser }) {
       });
 
       if (!response.data.success) {
-        window.alert(
+        setErrorMessage(
           response.data.message || "Failed to update profile details",
         );
         return;
@@ -204,20 +246,40 @@ export default function useProfile({ user, updateUser }) {
         confirmPassword: "",
       }));
 
-      window.alert("Profile details updated successfully");
+      setSuccessMessage("Profile details updated successfully");
     } catch (error) {
       console.error("Profile details update error:", error);
 
-      window.alert(
+      setErrorMessage(
         error.response?.data?.message ||
           "Server error while updating profile details",
       );
     }
   };
 
+  const handleCancelProfileEdit = () => {
+    setProfileForm({
+      fullName: user.fullName || "",
+      email: user.email || "",
+      password: "",
+      confirmPassword: "",
+    });
+
+    setSelectedProfileImage(null);
+    setProfileImagePreview(null);
+
+    setErrorMessage("");
+    setSuccessMessage("");
+    setImageErrorMessage("");
+    setImageSuccessMessage("");
+
+    setIsEditingProfile(false);
+  };
+
   return {
     isEditingProfile,
     setIsEditingProfile,
+    handleCancelProfileEdit,
     selectedProfileImage,
     profileImagePreview,
     profileForm,
@@ -225,5 +287,9 @@ export default function useProfile({ user, updateUser }) {
     handleSaveProfileImage,
     handleProfileFormChange,
     handleSaveProfileDetails,
+    errorMessage,
+    successMessage,
+    imageErrorMessage,
+    imageSuccessMessage,
   };
 }

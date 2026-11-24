@@ -673,3 +673,20 @@ Quick Management
     transition: none;
   }
 }
+
+.profileField .passwordInputWrapper input {
+  margin-bottom: 0;
+  padding-right: 44px;
+}
+
+.profileField .formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.profileField .formGroup .label {
+  margin: 0 0 8px;
+}

@@ -38,6 +38,7 @@ export default function ProfilePage() {
   const {
     isEditingProfile,
     setIsEditingProfile,
+    handleCancelProfileEdit,
     selectedProfileImage,
     profileImagePreview,
     profileForm,
@@ -45,6 +46,10 @@ export default function ProfilePage() {
     handleSaveProfileImage,
     handleProfileFormChange,
     handleSaveProfileDetails,
+    errorMessage,
+    successMessage,
+    imageErrorMessage,
+    imageSuccessMessage,
   } = useProfile({
     user,
     updateUser,
@@ -58,6 +63,7 @@ export default function ProfilePage() {
           isLibrarian={isLibrarian}
           isEditingProfile={isEditingProfile}
           setIsEditingProfile={setIsEditingProfile}
+          handleCancelProfileEdit={handleCancelProfileEdit}
           selectedProfileImage={selectedProfileImage}
           profileImagePreview={profileImagePreview}
           handleProfileImageChange={handleProfileImageChange}
@@ -65,8 +71,11 @@ export default function ProfilePage() {
           profileForm={profileForm}
           handleProfileFormChange={handleProfileFormChange}
           handleSaveProfileDetails={handleSaveProfileDetails}
+          errorMessage={errorMessage}
+          successMessage={successMessage}
+          imageErrorMessage={imageErrorMessage}
+          imageSuccessMessage={imageSuccessMessage}
         />
-
         {isLibrarian ? <LibrarianProfileDashboard /> : <UserProfileDashboard />}
       </div>
     </div>

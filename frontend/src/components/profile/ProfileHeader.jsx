@@ -22,6 +22,7 @@ import {
   profileFormPropType,
   userPropType,
 } from "../../propTypes/profilePropTypes";
+import AlertMessage from "../common/AlertMessage";
 
 /*
 ---------------------------------------------------------
@@ -37,6 +38,7 @@ export default function ProfileHeader({
   isLibrarian,
   isEditingProfile,
   setIsEditingProfile,
+  handleCancelProfileEdit,
   selectedProfileImage,
   profileImagePreview,
   handleProfileImageChange,
@@ -44,6 +46,10 @@ export default function ProfileHeader({
   profileForm,
   handleProfileFormChange,
   handleSaveProfileDetails,
+  errorMessage,
+  successMessage,
+  imageErrorMessage,
+  imageSuccessMessage,
 }) {
   return (
     <>
@@ -71,7 +77,13 @@ export default function ProfileHeader({
         <button
           type="button"
           className="editProfileButton"
-          onClick={() => setIsEditingProfile((prev) => !prev)}
+          onClick={() => {
+            if (isEditingProfile) {
+              handleCancelProfileEdit();
+            } else {
+              setIsEditingProfile(true);
+            }
+          }}
         >
           {isEditingProfile ? "Close Edit" : "Edit Profile"}
         </button>
@@ -102,6 +114,9 @@ export default function ProfileHeader({
           >
             Save Profile Image
           </button>
+          <AlertMessage type="error" message={imageErrorMessage} />
+
+          <AlertMessage type="success" message={imageSuccessMessage} />
 
           <div className="profileEditDivider" />
 
@@ -110,6 +125,8 @@ export default function ProfileHeader({
             handleProfileFormChange={handleProfileFormChange}
             handleSaveProfileDetails={handleSaveProfileDetails}
           />
+          <AlertMessage type="error" message={errorMessage} />
+          <AlertMessage type="success" message={successMessage} />
         </div>
       )}
     </>
@@ -121,6 +138,7 @@ ProfileHeader.propTypes = {
   isLibrarian: PropTypes.bool.isRequired,
   isEditingProfile: PropTypes.bool.isRequired,
   setIsEditingProfile: PropTypes.func.isRequired,
+  handleCancelProfileEdit: PropTypes.func.isRequired,
   selectedProfileImage: PropTypes.instanceOf(File),
   profileImagePreview: PropTypes.string,
   handleProfileImageChange: PropTypes.func.isRequired,
@@ -128,4 +146,8 @@ ProfileHeader.propTypes = {
   profileForm: profileFormPropType.isRequired,
   handleProfileFormChange: PropTypes.func.isRequired,
   handleSaveProfileDetails: PropTypes.func.isRequired,
+  errorMessage: PropTypes.string,
+  successMessage: PropTypes.string,
+  imageErrorMessage: PropTypes.string,
+  imageSuccessMessage: PropTypes.string,
 };

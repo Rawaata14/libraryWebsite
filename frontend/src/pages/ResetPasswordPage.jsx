@@ -11,6 +11,7 @@ import PageShell from "../components/layout/PageShell";
 import InputField from "../components/common/InputField";
 import Button from "../components/common/Button";
 import AlertMessage from "../components/common/AlertMessage";
+import { isValidPassword } from "../utils/validators";
 import axios from "axios";
 
 export default function ResetPasswordPage() {
@@ -48,8 +49,10 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    if (formData.password.length < 6 || formData.password.length > 20) {
-      setError("Password must be between 6 and 20 characters.");
+    if (!isValidPassword(formData.password)) {
+      setError(
+        "Password must be 6-20 characters long and include at least one letter and one number.",
+      );
       return;
     }
 
@@ -88,7 +91,7 @@ export default function ResetPasswordPage() {
   return (
     <PageShell>
       <div className="authPage">
-        <form className="authCard" onSubmit={handleSubmit}>
+        <form className="authCard" onSubmit={handleSubmit} noValidate>
           <h1>Reset Password</h1>
 
           <p>Enter your new password below.</p>
