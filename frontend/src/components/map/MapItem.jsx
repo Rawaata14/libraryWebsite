@@ -94,7 +94,7 @@ export default function MapItem({
   -------------------------------------------------------
   */
   const handlePointerDown = (event) => {
-    if (!isLibrarian || !isClickable) {
+    if (!isLibrarian || !isClickable || event.button !== 0) {
       return;
     }
 
@@ -102,7 +102,7 @@ export default function MapItem({
     event.currentTarget.setPointerCapture(event.pointerId);
 
     onSelect(item.seatId);
-    setDraggingItemId(item.seatId);
+    setDraggingItemId(item.seatId, event);
   };
 
   /*
@@ -117,6 +117,8 @@ export default function MapItem({
     if (!isLibrarian) {
       return;
     }
+
+    setDraggingItemId(null);
 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
@@ -140,11 +142,7 @@ export default function MapItem({
   };
 
   return (
-    <button
-      type="button"
-      disabled={!isClickable}
-      aria-label={accessibleLabel}
-      aria-pressed={isSelected}
+    <div
       className={`mapIconItem ${item.type} ${item.status} ${
         isSelected ? "selected" : ""
       }`}
@@ -153,17 +151,29 @@ export default function MapItem({
         left: `${item.x}%`,
         top: `${item.y}%`,
         "--item-rotation": `${item.rotation || 0}deg`,
-        touchAction: "none",
-        pointerEvents: isClickable ? "auto" : "none",
-        cursor: isClickable ? "pointer" : "not-allowed",
+        pointerEvents: "none",
       }}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onClick={handleClick}
-      title={accessibleLabel}
     >
       <img src={itemIcon} alt="" aria-hidden="true" draggable={false} />
-    </button>
+
+      <button
+        type="button"
+        className="mapItemHitArea"
+        disabled={!isClickable}
+        aria-label={accessibleLabel}
+        aria-pressed={isSelected}
+        style={{
+          pointerEvents: isClickable ? "auto" : "none",
+          cursor: isClickable ? "pointer" : "not-allowed",
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onLostPointerCapture={handlePointerUp}
+        onClick={handleClick}
+        title={accessibleLabel}
+      />
+    </div>
   );
 }
 

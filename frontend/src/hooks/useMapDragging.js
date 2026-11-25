@@ -37,7 +37,7 @@ export default function useMapDragging({ items, setItems }) {
   const mapRef = useRef(null);
 
   const [hoveredZoneId, setHoveredZoneId] = useState(null);
-  const [draggingItemId, setDraggingItemId] = useState(null);
+  const dragRef = useRef(null);
 
   /*
   ---------------------------------------------------------
@@ -65,6 +65,29 @@ export default function useMapDragging({ items, setItems }) {
     };
   };
 
+  const setDraggingItemId = (seatId, event) => {
+    if (seatId == null || !event || !mapRef.current) {
+      dragRef.current = null;
+      return;
+    }
+
+    const currentItem = items.find((item) => item.seatId === seatId);
+
+    if (!currentItem) {
+      return;
+    }
+
+    dragRef.current = {
+      seatId,
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startItemX: Number(currentItem.x),
+      startItemY: Number(currentItem.y),
+      hasMoved: false,
+    };
+  };
+
   /*
   ---------------------------------------------------------
   handleMapPointerMove
@@ -85,33 +108,50 @@ export default function useMapDragging({ items, setItems }) {
 
     setHoveredZoneId(hoveredZone?.id || null);
 
-    if (!draggingItemId) {
+    const drag = dragRef.current;
+
+    if (!drag || event.pointerId !== drag.pointerId) {
       return;
     }
 
-    const currentItem = items.find((item) => item.seatId === draggingItemId);
+    const deltaX = event.clientX - drag.startClientX;
+    const deltaY = event.clientY - drag.startClientY;
 
-    if (!currentItem) {
+    // התחלת גרירה רק לאחר תנועה של לפחות 5 פיקסלים
+    if (!drag.hasMoved) {
+      if (Math.hypot(deltaX, deltaY) < 5) {
+        return;
+      }
+
+      drag.hasMoved = true;
+    }
+
+    const currentItem = items.find((item) => item.seatId === drag.seatId);
+
+    if (!currentItem || !mapRef.current) {
       return;
     }
+
+    const rectangle = mapRef.current.getBoundingClientRect();
+
+    // חישוב המיקום ביחס לנקודת האחיזה המקורית
+    const targetX = drag.startItemX + (deltaX / rectangle.width) * 100;
+
+    const targetY = drag.startItemY + (deltaY / rectangle.height) * 100;
 
     const allowedZone = mapZones.find(
       (zone) => zone.id === currentItem.location,
     );
 
-    if (!allowedZone && !isInsideAllowedZone(position.x, position.y)) {
+    if (!allowedZone && !isInsideAllowedZone(targetX, targetY)) {
       return;
     }
 
-    const targetPosition = clampPositionToZone(
-      position.x,
-      position.y,
-      allowedZone,
-    );
+    const targetPosition = clampPositionToZone(targetX, targetY, allowedZone);
 
     setItems((previousItems) =>
       previousItems.map((item) =>
-        item.seatId === draggingItemId
+        item.seatId === drag.seatId
           ? {
               ...item,
               x: targetPosition.x,
@@ -131,7 +171,7 @@ export default function useMapDragging({ items, setItems }) {
   ---------------------------------------------------------
   */
   const stopDragging = () => {
-    setDraggingItemId(null);
+    dragRef.current = null;
   };
 
   /*

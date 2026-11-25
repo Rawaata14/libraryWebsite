@@ -89,6 +89,20 @@ export default function LibraryMap({
     fetchLatestSeats,
   });
 
+  const handleMapClick = (event) => {
+    if (!isLibrarian) {
+      return;
+    }
+
+    // אין לבטל בחירה בעת לחיצה על רהיט
+    if (event.target.closest(".mapItemHitArea")) {
+      return;
+    }
+
+    stopDragging();
+    onSeatSelect(null);
+  };
+
   return (
     <div className="dynamicMapWrapper">
       {/*
@@ -130,6 +144,7 @@ export default function LibraryMap({
           onPointerMove={handleMapPointerMove}
           onPointerUp={stopDragging}
           onPointerLeave={handleMapPointerLeave}
+          onClick={handleMapClick}
         >
           {/*
         תמונת הרקע משמשת לצורכי עיצוב בלבד.
@@ -189,26 +204,26 @@ export default function LibraryMap({
             const isReservableItem = RESERVABLE_ITEM_TYPES.includes(item.type);
 
             /*
--------------------------------------------------
-בדיקת אפשרות בחירת הפריט
+            -------------------------------------------------
+            בדיקת אפשרות בחירת הפריט
 
-ספרנית:
-יכולה לבחור כל פריט לצורך עריכה וניהול.
+            ספרנית:
+            יכולה לבחור כל פריט לצורך עריכה וניהול.
 
-משתמש:
-יכול לבחור כל פריט שמייצג מקום ישיבה, כל עוד
-המקום אינו חסום מנהלית.
+            משתמש:
+            יכול לבחור כל פריט שמייצג מקום ישיבה, כל עוד
+            המקום אינו חסום מנהלית.
 
-מצב available:
-פותח תהליך הזמנה רגיל.
+            מצב available:
+            פותח תהליך הזמנה רגיל.
 
-מצב occupied, reserved או unavailable:
-פותח תהליך הצטרפות לרשימת המתנה.
+            מצב occupied, reserved או unavailable:
+            פותח תהליך הצטרפות לרשימת המתנה.
 
-מצב blocked:
-אינו ניתן להזמנה או להמתנה.
--------------------------------------------------
-*/
+            מצב blocked:
+            אינו ניתן להזמנה או להמתנה.
+            -------------------------------------------------
+            */
             const normalizedItemStatus = String(
               item.status || "",
             ).toLowerCase();

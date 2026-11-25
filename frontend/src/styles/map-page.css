@@ -5,9 +5,11 @@
 */
 
 .mapPageContainer {
-  max-width: 1280px;
+  width: 94%;
+  max-width: 1800px;
   margin: 20px auto 40px;
   padding: 20px;
+  box-sizing: border-box;
 }
 
 .mapPageCard {
@@ -113,8 +115,7 @@ seatWaitingListExplanation
   border-left: 4px solid #c78a34;
   border-radius: 8px;
 
-  background:
-    rgba(255, 240, 201, 0.65);
+  background: rgba(255, 240, 201, 0.65);
   color: #543614;
 
   font-size: 14px;
