@@ -84,7 +84,7 @@
 מציג את אזור הספרייה בצורה רחבה יותר
 ומצמצם את השוליים הריקים שבתמונת המקור.
 */
-aspect-ratio: 25 / 16;
+  aspect-ratio: 25 / 16;
 
   overflow: hidden;
   border: 3px solid #7a4b3d;
@@ -115,8 +115,7 @@ aspect-ratio: 25 / 16;
   הגודל משתנה בהתאם לרוחב המפה,
   אך נשמר גודל מינימלי קריא.
   */
-  padding: clamp(6px, 0.8cqw, 10px)
-    clamp(9px, 1.5cqw, 18px);
+  padding: clamp(6px, 0.8cqw, 10px) clamp(9px, 1.5cqw, 18px);
 
   max-width: 24cqw;
   border-radius: 14px;
@@ -225,24 +224,61 @@ aspect-ratio: 25 / 16;
   width: clamp(24px, 3.5cqw, 42px);
 }
 
+.mapIconItem.seat {
+  clip-path: inset(12% 12% 11% 12%);
+}
+
 .mapIconItem.single-seat img {
   width: clamp(70px, 12.5cqw, 150px);
+}
+.mapIconItem.single-seat {
+  clip-path: inset(10% 33.5% 12% 33.5%);
 }
 
 .mapIconItem.table-4 img {
   width: clamp(54px, 8.75cqw, 105px);
 }
 
+.mapIconItem.table-4 {
+  clip-path: inset(12% 10% 13% 10%);
+}
+
 .mapIconItem.table-8 img {
   width: clamp(78px, 12.9cqw, 155px);
+}
+
+.mapIconItem.table-8 {
+  clip-path: inset(18% 10.5% 21% 10.5%);
 }
 
 .mapIconItem.computer-seat img {
   width: clamp(56px, 9.2cqw, 110px);
 }
 
+.mapIconItem.computer-seat {
+  clip-path: inset(9% 23% 8% 23%);
+}
+
 .mapIconItem.reception img {
   width: clamp(80px, 13.3cqw, 160px);
+}
+
+/* ===== Decorative reception desk ===== */
+
+.mapReceptionDesk {
+  position: absolute;
+  left: 44.5%;
+  top: 60%;
+
+  width: 11%;
+
+  height: auto;
+
+  transform: translate(-50%, -50%) rotate(90deg);
+  z-index: 1;
+
+  pointer-events: none;
+  user-select: none;
 }
 
 /* ===== אובייקט חסום ===== */
@@ -322,5 +358,61 @@ aspect-ratio: 25 / 16;
   .mapToolbarButtons button {
     width: 100%;
     min-height: 44px;
+  }
+}
+
+/* ===== Map scroll container ===== */
+
+.mapScrollContainer {
+  display: contents;
+}
+
+/* ===== Mobile map scrolling ===== */
+
+@media (max-width: 600px) {
+  .dynamicMapWrapper {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .mapScrollContainer {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+  }
+
+  .dynamicMapCanvas {
+    min-width: 750px;
+    flex-shrink: 0;
+  }
+}
+
+/* ===== Large map proportional furniture scaling ===== */
+
+@container (min-width: 1200px) {
+  .mapIconItem.seat img {
+    width: 3.5cqw;
+  }
+
+  .mapIconItem.single-seat img {
+    width: 12.5cqw;
+  }
+
+  .mapIconItem.table-4 img {
+    width: 8.75cqw;
+  }
+
+  .mapIconItem.table-8 img {
+    width: 12.9cqw;
+  }
+
+  .mapIconItem.computer-seat img {
+    width: 9.2cqw;
+  }
+
+  .mapIconItem.reception img {
+    width: 13.3cqw;
   }
 }

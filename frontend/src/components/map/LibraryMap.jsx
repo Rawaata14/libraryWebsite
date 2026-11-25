@@ -23,6 +23,7 @@ import MapToolbar from "./MapToolbar";
 import useLibraryMap from "../../hooks/useLibraryMap";
 import { mapZones } from "../../utils/mapUtils";
 import { seatPropType } from "../../propTypes/seatPropTypes";
+import receptionImage from "../../assets/icons/reception.png";
 
 /*
 ---------------------------------------------------------
@@ -120,49 +121,57 @@ export default function LibraryMap({
       משטח המפה
       =====================================================
       */}
-
-      <div
-        className="dynamicMapCanvas"
-        ref={mapRef}
-        role="region"
-        aria-label="Interactive library seating map"
-        onPointerMove={handleMapPointerMove}
-        onPointerUp={stopDragging}
-        onPointerLeave={handleMapPointerLeave}
-      >
-        {/*
+      <div className="mapScrollContainer">
+        <div
+          className="dynamicMapCanvas"
+          ref={mapRef}
+          role="region"
+          aria-label="Interactive library seating map"
+          onPointerMove={handleMapPointerMove}
+          onPointerUp={stopDragging}
+          onPointerLeave={handleMapPointerLeave}
+        >
+          {/*
         תמונת הרקע משמשת לצורכי עיצוב בלבד.
         המושבים האינטראקטיביים מקבלים תיאור נגיש בנפרד.
         */}
-        <img
-          src="/images/library-map.png"
-          alt=""
-          aria-hidden="true"
-          className="dynamicMapBackground"
-        />
+          <img
+            src="/images/library-map.png"
+            alt=""
+            aria-hidden="true"
+            className="dynamicMapBackground"
+          />
 
-        {/*
+          {/* Decorative reception desk */}
+          <img
+            src={receptionImage}
+            alt=""
+            aria-hidden="true"
+            className="mapReceptionDesk"
+          />
+
+          {/*
         ==================================================
         כותרות אזורי המפה
         ==================================================
         */}
 
-        {mapZones.map((zone) => (
-          <div
-            key={zone.id}
-            className={`mapZoneLabel ${
-              hoveredZoneId === zone.id ? "hiddenZoneLabel" : ""
-            }`}
-            style={{
-              left: `${zone.labelX}%`,
-              top: `${zone.labelY}%`,
-            }}
-          >
-            {zone.label}
-          </div>
-        ))}
+          {mapZones.map((zone) => (
+            <div
+              key={zone.id}
+              className={`mapZoneLabel ${
+                hoveredZoneId === zone.id ? "hiddenZoneLabel" : ""
+              }`}
+              style={{
+                left: `${zone.labelX}%`,
+                top: `${zone.labelY}%`,
+              }}
+            >
+              {zone.label}
+            </div>
+          ))}
 
-        {/*
+          {/*
         ==================================================
         פריטי המפה
 
@@ -174,12 +183,12 @@ export default function LibraryMap({
         ==================================================
         */}
 
-        {items.map((item) => {
-          const isTable = item.type === "table-4" || item.type === "table-8";
+          {items.map((item) => {
+            const isTable = item.type === "table-4" || item.type === "table-8";
 
-          const isReservableItem = RESERVABLE_ITEM_TYPES.includes(item.type);
+            const isReservableItem = RESERVABLE_ITEM_TYPES.includes(item.type);
 
-          /*
+            /*
 -------------------------------------------------
 בדיקת אפשרות בחירת הפריט
 
@@ -200,36 +209,39 @@ export default function LibraryMap({
 אינו ניתן להזמנה או להמתנה.
 -------------------------------------------------
 */
-          const normalizedItemStatus = String(item.status || "").toLowerCase();
+            const normalizedItemStatus = String(
+              item.status || "",
+            ).toLowerCase();
 
-          const isItemClickable =
-            isLibrarian ||
-            (isReservableItem && normalizedItemStatus !== "blocked");
+            const isItemClickable =
+              isLibrarian ||
+              (isReservableItem && normalizedItemStatus !== "blocked");
 
-          return (
-            <div
-              key={item.seatId}
-              style={{
-                position: "absolute",
-                zIndex: isTable ? 2 : 1,
-                left: 0,
-                top: 0,
-                width: "100%",
-                height: "100%",
-                pointerEvents: "none",
-              }}
-            >
-              <MapItem
-                item={item}
-                isSelected={selectedSeatId === item.seatId}
-                onSelect={handleItemSelect}
-                isLibrarian={isLibrarian}
-                setDraggingItemId={setDraggingItemId}
-                isClickable={isItemClickable}
-              />
-            </div>
-          );
-        })}
+            return (
+              <div
+                key={item.seatId}
+                style={{
+                  position: "absolute",
+                  zIndex: isTable ? 2 : 1,
+                  left: 0,
+                  top: 0,
+                  width: "100%",
+                  height: "100%",
+                  pointerEvents: "none",
+                }}
+              >
+                <MapItem
+                  item={item}
+                  isSelected={selectedSeatId === item.seatId}
+                  onSelect={handleItemSelect}
+                  isLibrarian={isLibrarian}
+                  setDraggingItemId={setDraggingItemId}
+                  isClickable={isItemClickable}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/*
