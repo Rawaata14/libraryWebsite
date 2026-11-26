@@ -71,6 +71,7 @@ router.get("/get-map", async (req, res) => {
       date,
       startTime,
       endTime,
+      req.session?.user?.userId ?? null,
     );
 
     if (result.success) {

@@ -78,17 +78,17 @@ joinSeatWaitingList
 */
 export async function joinSeatWaitingList({
   seatId,
-  date,
-  startTime,
-  endTime,
+  requestedDate,
+  requestedStartTime,
+  requestedEndTime,
 }) {
   const response = await axios.post(
-    buildApiUrl("/waiting-lists/seat"),
+    buildApiUrl("/waiting-lists/seats"),
     {
       seatId,
-      date,
-      startTime,
-      endTime,
+      requestedDate,
+      requestedStartTime,
+      requestedEndTime,
     },
     {
       withCredentials: true,

@@ -19,7 +19,6 @@ const { getConnection } = require("../dbSingleton");
 const {
   sendSeatReservationEmail,
   sendSeatCancellationEmail,
-  sendSeatWaitingListOfferEmail,
 } = require("../../utils/emailService");
 const {
   isValidDate,
@@ -28,16 +27,15 @@ const {
   normalizeTime,
   getLibraryDateTime,
 } = require("../../utils/formatters");
-const seatWaitingListQueries = require("./waitingListQueries");
-
-const RESERVATION_TIME_SLOTS = [
-  "08:00 - 10:00",
-  "10:00 - 12:00",
-  "12:00 - 14:00",
-  "14:00 - 16:00",
-  "16:00 - 18:00",
-  "18:00 - 20:00",
-];
+const {
+  getOpeningHours,
+  getReservationTimeSlots,
+  isValidReservationSlot,
+} = require("../../utils/libraryHours");
+const {
+  createSeatOfferInTransaction,
+  notifySeatOffer,
+} = require("../../services/seatWaitingListService");
 
 /*
 ---------------------------------------------------------
@@ -61,7 +59,6 @@ function validateReservationTime(reservationDate, startTime, endTime) {
   }
 
   const normalizedStartTime = normalizeTime(startTime);
-
   const normalizedEndTime = normalizeTime(endTime);
 
   if (normalizedStartTime >= normalizedEndTime) {
@@ -72,6 +69,35 @@ function validateReservationTime(reservationDate, startTime, endTime) {
     };
   }
 
+  // בדיקה שהספרייה פתוחה בתאריך המבוקש
+  const openingHours = getOpeningHours(reservationDate);
+
+  if (!openingHours) {
+    return {
+      success: false,
+      invalidReservation: true,
+      message: "The library is closed on the selected date",
+    };
+  }
+
+  // בדיקה שההזמנה תואמת לחלון זמן מורשה
+  const isAllowedSlot = isValidReservationSlot(
+    reservationDate,
+    normalizedStartTime,
+    normalizedEndTime,
+  );
+
+  if (!isAllowedSlot) {
+    return {
+      success: false,
+      invalidReservation: true,
+      message:
+        `Invalid reservation time slot. Library opening hours: ` +
+        `${openingHours.open} - ${openingHours.close}`,
+    };
+  }
+
+  // מניעת הזמנות בעבר
   const libraryNow = getLibraryDateTime();
 
   const reservationStartKey = `${reservationDate}T${normalizedStartTime}`;
@@ -273,6 +299,37 @@ async function reserveSeat(reservationDetails) {
         throw error;
       }
 
+      // בדיקה האם קיימת הצעה פעילה עבור משתמש אחר
+      const [activeOffers] = await connection.query(
+        `SELECT queueSeatId
+          FROM waiting_list_seat
+          WHERE seatId = ?
+            AND reservationDate_placeholder = ?
+            AND requestedStartTime < ?
+            AND requestedEndTime > ?
+            AND status = 'offered'
+            AND offerExpiresAt > ?
+            AND userId <> ?
+          LIMIT 1
+          FOR UPDATE`.replace("reservationDate_placeholder", "requestedDate"),
+        [
+          seatId,
+          validation.reservationDate,
+          validation.endTime,
+          validation.startTime,
+          getLibraryDateTime().sqlDateTime,
+          userId,
+        ],
+      );
+
+      if (activeOffers.length > 0) {
+        const error = new Error(
+          "This seat is temporarily held for another user with an active waiting list offer.",
+        );
+        error.conflict = true;
+        throw error;
+      }
+
       // 6. שמירת ההזמנה
       const [result] = await connection.query(
         `INSERT INTO seat_reservation
@@ -380,9 +437,9 @@ async function reserveGroupSeats(reservationDetails) {
 
       const [tables] = await connection.query(
         `SELECT seatId, type
-   FROM seat
-   WHERE seatId = ?
-   FOR UPDATE`,
+          FROM seat
+          WHERE seatId = ?
+          FOR UPDATE`,
         [tableId],
       );
 
@@ -491,6 +548,37 @@ async function reserveGroupSeats(reservationDetails) {
 
         if (overlaps.length > 0) {
           const error = new Error(`Seat ${seatId} is already reserved`);
+          error.conflict = true;
+          throw error;
+        }
+
+        // בדיקת הצעה פעילה עבור משתמש אחר
+        const [activeOffers] = await connection.query(
+          `SELECT queueSeatId
+   FROM waiting_list_seat
+   WHERE seatId = ?
+     AND requestedDate = ?
+     AND requestedStartTime < ?
+     AND requestedEndTime > ?
+     AND status = 'offered'
+     AND offerExpiresAt > ?
+     AND userId <> ?
+   LIMIT 1
+   FOR UPDATE`,
+          [
+            seatId,
+            validation.reservationDate,
+            validation.endTime,
+            validation.startTime,
+            getLibraryDateTime().sqlDateTime,
+            userId,
+          ],
+        );
+
+        if (activeOffers.length > 0) {
+          const error = new Error(
+            `Seat ${seatId} is temporarily held for another user with an active waiting list offer.`,
+          );
           error.conflict = true;
           throw error;
         }
@@ -689,165 +777,204 @@ cancelReservation
 */
 async function cancelReservation(reservationId, userId) {
   try {
-    const findSQL = `
-      SELECT
-        reservationId,
-        seatId,
-        DATE_FORMAT(
-          reservationDate,
-          '%Y-%m-%d'
-        ) AS reservationDate,
-        TIME_FORMAT(
-          startTime,
-          '%H:%i:%s'
-        ) AS startTime,
-        TIME_FORMAT(
-          endTime,
-          '%H:%i:%s'
-        ) AS endTime,
-        status
-      FROM seat_reservation
-      WHERE reservationId = ?
-        AND userId = ?
-      LIMIT 1
-    `;
-
-    const reservations = await doQuery(findSQL, [reservationId, userId]);
-
-    if (reservations.length === 0) {
-      return {
-        success: false,
-        notFound: true,
-        message: "Reservation not found",
-      };
-    }
-
-    const reservation = reservations[0];
-
-    if (
-      ["cancelled", "canceled"].includes(
-        String(reservation.status).toLowerCase(),
-      )
-    ) {
-      return {
-        success: false,
-        alreadyCancelled: true,
-        message: "Reservation is already cancelled",
-      };
-    }
-
-    const reservationDate = normalizeDate(reservation.reservationDate);
-
-    const reservationStartTime = normalizeTime(reservation.startTime);
-
-    const reservationStartKey = `${reservationDate}T${reservationStartTime}`;
-
-    const libraryNow = getLibraryDateTime();
-
-    if (
-      !reservationDate ||
-      !reservationStartTime ||
-      reservationStartKey <= libraryNow.dateTimeKey
-    ) {
-      return {
-        success: false,
-        cancellationClosed: true,
-        message:
-          "This reservation can no longer be cancelled because its start time has arrived",
-      };
-    }
-
-    const cancelSQL = `
-      UPDATE seat_reservation
-      SET status = 'cancelled'
-      WHERE reservationId = ?
-        AND userId = ?
-        AND LOWER(status) NOT IN (
-          'cancelled',
-          'canceled'
-        )
-    `;
-
-    const result = await doQuery(cancelSQL, [reservationId, userId]);
-
-    if (result.affectedRows === 0) {
-      return {
-        success: false,
-        notFound: true,
-        message: "Reservation not found or cannot be cancelled",
-      };
-    }
-
-    const users = await doQuery(
-      `SELECT email, fullName FROM user WHERE userId = ?`,
-      [userId],
-    );
-
-    if (users.length > 0) {
-      const user = users[0];
-      await sendSeatCancellationEmail(
-        user.email,
-        user.fullName,
-        {
-          reservationDate,
-          startTime: reservationStartTime,
-          endTime: normalizeTime(reservation.endTime),
-          seatId: reservation.seatId,
-        },
-        false,
+    const transactionResult = await withTransaction(async (connection) => {
+      // 1. נעילת המשתמש
+      await connection.query(
+        `SELECT userId
+           FROM user
+           WHERE userId = ?
+           FOR UPDATE`,
+        [userId],
       );
-    }
-    try {
-      const nextUser = await seatWaitingListQueries.getFirstWaitingForSeat(
+
+      // 2. איתור הכיסא המשויך להזמנה
+      const [initialReservations] = await connection.query(
+        `SELECT seatId
+           FROM seat_reservation
+           WHERE reservationId = ?
+             AND userId = ?
+           LIMIT 1`,
+        [reservationId, userId],
+      );
+
+      if (initialReservations.length === 0) {
+        return {
+          success: false,
+          notFound: true,
+          message: "Reservation not found",
+        };
+      }
+
+      const seatId = initialReservations[0].seatId;
+
+      // 3. נעילת הכיסא לפני ביטול ההזמנה
+      await connection.query(
+        `SELECT seatId
+           FROM seat
+           WHERE seatId = ?
+           FOR UPDATE`,
+        [seatId],
+      );
+
+      // 4. שליפה ונעילה של ההזמנה
+      const [reservations] = await connection.query(
+        `SELECT
+             reservationId,
+             seatId,
+             DATE_FORMAT(
+               reservationDate, '%Y-%m-%d'
+             ) AS reservationDate,
+             TIME_FORMAT(
+               startTime, '%H:%i:%s'
+             ) AS startTime,
+             TIME_FORMAT(
+               endTime, '%H:%i:%s'
+             ) AS endTime,
+             status
+           FROM seat_reservation
+           WHERE reservationId = ?
+             AND userId = ?
+           LIMIT 1
+           FOR UPDATE`,
+        [reservationId, userId],
+      );
+
+      if (reservations.length === 0) {
+        return {
+          success: false,
+          notFound: true,
+          message: "Reservation not found",
+        };
+      }
+
+      const reservation = reservations[0];
+
+      // 5. בדיקה שההזמנה לא בוטלה בעבר
+      if (
+        ["cancelled", "canceled"].includes(
+          String(reservation.status).toLowerCase(),
+        )
+      ) {
+        return {
+          success: false,
+          alreadyCancelled: true,
+          message: "Reservation is already cancelled",
+        };
+      }
+
+      const reservationDate = normalizeDate(reservation.reservationDate);
+
+      const reservationStartTime = normalizeTime(reservation.startTime);
+
+      const reservationEndTime = normalizeTime(reservation.endTime);
+
+      const libraryNow = getLibraryDateTime();
+
+      const reservationStartKey = `${reservationDate}T${reservationStartTime}`;
+
+      // 6. מניעת ביטול לאחר שעת ההתחלה
+      if (
+        !reservationDate ||
+        !reservationStartTime ||
+        reservationStartKey <= libraryNow.dateTimeKey
+      ) {
+        return {
+          success: false,
+          cancellationClosed: true,
+          message:
+            "This reservation can no longer be cancelled because its start time has arrived",
+        };
+      }
+
+      // 7. ביטול ההזמנה
+      const [result] = await connection.query(
+        `UPDATE seat_reservation
+           SET status = 'cancelled'
+           WHERE reservationId = ?
+             AND userId = ?
+             AND LOWER(status) NOT IN (
+               'cancelled', 'canceled'
+             )`,
+        [reservationId, userId],
+      );
+
+      if (result.affectedRows !== 1) {
+        throw new Error("Failed to cancel reservation");
+      }
+
+      // 8. יצירת הצעה באותה טרנזקציה
+      const offer = await createSeatOfferInTransaction(
+        connection,
         reservation.seatId,
         reservationDate,
         reservationStartTime,
-        normalizeTime(reservation.endTime),
+        reservationEndTime,
       );
 
-      if (nextUser) {
-        const libraryNow = getLibraryDateTime();
-        const offeredAt = libraryNow.dateTimeKey.replace("T", " ");
-        const offerExpiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000)
-          .toISOString()
-          .slice(0, 19)
-          .replace("T", " ");
+      return {
+        success: true,
+        offer,
+        data: {
+          reservationId,
+          seatId: reservation.seatId,
+          reservationDate,
+          startTime: reservationStartTime,
+          endTime: reservationEndTime,
+          isToday: reservationDate === libraryNow.date,
+        },
+      };
+    });
 
-        await seatWaitingListQueries.offerSeatEntry(
-          nextUser.queueSeatId,
-          offeredAt,
-          offerExpiresAt,
-        );
-
-        if (nextUser.email) {
-          await sendSeatWaitingListOfferEmail(
-            nextUser.email,
-            nextUser.fullName,
-            {
-              requestedDate: reservationDate,
-              requestedStartTime: reservationStartTime,
-              requestedEndTime: normalizeTime(reservation.endTime),
-              offerExpiresAt,
-            },
-          );
-        }
-      }
-    } catch (queueError) {
-      console.error(
-        "Error processing waiting list after cancellation:",
-        queueError,
-      );
+    if (!transactionResult.success) {
+      return transactionResult;
     }
+
+    // בשלב זה הטרנזקציה כבר הסתיימה בהצלחה
+    const { data, offer } = transactionResult;
+
+    // 9. שליחת התראה לממתין לאחר COMMIT
+    if (offer) {
+      try {
+        await notifySeatOffer(offer);
+      } catch (notificationError) {
+        console.error(
+          "Offer saved, but notification failed:",
+          notificationError,
+        );
+      }
+    }
+
+    // 10. שליחת מייל ביטול למשתמש לאחר COMMIT
+    try {
+      const users = await doQuery(
+        `SELECT email, fullName
+         FROM user
+         WHERE userId = ?`,
+        [userId],
+      );
+
+      if (users.length > 0) {
+        const user = users[0];
+
+        await sendSeatCancellationEmail(
+          user.email,
+          user.fullName,
+          {
+            reservationDate: data.reservationDate,
+            startTime: data.startTime,
+            endTime: data.endTime,
+            seatId: data.seatId,
+          },
+          false,
+        );
+      }
+    } catch (emailError) {
+      console.error("Reservation cancelled, but email failed:", emailError);
+    }
+
     return {
       success: true,
-      data: {
-        reservationId,
-        seatId: reservation.seatId,
-        reservationDate,
-        startTime: reservationStartTime,
-        endTime: normalizeTime(reservation.endTime),
-        isToday: reservationDate === libraryNow.date,
-      },
+      data,
     };
   } catch (error) {
     console.error("Error while cancelling reservation:", error);
@@ -858,7 +985,6 @@ async function cancelReservation(reservationId, userId) {
     };
   }
 }
-
 /*
 ---------------------------------------------------------
 cancelReservationByLibrarian
@@ -872,151 +998,188 @@ async function cancelReservationByLibrarian(
   reservationId,
   cancellationReason = "",
 ) {
-  console.log(
-    "Received cancellation reason from frontend/route:",
-    cancellationReason,
-  );
   try {
-    const getReservationSQL = `
-      SELECT
-        reservationId,
-        userId,
-        seatId,
-        DATE_FORMAT(
-          reservationDate,
-          '%Y-%m-%d'
-        ) AS reservationDate,
-        TIME_FORMAT(
-          startTime,
-          '%H:%i:%s'
-        ) AS startTime,
-        TIME_FORMAT(
-          endTime,
-          '%H:%i:%s'
-        ) AS endTime,
-        status
-      FROM seat_reservation
-      WHERE reservationId = ?
-      LIMIT 1
-    `;
-
-    const reservations = await doQuery(getReservationSQL, [reservationId]);
-
-    if (reservations.length === 0) {
-      return {
-        success: false,
-        notFound: true,
-        message: "Reservation not found",
-      };
-    }
-
-    const reservation = reservations[0];
-
-    if (
-      ["cancelled", "canceled"].includes(
-        String(reservation.status).toLowerCase(),
-      )
-    ) {
-      return {
-        success: false,
-        alreadyCancelled: true,
-        message: "Reservation is already cancelled",
-      };
-    }
-
-    const cancelSQL = `
-      UPDATE seat_reservation
-      SET status = 'cancelled'
-      WHERE reservationId = ?
-        AND LOWER(status) NOT IN (
-          'cancelled',
-          'canceled'
-        )
-    `;
-
-    const result = await doQuery(cancelSQL, [reservationId]);
-
-    if (result.affectedRows === 0) {
-      return {
-        success: false,
-        message: "Failed to cancel reservation",
-      };
-    }
-
-    const users = await doQuery(
-      `SELECT email, fullName FROM user WHERE userId = ?`,
-      [reservation.userId],
-    );
-
-    if (users.length > 0) {
-      const user = users[0];
-      await sendSeatCancellationEmail(
-        user.email,
-        user.fullName,
-        {
-          reservationDate: normalizeDate(reservation.reservationDate),
-          startTime: normalizeTime(reservation.startTime),
-          endTime: normalizeTime(reservation.endTime),
-          seatId: reservation.seatId,
-        },
-        true,
-        cancellationReason, // העברת הסיבה לפונקציית המייל
-      );
-    }
-
-    try {
-      const nextUser = await seatWaitingListQueries.getFirstWaitingForSeat(
-        reservation.seatId,
-        normalizeDate(reservation.reservationDate),
-        normalizeTime(reservation.startTime),
-        normalizeTime(reservation.endTime),
+    const transactionResult = await withTransaction(async (connection) => {
+      // 1. איתור המשתמש והכיסא המשויכים להזמנה
+      const [initialReservations] = await connection.query(
+        `SELECT userId, seatId
+           FROM seat_reservation
+           WHERE reservationId = ?
+           LIMIT 1`,
+        [reservationId],
       );
 
-      if (nextUser) {
-        const libraryNow = getLibraryDateTime();
-        const offeredAt = libraryNow.dateTimeKey.replace("T", " ");
-        const offerExpiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000)
-          .toISOString()
-          .slice(0, 19)
-          .replace("T", " ");
-
-        await seatWaitingListQueries.offerSeatEntry(
-          nextUser.queueSeatId,
-          offeredAt,
-          offerExpiresAt,
-        );
-
-        if (nextUser.email) {
-          await sendSeatWaitingListOfferEmail(
-            nextUser.email,
-            nextUser.fullName,
-            {
-              requestedDate: normalizeDate(reservation.reservationDate),
-              requestedStartTime: normalizeTime(reservation.startTime),
-              requestedEndTime: normalizeTime(reservation.endTime),
-              offerExpiresAt,
-            },
-          );
-        }
+      if (initialReservations.length === 0) {
+        return {
+          success: false,
+          notFound: true,
+          message: "Reservation not found",
+        };
       }
-    } catch (queueError) {
-      console.error(
-        "Error processing waiting list after cancellation:",
-        queueError,
+
+      const { userId, seatId } = initialReservations[0];
+
+      // 2. נעילת המשתמש בעל ההזמנה
+      await connection.query(
+        `SELECT userId
+           FROM user
+           WHERE userId = ?
+           FOR UPDATE`,
+        [userId],
       );
+
+      // 3. נעילת הכיסא
+      await connection.query(
+        `SELECT seatId
+           FROM seat
+           WHERE seatId = ?
+           FOR UPDATE`,
+        [seatId],
+      );
+
+      // 4. שליפה ונעילה של ההזמנה
+      const [reservations] = await connection.query(
+        `SELECT
+             reservationId,
+             userId,
+             seatId,
+             DATE_FORMAT(
+               reservationDate, '%Y-%m-%d'
+             ) AS reservationDate,
+             TIME_FORMAT(
+               startTime, '%H:%i:%s'
+             ) AS startTime,
+             TIME_FORMAT(
+               endTime, '%H:%i:%s'
+             ) AS endTime,
+             status
+           FROM seat_reservation
+           WHERE reservationId = ?
+           LIMIT 1
+           FOR UPDATE`,
+        [reservationId],
+      );
+
+      if (reservations.length === 0) {
+        return {
+          success: false,
+          notFound: true,
+          message: "Reservation not found",
+        };
+      }
+
+      const reservation = reservations[0];
+
+      // 5. בדיקה שההזמנה לא בוטלה בעבר
+      if (
+        ["cancelled", "canceled"].includes(
+          String(reservation.status).toLowerCase(),
+        )
+      ) {
+        return {
+          success: false,
+          alreadyCancelled: true,
+          message: "Reservation is already cancelled",
+        };
+      }
+
+      const reservationDate = normalizeDate(reservation.reservationDate);
+
+      const reservationStartTime = normalizeTime(reservation.startTime);
+
+      const reservationEndTime = normalizeTime(reservation.endTime);
+
+      // 6. ביטול ההזמנה
+      // ספרנית רשאית לבטל גם לאחר שעת ההתחלה
+      const [result] = await connection.query(
+        `UPDATE seat_reservation
+           SET status = 'cancelled'
+           WHERE reservationId = ?
+             AND LOWER(status) NOT IN (
+               'cancelled', 'canceled'
+             )`,
+        [reservationId],
+      );
+
+      if (result.affectedRows !== 1) {
+        throw new Error("Failed to cancel reservation");
+      }
+
+      // 7. יצירת הצעה לממתין באותה טרנזקציה
+      const offer = await createSeatOfferInTransaction(
+        connection,
+        reservation.seatId,
+        reservationDate,
+        reservationStartTime,
+        reservationEndTime,
+      );
+
+      return {
+        success: true,
+        offer,
+        data: {
+          reservationId,
+          userId: reservation.userId,
+          seatId: reservation.seatId,
+          reservationDate,
+          startTime: reservationStartTime,
+          endTime: reservationEndTime,
+          cancellationReason,
+        },
+      };
+    });
+
+    if (!transactionResult.success) {
+      return transactionResult;
+    }
+
+    // הטרנזקציה הסתיימה בהצלחה
+    const { data, offer } = transactionResult;
+
+    // 8. שליחת התראה לממתין לאחר COMMIT
+    if (offer) {
+      try {
+        await notifySeatOffer(offer);
+      } catch (notificationError) {
+        console.error(
+          "Offer saved, but notification failed:",
+          notificationError,
+        );
+      }
+    }
+
+    // 9. שליחת מייל ביטול לבעל ההזמנה
+    try {
+      const users = await doQuery(
+        `SELECT email, fullName
+         FROM user
+         WHERE userId = ?`,
+        [data.userId],
+      );
+
+      if (users.length > 0) {
+        const user = users[0];
+
+        await sendSeatCancellationEmail(
+          user.email,
+          user.fullName,
+          {
+            reservationDate: data.reservationDate,
+            startTime: data.startTime,
+            endTime: data.endTime,
+            seatId: data.seatId,
+          },
+          true,
+          cancellationReason,
+        );
+      }
+    } catch (emailError) {
+      console.error("Reservation cancelled, but email failed:", emailError);
     }
 
     return {
       success: true,
-      data: {
-        reservationId,
-        userId: reservation.userId,
-        seatId: reservation.seatId,
-        reservationDate: normalizeDate(reservation.reservationDate),
-        startTime: normalizeTime(reservation.startTime),
-        endTime: normalizeTime(reservation.endTime),
-        cancellationReason,
-      },
+      data,
     };
   } catch (error) {
     console.error("Error while librarian cancels reservation:", error);
@@ -1137,6 +1300,7 @@ async function getAllTimeSlotsAvailability(date) {
 
     const libraryNow = getLibraryDateTime();
 
+    // מניעת הצגת חלונות זמן בתאריכים שעברו
     if (date < libraryNow.date) {
       return {
         success: true,
@@ -1144,10 +1308,17 @@ async function getAllTimeSlotsAvailability(date) {
       };
     }
 
-    const validSlots = RESERVATION_TIME_SLOTS.filter((slot) => {
+    // קבלת חלונות הזמן בהתאם ליום בשבוע
+    const availableSlots = getReservationTimeSlots(date);
+
+    // סינון חלונות זמן ששעת ההתחלה שלהם כבר הגיעה
+    const validSlots = availableSlots.filter((slot) => {
       const startTime = slot.split(" - ")[0];
 
-      if (date === libraryNow.date && startTime <= libraryNow.time) {
+      if (
+        date === libraryNow.date &&
+        normalizeTime(startTime) <= normalizeTime(libraryNow.time)
+      ) {
         return false;
       }
 

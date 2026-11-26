@@ -24,6 +24,19 @@ const express = require("express");
 const { requireAuth, requireLibrarian } = require("../middleware/auth");
 
 const waitingListService = require("../services/waitingListService");
+const {
+  getOpeningHours,
+  isValidReservationSlot,
+} = require("../utils/libraryHours");
+
+const {
+  isValidDate,
+  isValidTime,
+  normalizeTime,
+  getLibraryDateTime,
+} = require("../utils/formatters");
+const { doQuery } = require("../database/query");
+const seatQueries = require("../database/queries/seatQueries");
 
 const router = express.Router();
 
@@ -329,46 +342,97 @@ router.post("/general-seats", requireAuth, async (req, res) => {
   try {
     const { requestedDate, requestedStartTime, requestedEndTime } = req.body;
 
-    if (!requestedDate || !requestedStartTime || !requestedEndTime) {
+    // בדיקת תקינות התאריך והשעות
+    if (
+      !isValidDate(requestedDate) ||
+      !isValidTime(requestedStartTime) ||
+      !isValidTime(requestedEndTime)
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Date, start time, and end time are required.",
+        message: "Invalid waiting-list date or time.",
+      });
+    }
+
+    const startTime = normalizeTime(requestedStartTime);
+    const endTime = normalizeTime(requestedEndTime);
+
+    // בדיקת סדר השעות
+    if (startTime >= endTime) {
+      return res.status(400).json({
+        success: false,
+        message: "Start time must be earlier than end time.",
+      });
+    }
+
+    // בדיקה שהספרייה פתוחה בתאריך המבוקש
+    const openingHours = getOpeningHours(requestedDate);
+
+    if (!openingHours) {
+      return res.status(400).json({
+        success: false,
+        message: "The library is closed on the selected date.",
+      });
+    }
+
+    // בדיקת התאמה לחלון הזמנה מורשה
+    if (!isValidReservationSlot(requestedDate, startTime, endTime)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          `Invalid waiting-list time slot. Library opening hours: ` +
+          `${openingHours.open} - ${openingHours.close}`,
+      });
+    }
+
+    // מניעת הצטרפות לרשימת המתנה עבור מועד שכבר התחיל
+    const libraryNow = getLibraryDateTime();
+
+    if (`${requestedDate}T${startTime}` <= libraryNow.dateTimeKey) {
+      return res.status(400).json({
+        success: false,
+        message: "The waiting-list time slot must start in the future.",
       });
     }
 
     const userId = req.session.user.userId;
 
-    // 1. בדיקת סך כל הכיסאות הפעילים (הניתנים להזמנה) בספרייה
-    const sqlTotalSeats = `
-      SELECT COUNT(*) AS count
-      FROM seat
-      WHERE LOWER(status) <> 'blocked'
-        AND type IN ('seat', 'seat-to-add', 'single-seat', 'computer-seat')
-    `;
-    const totalSeatsResult = await require("../database/query")(sqlTotalSeats);
-    const reservableCount = Number(totalSeatsResult[0]?.count) || 0;
-
-    // 2. בדיקת כמה מקומות תפוסים בפועל באותו חלון זמן
-    const sqlCheckOccupied = `
-      SELECT COUNT(*) AS bookedCount
-      FROM seat_reservation
-      WHERE reservationDate = ?
-        AND startTime = ?
-        AND endTime = ?
-        AND LOWER(status) <> 'cancelled'
-    `;
-    const occupiedResult = await require("../database/query")(
-      sqlCheckOccupied,
-      [requestedDate, requestedStartTime, requestedEndTime],
+    // בדיקת זמינות מקומות בהתאם למשתמש המחובר
+    const mapResult = await seatQueries.getMapSeatsByTimeSlot(
+      requestedDate,
+      startTime,
+      endTime,
+      userId,
     );
-    const bookedCount = Number(occupiedResult[0]?.bookedCount) || 0;
 
-    // אם הספרייה עדיין לא מלאה לחלוטין, לא מאפשרים להיכנס לתור הכללי
-    if (bookedCount < reservableCount) {
+    if (!mapResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: "Unable to check seat availability.",
+      });
+    }
+
+    // סינון כיסאות הניתנים להזמנה
+    const reservableSeats = mapResult.map.filter(
+      (seat) =>
+        ["seat", "single-seat", "computer-seat"].includes(seat.type) &&
+        String(seat.status).toLowerCase() !== "blocked",
+    );
+
+    // בדיקה שכל הכיסאות תפוסים או שמורים זמנית
+    const isLibraryFullyBooked =
+      reservableSeats.length > 0 &&
+      reservableSeats.every((seat) =>
+        ["occupied", "held"].includes(String(seat.status).toLowerCase()),
+      );
+
+    if (!isLibraryFullyBooked) {
       return res.status(400).json({
         success: false,
         message:
-          "There are still available seats for this time slot. Please choose an available seat instead.",
+          reservableSeats.length === 0
+            ? "There are no reservable seats for this time slot."
+            : "The library is not fully booked. Please check seat availability.",
       });
     }
 
@@ -380,14 +444,18 @@ router.post("/general-seats", requireAuth, async (req, res) => {
         AND requestedDate = ?
         AND requestedStartTime = ?
         AND requestedEndTime = ?
-        AND seatId IS NULL
-        AND status IN ('waiting', 'offered')
+        AND (
+          (seatId IS NULL AND status = 'waiting')
+          OR
+          (status = 'offered' AND offerExpiresAt > ?)
+        )
     `;
-    const existingEntry = await require("../database/query")(sqlCheckExisting, [
+    const existingEntry = await doQuery(sqlCheckExisting, [
       userId,
       requestedDate,
-      requestedStartTime,
-      requestedEndTime,
+      startTime,
+      endTime,
+      getLibraryDateTime().sqlDateTime,
     ]);
 
     if (existingEntry.length > 0) {
@@ -409,7 +477,7 @@ router.post("/general-seats", requireAuth, async (req, res) => {
       )
       VALUES (NULL, ?, ?, ?, ?, 'waiting')
     `;
-    const insertResult = await require("../database/query")(sqlInsert, [
+    const insertResult = await doQuery(sqlInsert, [
       userId,
       requestedDate,
       requestedStartTime,
@@ -449,51 +517,59 @@ DELETE /waiting-lists/librarian/:type/:waitingId
 רק משתמשת מחוברת בעלת תפקיד librarian.
 ---------------------------------------------------------
 */
-router.delete("/librarian/:type/:waitingId", requireLibrarian, async (req, res) => {
-  try {
-    const waitingId = Number(req.params.waitingId);
-    const type = req.params.type;
+router.delete(
+  "/librarian/:type/:waitingId",
+  requireLibrarian,
+  async (req, res) => {
+    try {
+      const waitingId = Number(req.params.waitingId);
+      const type = req.params.type;
 
-    if (!["book", "seat"].includes(type)) {
-      return res.status(400).json({
+      if (!["book", "seat"].includes(type)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid waiting-list type.",
+        });
+      }
+
+      if (!Number.isInteger(waitingId) || waitingId <= 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid waiting-list ID.",
+        });
+      }
+
+      // שימוש בשירות הניהולי של הספרנית כדי שגם יבטל וגם יקדם את הבא בתור
+      let result;
+      if (type === "book") {
+        result =
+          await waitingListService.cancelBookEntryByLibrarianService(waitingId);
+      } else {
+        result =
+          await waitingListService.cancelSeatEntryByLibrarianService(waitingId);
+      }
+
+      if (!result.success) {
+        return res.status(result.statusCode || 400).json({
+          success: false,
+          message: result.message || "Failed to cancel waiting entry.",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message:
+          result.message ||
+          "Waiting entry successfully cancelled by librarian.",
+      });
+    } catch (error) {
+      console.error("Error cancelling waiting entry by librarian:", error);
+      return res.status(500).json({
         success: false,
-        message: "Invalid waiting-list type.",
+        message: "Internal server error.",
       });
     }
-
-    if (!Number.isInteger(waitingId) || waitingId <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid waiting-list ID.",
-      });
-    }
-
-    // שימוש בשירות הניהולי של הספרנית כדי שגם יבטל וגם יקדם את הבא בתור
-    let result;
-    if (type === "book") {
-      result = await waitingListService.cancelBookEntryByLibrarianService(waitingId);
-    } else {
-      result = await waitingListService.cancelSeatEntryByLibrarianService(waitingId);
-    }
-
-    if (!result.success) {
-      return res.status(result.statusCode || 400).json({
-        success: false,
-        message: result.message || "Failed to cancel waiting entry.",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: result.message || "Waiting entry successfully cancelled by librarian.",
-    });
-  } catch (error) {
-    console.error("Error cancelling waiting entry by librarian:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error.",
-    });
-  }
-});
+  },
+);
 
 module.exports = router;

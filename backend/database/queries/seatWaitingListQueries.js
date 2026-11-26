@@ -23,7 +23,7 @@ requestedStartTime + requestedEndTime
 =========================================================
 */
 
-const {doQuery} = require("../query");
+const { doQuery } = require("../query");
 
 /*
 ---------------------------------------------------------
@@ -68,6 +68,33 @@ async function getSeat(seatId) {
 
 /*
 ---------------------------------------------------------
+getSeatForUpdate
+
+תפקיד:
+שליפת כיסא ונעילתו במסגרת טרנזקציה,
+לצורך סנכרון בין הזמנות להצעות מרשימת ההמתנה.
+---------------------------------------------------------
+*/
+async function getSeatForUpdate(seatId, connection) {
+  if (!connection) {
+    throw new Error("A transaction connection is required to lock a seat.");
+  }
+
+  const sql = `
+    SELECT seatId, type, status
+    FROM seat
+    WHERE seatId = ?
+    LIMIT 1
+    FOR UPDATE
+  `;
+
+  const seats = await doQuery(sql, [seatId], connection);
+
+  return seats[0] || null;
+}
+
+/*
+---------------------------------------------------------
 hasSeatReservation
 
 תפקיד:
@@ -106,32 +133,28 @@ async function hasSeatReservation(
   requestedDate,
   requestedStartTime,
   requestedEndTime,
+  connection = null,
 ) {
   const sql = `
     SELECT reservationId
-
     FROM seat_reservation
-
     WHERE seatId = ?
       AND reservationDate = ?
-
       AND LOWER(status) NOT IN (
         'cancelled',
         'canceled'
       )
-
       AND startTime < ?
       AND endTime > ?
-
     LIMIT 1
+    ${connection ? "FOR UPDATE" : ""}
   `;
 
-  const reservations = await doQuery(sql, [
-    seatId,
-    requestedDate,
-    requestedEndTime,
-    requestedStartTime,
-  ]);
+  const reservations = await doQuery(
+    sql,
+    [seatId, requestedDate, requestedEndTime, requestedStartTime],
+    connection,
+  );
 
   return reservations.length > 0;
 }
@@ -590,68 +613,94 @@ async function getFirstWaitingForSeat(
   requestedDate,
   requestedStartTime,
   requestedEndTime,
+  connection = null,
 ) {
+  // בחירת הרשומה הראשונה ונעילת רשומות ההמתנה בלבד
   const sql = `
     SELECT
-      waiting.queueSeatId,
-      waiting.seatId,
-      waiting.userId,
+      queueSeatId,
+      seatId,
+      userId,
 
       DATE_FORMAT(
-        waiting.requestedDate,
+        requestedDate,
         '%Y-%m-%d'
       ) AS requestedDate,
 
       TIME_FORMAT(
-        waiting.requestedStartTime,
+        requestedStartTime,
         '%H:%i:%s'
       ) AS requestedStartTime,
 
       TIME_FORMAT(
-        waiting.requestedEndTime,
+        requestedEndTime,
         '%H:%i:%s'
-      ) AS requestedEndTime,
-
-      seat.location,
-
-      user.fullName,
-
-      user.email
+      ) AS requestedEndTime
 
     FROM waiting_list_seat
-      AS waiting
 
-    LEFT JOIN seat
-      ON seat.seatId =
-        waiting.seatId
-
-    INNER JOIN user
-      ON user.userId =
-        waiting.userId
-
-    WHERE (waiting.seatId IS NULL OR waiting.seatId = ?)
-      AND waiting.requestedDate = ?
-      AND waiting.requestedStartTime = ?
-      AND waiting.requestedEndTime = ?
-      AND waiting.status = 'waiting'
+    WHERE (seatId IS NULL OR seatId = ?)
+      AND requestedDate = ?
+      AND requestedStartTime = ?
+      AND requestedEndTime = ?
+      AND status = 'waiting'
 
     ORDER BY
-      waiting.createdAt ASC,
-      waiting.queueSeatId ASC
+      createdAt ASC,
+      queueSeatId ASC
 
     LIMIT 1
+    ${connection ? "FOR UPDATE" : ""}
   `;
 
-  const entries = await doQuery(sql, [
+  const entries = await doQuery(
+    sql,
+    [seatId, requestedDate, requestedStartTime, requestedEndTime],
+    connection,
+  );
+
+  const entry = entries[0];
+
+  if (!entry) {
+    return null;
+  }
+
+  // שליפת פרטי המשתמש ללא נעילה מפורשת
+  const users = await doQuery(
+    `
+      SELECT fullName, email
+      FROM user
+      WHERE userId = ?
+      LIMIT 1
+    `,
+    [entry.userId],
+    connection,
+  );
+
+  if (!users[0]) {
+    return null;
+  }
+
+  // שליפת מיקום הכיסא ללא נעילה נוספת
+  const seats = await doQuery(
+    `
+      SELECT location
+      FROM seat
+      WHERE seatId = ?
+      LIMIT 1
+    `,
+    [seatId],
+    connection,
+  );
+
+  return {
+    ...entry,
     seatId,
-    requestedDate,
-    requestedStartTime,
-    requestedEndTime,
-  ]);
-
-  return entries[0] || null;
+    location: seats[0]?.location ?? null,
+    fullName: users[0].fullName,
+    email: users[0].email,
+  };
 }
-
 /*
 ---------------------------------------------------------
 offerSeatEntry
@@ -676,22 +725,31 @@ offerSeatEntry
 תוצאת פעולת ה-UPDATE.
 ---------------------------------------------------------
 */
-async function offerSeatEntry(waitingId, offeredAt, expiresAt) {
+async function offerSeatEntry(
+  waitingId,
+  offeredAt,
+  expiresAt,
+  seatId = null,
+  connection = null,
+) {
   const sql = `
     UPDATE waiting_list_seat
-
     SET
       status = 'offered',
+      seatId = COALESCE(seatId, ?),
       offeredAt = ?,
       offerExpiresAt = ?
-
     WHERE queueSeatId = ?
       AND status = 'waiting'
+      AND (seatId IS NULL OR ? IS NULL OR seatId = ?)
   `;
 
-  return doQuery(sql, [offeredAt, expiresAt, waitingId]);
+  return doQuery(
+    sql,
+    [seatId, offeredAt, expiresAt, waitingId, seatId, seatId],
+    connection,
+  );
 }
-
 /*
 ---------------------------------------------------------
 getSeatOffer
@@ -799,154 +857,34 @@ async function hasActiveSeatOffer(
   requestedStartTime,
   requestedEndTime,
   currentDateTime,
+  connection = null,
 ) {
   const sql = `
     SELECT queueSeatId
-
     FROM waiting_list_seat
-
     WHERE seatId = ?
       AND requestedDate = ?
-      AND requestedStartTime = ?
-      AND requestedEndTime = ?
+      AND requestedStartTime < ?
+      AND requestedEndTime > ?
       AND status = 'offered'
       AND offerExpiresAt > ?
-
     LIMIT 1
+    ${connection ? "FOR UPDATE" : ""}
   `;
 
-  const offers = await doQuery(sql, [
-    seatId,
-    requestedDate,
-    requestedStartTime,
-    requestedEndTime,
-    currentDateTime,
-  ]);
+  const offers = await doQuery(
+    sql,
+    [
+      seatId,
+      requestedDate,
+      requestedEndTime,
+      requestedStartTime,
+      currentDateTime,
+    ],
+    connection,
+  );
 
   return offers.length > 0;
-}
-
-/*
----------------------------------------------------------
-processNextInGeneralQueue
-
-תפקיד:
-נקראת כאשר מתפנה מקום (עקב ביטול הזמנה). 
-מחפשת את הממתין הראשון בתור הכללי (seatId IS NULL) 
-לחלון הזמן המבוקש, מקצה לו כיסא פנוי, מעדכנת ל-offered 
-ושולחת לו מייל התראה.
----------------------------------------------------------
-*/
-async function processNextInGeneralQueue(reservationDate, startTime, endTime) {
-  try {
-    // 1. איתור הממתין הראשון בתור הכללי לחלון הזמן הזה
-    const findNextSQL = `
-      SELECT
-        waiting.queueSeatId,
-        waiting.userId,
-        user.fullName,
-        user.email
-      FROM waiting_list_seat AS waiting
-      INNER JOIN user AS user ON waiting.userId = user.userId
-      WHERE waiting.seatId IS NULL
-        AND waiting.requestedDate = ?
-        AND waiting.requestedStartTime = ?
-        AND waiting.requestedEndTime = ?
-        AND waiting.status = 'waiting'
-      ORDER BY waiting.createdAt ASC, waiting.queueSeatId ASC
-      LIMIT 1
-    `;
-
-    const nextEntries = await doQuery(findNextSQL, [
-      reservationDate,
-      startTime,
-      endTime,
-    ]);
-
-    if (nextEntries.length === 0) {
-      return { success: true, processed: false }; // אין ממתינים בתור הכללי
-    }
-
-    const nextUserInQueue = nextEntries[0];
-
-    // 2. מציאת כיסא פנוי פיזי בספרייה שלא תפוס באותו חלון זמן
-    const findAvailableSeatSQL = `
-      SELECT seatId
-      FROM seat
-      WHERE seatId NOT IN (
-        SELECT seatId
-        FROM seat_reservation
-        WHERE reservationDate = ?
-          AND LOWER(status) NOT IN ('cancelled', 'canceled')
-          AND startTime < ?
-          AND endTime > ?
-      )
-      LIMIT 1
-    `;
-
-    const availableSeats = await doQuery(findAvailableSeatSQL, [
-      reservationDate,
-      endTime,
-      startTime,
-    ]);
-
-    if (availableSeats.length === 0) {
-      return {
-        success: false,
-        message: "No available physical seats to offer.",
-      };
-    }
-
-    const assignedSeatId = availableSeats[0].seatId;
-
-    // 3. הגדרת זמן תפוגה להצעה (למשל שעתיים מעכשיו)
-    const libraryNow = getLibraryDateTime();
-    // חישוב פשוט או הוספת שעתיים לפי הפורמט של השרת
-    const offerExpiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 19)
-      .replace("T", " ");
-
-    const offeredAt = libraryNow.dateTimeKey.replace("T", " ");
-
-    // 4. עדכון רשומת ההמתנה: הפיכה ל-offered, הצמדת הכיסא שהתפנה, והגדרת תפוגה
-    const updateSQL = `
-      UPDATE waiting_list_seat
-      SET
-        status = 'offered',
-        seatId = ?,
-        offeredAt = ?,
-        offerExpiresAt = ?
-      WHERE queueSeatId = ?
-        AND status = 'waiting'
-    `;
-
-    const updateResult = await doQuery(updateSQL, [
-      assignedSeatId,
-      offeredAt,
-      offerExpiresAt,
-      nextUserInQueue.queueSeatId,
-    ]);
-
-    if (updateResult.affectedRows > 0 && nextUserInQueue.email) {
-      // 5. שליחת מייל אוטומטי למשתמש
-      await sendSeatWaitingListOfferEmail(
-        nextUserInQueue.email,
-        nextUserInQueue.fullName,
-        {
-          requestedDate: reservationDate,
-          requestedStartTime: startTime,
-          requestedEndTime: endTime,
-          offerExpiresAt,
-        },
-      );
-    }
-
-    return { success: true, processed: true, assignedSeatId };
-  } catch (error) {
-    console.error("Error processing next in general queue:", error);
-    return { success: false, error: error.message };
-  }
 }
 
 /*
@@ -977,6 +915,7 @@ async function cancelSeatEntryByLibrarian(queueSeatId) {
 
 module.exports = {
   getSeat,
+  getSeatForUpdate,
   hasSeatReservation,
   getActiveSeatEntry,
   addSeatEntry,
@@ -988,5 +927,4 @@ module.exports = {
   getSeatOffer,
   hasActiveSeatOffer,
   cancelSeatEntryByLibrarian,
-  processNextInGeneralQueue,
 };

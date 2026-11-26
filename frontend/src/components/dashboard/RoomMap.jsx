@@ -13,7 +13,7 @@ RoomMap.jsx
 =========================================================
 */
 
-import { useCallback, useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState, useRef } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
@@ -38,11 +38,14 @@ export default function RoomMap({
   selectedDate = "",
   selectedTime = "",
   onConnectionErrorChange,
+  onMapLoaded,
+  readOnly = false,
 }) {
   const { isLibrarian } = useContext(AuthContext);
   const location = useLocation();
 
   const [items, setItems] = useState([]);
+  const mapRequestId = useRef(0);
   const [isConnectionError, setIsConnectionError] = useState(false);
   const [internalSelectedSeatId, setInternalSelectedSeatId] =
     useState(selectedSeatId);
@@ -71,6 +74,7 @@ export default function RoomMap({
   */
   const handleSeatSelect = useCallback(
     (seatData) => {
+      if (readOnly) return;
       // טיפול במקרה שבו מתקבל ישירות אובייקט או מזהה (מספר/מחרוזת)
       let targetItem = null;
 
@@ -92,7 +96,7 @@ export default function RoomMap({
         onSeatSelect(targetItem);
       }
     },
-    [onSeatSelect, items],
+    [onSeatSelect, items, readOnly],
   );
 
   /*
@@ -109,6 +113,8 @@ export default function RoomMap({
   ---------------------------------------------------------
   */
   const fetchSeats = useCallback(async () => {
+    const requestId = ++mapRequestId.current;
+
     try {
       const response = await axios.get(buildApiUrl("/seats/get-map"), {
         params: {
@@ -118,20 +124,40 @@ export default function RoomMap({
         withCredentials: true,
       });
 
+      if (requestId !== mapRequestId.current) return;
+
       const mapData =
         response.data.map ||
         (Array.isArray(response.data) ? response.data : []);
 
       setItems(mapData);
       onItemsChange?.(mapData);
+
+      onMapLoaded?.({
+        date: selectedDate,
+        time: selectedTime,
+        items: mapData,
+      });
+
       setIsConnectionError(false);
       onConnectionErrorChange?.(false);
     } catch (error) {
+      if (requestId !== mapRequestId.current) return;
+
       console.error("Error fetching library map:", error);
+
+      onMapLoaded?.(null);
+
       setIsConnectionError(true);
       onConnectionErrorChange?.(true);
     }
-  }, [selectedDate, selectedTime, onItemsChange, onConnectionErrorChange]);
+  }, [
+    selectedDate,
+    selectedTime,
+    onItemsChange,
+    onConnectionErrorChange,
+    onMapLoaded,
+  ]);
 
   /*
   ---------------------------------------------------------
@@ -143,14 +169,19 @@ export default function RoomMap({
   ---------------------------------------------------------
   */
   useEffect(() => {
+    onMapLoaded?.(null);
+
     fetchSeats();
 
     const intervalId = setInterval(() => {
       fetchSeats();
     }, 10000);
 
-    return () => clearInterval(intervalId);
-  }, [fetchSeats]);
+    return () => {
+      clearInterval(intervalId);
+      mapRequestId.current += 1;
+    };
+  }, [fetchSeats, onMapLoaded]);
 
   const isManagementMapPage =
     location.pathname === "/map" || location.pathname === "/admin/map";
@@ -182,6 +213,7 @@ export default function RoomMap({
         fetchLatestSeats={fetchSeats}
         selectedSeatId={internalSelectedSeatId}
         onSeatSelect={handleSeatSelect}
+        readOnly={readOnly}
       />
     </>
   );
@@ -190,6 +222,10 @@ export default function RoomMap({
 RoomMap.propTypes = {
   selectedSeatId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   onSeatSelect: PropTypes.func,
+  onItemsChange: PropTypes.func,
   selectedDate: PropTypes.string,
   selectedTime: PropTypes.string,
+  onConnectionErrorChange: PropTypes.func,
+  onMapLoaded: PropTypes.func,
+  readOnly: PropTypes.bool,
 };

@@ -23,6 +23,14 @@ import PageShell from "../components/layout/PageShell";
 import RoomMap from "../components/dashboard/RoomMap";
 import SeatReservationSummary from "../components/map/SeatReservationSummary";
 import useSeatReservation from "../hooks/useSeatReservation";
+import Button from "../components/common/Button";
+import {
+  LoaderCircle,
+  TriangleAlert,
+  CircleAlert,
+  Users,
+  ListPlus,
+} from "lucide-react";
 import { useState } from "react";
 
 /*
@@ -36,11 +44,14 @@ MapPage
 */
 export default function MapPage() {
   const [mapItems, setMapItems] = useState([]);
+  const [loadedMap, setLoadedMap] = useState(null);
   const [isMapConnectionError, setIsMapConnectionError] = useState(false);
   const {
     minimumDate,
     selectedDate,
     availableSlots,
+    isLoadingSlots,
+    slotsLoadError,
     selectedTime,
     selectedSeat,
     offeredSeatId,
@@ -53,6 +64,7 @@ export default function MapPage() {
     handleDateChange,
     handleTimeChange,
     handleConfirmReservation,
+    handleJoinGeneralWaitingList,
     isTable,
     groupSize,
     setGroupSize,
@@ -61,6 +73,64 @@ export default function MapPage() {
     items: mapItems,
     isMapConnectionError,
   });
+
+  const hasValidTimeSlot =
+    !isLoadingSlots &&
+    !slotsLoadError &&
+    Boolean(selectedDate) &&
+    Boolean(selectedTime) &&
+    availableSlots.includes(selectedTime);
+
+  const isMapCurrent =
+    loadedMap !== null &&
+    loadedMap.date === selectedDate &&
+    loadedMap.time === selectedTime;
+
+  const reservableSeats = (loadedMap?.items || []).filter(
+    (item) =>
+      ["seat", "single-seat", "computer-seat"].includes(item.type) &&
+      String(item.status).toLowerCase() !== "blocked",
+  );
+
+  const isLibraryFullyBooked =
+    hasValidTimeSlot &&
+    isMapCurrent &&
+    !isMapConnectionError &&
+    reservableSeats.length > 0 &&
+    reservableSeats.every((item) =>
+      ["occupied", "held"].includes(String(item.status).toLowerCase()),
+    );
+
+  const isSaturday =
+    Boolean(selectedDate) &&
+    new Date(`${selectedDate}T00:00:00Z`).getUTCDay() === 6;
+
+  let slotsMessage = null;
+
+  if (isLoadingSlots) {
+    slotsMessage = {
+      type: "info",
+      message: "Loading available reservation times...",
+    };
+  } else if (slotsLoadError) {
+    slotsMessage = {
+      type: "error",
+      message:
+        "Unable to load reservation times. Please check your connection and try again.",
+    };
+  } else if (isSaturday) {
+    slotsMessage = {
+      type: "warning",
+      message:
+        "The library is closed on Saturdays. Please select another date to make a reservation.",
+    };
+  } else if (availableSlots.length === 0) {
+    slotsMessage = {
+      type: "warning",
+      message:
+        "No reservation time slots available. Please select another date.",
+    };
+  }
 
   return (
     <PageShell>
@@ -149,6 +219,11 @@ export default function MapPage() {
                   id="reservation-time"
                   className="mapFilterInput"
                   value={selectedTime}
+                  disabled={
+                    isLoadingSlots ||
+                    slotsLoadError ||
+                    availableSlots.length === 0
+                  }
                   onChange={(event) => handleTimeChange(event.target.value)}
                 >
                   {availableSlots.length > 0 ? (
@@ -159,12 +234,81 @@ export default function MapPage() {
                     ))
                   ) : (
                     <option value="" disabled>
-                      No future time slots for this date
+                      {isLoadingSlots
+                        ? "Loading available times..."
+                        : slotsLoadError
+                          ? "Unable to load times"
+                          : isSaturday
+                            ? "Library closed"
+                            : "No available time slots"}
                     </option>
                   )}
                 </select>
               </div>
             </div>
+
+            {slotsMessage && (
+              <div
+                className={`mapSlotsMessage mapSlotsMessage--${slotsMessage.type}`}
+                role={slotsMessage.type === "error" ? "alert" : "status"}
+                aria-live="polite"
+              >
+                {slotsMessage.type === "info" && (
+                  <LoaderCircle size={20} aria-hidden="true" />
+                )}
+
+                {slotsMessage.type === "warning" && (
+                  <TriangleAlert size={20} aria-hidden="true" />
+                )}
+
+                {slotsMessage.type === "error" && (
+                  <CircleAlert size={20} aria-hidden="true" />
+                )}
+
+                <span>{slotsMessage.message}</span>
+              </div>
+            )}
+
+            {isLibraryFullyBooked && (
+              <div className="generalWaitingListPanel">
+                <div className="generalWaitingListContent">
+                  <div className="generalWaitingListIcon">
+                    <Users size={26} aria-hidden="true" />
+                  </div>
+
+                  <div className="generalWaitingListText">
+                    <h3>No Seats Currently Available</h3>
+
+                    <p>
+                      All reservable seats are currently occupied or temporarily
+                      held for the selected time slot. Join the general waiting
+                      list to receive an offer when a seat becomes available.
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  variant="secondary"
+                  className="waitingListButton generalWaitingListButton"
+                  disabled={isSubmitting || isMapConnectionError}
+                  onClick={handleJoinGeneralWaitingList}
+                >
+                  {isSubmitting ? (
+                    <LoaderCircle
+                      size={18}
+                      className="generalWaitingListSpinner"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <ListPlus size={18} aria-hidden="true" />
+                  )}
+
+                  {isSubmitting
+                    ? "Joining Waiting List..."
+                    : "Join General Waiting List"}
+                </Button>
+              </div>
+            )}
 
             {/*
             RoomMap מקבלת את התאריך וטווח הזמן
@@ -178,12 +322,17 @@ export default function MapPage() {
             */}
             <RoomMap
               key={mapRefreshKey}
-              onSeatSelect={handleSeatSelect}
+              onSeatSelect={(seat) => {
+                if (!hasValidTimeSlot) return;
+                handleSeatSelect(seat);
+              }}
               onItemsChange={setMapItems}
+              onMapLoaded={setLoadedMap}
               selectedSeatId={selectedSeat?.id || offeredSeatId}
               selectedDate={selectedDate}
               selectedTime={selectedTime}
               onConnectionErrorChange={setIsMapConnectionError}
+              readOnly={!hasValidTimeSlot}
             />
           </div>
         </div>
@@ -203,7 +352,7 @@ export default function MapPage() {
       פותח את החלון.
       ===================================================
       */}
-      {selectedSeat && (
+      {selectedSeat && hasValidTimeSlot && (
         <SeatReservationSummary
           selectedSeat={selectedSeat}
           selectedDate={selectedDate}

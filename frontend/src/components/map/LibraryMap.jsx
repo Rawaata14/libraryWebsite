@@ -61,6 +61,7 @@ export default function LibraryMap({
   onSeatSelect,
   fetchLatestSeats,
   selectedSeatId,
+  readOnly = false,
 }) {
   const {
     mapRef,
@@ -129,6 +130,30 @@ export default function LibraryMap({
           saveMap={saveMap}
         />
       )}
+
+      {/* ===== מקרא סטטוסים של מקומות הישיבה ===== */}
+
+      <div className="mapLegend" aria-label="Seat status legend">
+        <div className="mapLegendItem">
+          <span className="mapLegendColor available" aria-hidden="true" />
+          <span>Available</span>
+        </div>
+
+        <div className="mapLegendItem">
+          <span className="mapLegendColor occupied" aria-hidden="true" />
+          <span>Occupied</span>
+        </div>
+
+        <div className="mapLegendItem">
+          <span className="mapLegendColor blocked" aria-hidden="true" />
+          <span>Blocked</span>
+        </div>
+
+        <div className="mapLegendItem">
+          <span className="mapLegendColor held" aria-hidden="true" />
+          <span>Temporarily Held</span>
+        </div>
+      </div>
 
       {/*
       =====================================================
@@ -229,8 +254,10 @@ export default function LibraryMap({
             ).toLowerCase();
 
             const isItemClickable =
-              isLibrarian ||
-              (isReservableItem && normalizedItemStatus !== "blocked");
+              !readOnly &&
+              (isLibrarian ||
+                (isReservableItem &&
+                  !["blocked", "held"].includes(normalizedItemStatus)));
 
             return (
               <div
@@ -247,7 +274,7 @@ export default function LibraryMap({
               >
                 <MapItem
                   item={item}
-                  isSelected={selectedSeatId === item.seatId}
+                  isSelected={!readOnly && selectedSeatId === item.seatId}
                   onSelect={handleItemSelect}
                   isLibrarian={isLibrarian}
                   setDraggingItemId={setDraggingItemId}
@@ -299,4 +326,5 @@ LibraryMap.propTypes = {
   onSeatSelect: PropTypes.func.isRequired,
   fetchLatestSeats: PropTypes.func,
   selectedSeatId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  readOnly: PropTypes.bool,
 };

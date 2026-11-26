@@ -32,9 +32,9 @@ doQuery
 על קוד החיבור בכל קובץ Queries.
 ---------------------------------------------------------
 */
-async function doQuery(sql, params = []) {
+async function doQuery(sql, params = [], connection = null) {
   try {
-    const database = await getConnection();
+    const database = connection ?? (await getConnection());
 
     const [result] = await database.query(sql, params);
 
@@ -48,7 +48,6 @@ async function doQuery(sql, params = []) {
     throw error;
   }
 }
-
 
 /*
 ---------------------------------------------------------
@@ -86,8 +85,7 @@ async function withTransaction(callback) {
   }
 }
 
-
 module.exports = {
   doQuery,
-  withTransaction
+  withTransaction,
 };

@@ -80,6 +80,157 @@
   color: #2e5c1c;
 }
 
+/* =========================================
+   Reservation Time Slots Messages
+========================================= */
+
+.mapSlotsMessage {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 12px 18px;
+  margin: 12px 0 16px;
+  border: 1px solid;
+  border-left-width: 5px;
+  border-radius: 10px;
+  font-family: "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.6;
+  box-sizing: border-box;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Icon */
+
+.mapSlotsMessage svg {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  stroke-width: 2.3;
+}
+
+/* Loading */
+
+.mapSlotsMessage--info {
+  background-color: #dceeff;
+  color: #082b50;
+  border-color: #3b82f6;
+}
+
+.mapSlotsMessage--info svg {
+  background-color: #a9d1fa;
+}
+
+/* Warning */
+
+.mapSlotsMessage--warning {
+  background-color: #ffedb3;
+  color: #332200;
+  border-color: #d49b00;
+}
+
+.mapSlotsMessage--warning svg {
+  background-color: #e9b949;
+}
+
+/* Error */
+
+.mapSlotsMessage--error {
+  background-color: #ffdddd;
+  color: #650d0d;
+  border-color: #dc2626;
+}
+
+.mapSlotsMessage--error svg {
+  background-color: #f5a3a3;
+}
+
+/* Mobile responsiveness */
+
+@media (max-width: 600px) {
+  .mapSlotsMessage {
+    padding: 12px;
+    font-size: 14px;
+  }
+}
+
+/* =========================================
+   Reservation Messages Animations
+========================================= */
+
+@keyframes messageGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 3px var(--message-glow-color);
+  }
+
+  50% {
+    box-shadow: 0 0 14px 3px var(--message-glow-color);
+  }
+}
+
+@keyframes iconPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.18);
+  }
+}
+
+/* Warning animation */
+
+.mapSlotsMessage--warning {
+  --message-glow-color: rgba(212, 155, 0, 0.55);
+  animation: messageGlow 2s ease-in-out infinite;
+}
+
+/* Error animation */
+
+.mapSlotsMessage--error {
+  --message-glow-color: rgba(220, 38, 38, 0.45);
+  animation: messageGlow 2s ease-in-out infinite;
+}
+
+/* Warning and error icons */
+
+.mapSlotsMessage--warning svg,
+.mapSlotsMessage--error svg {
+  animation: iconPulse 1.5s ease-in-out infinite;
+}
+
+/* Loading icon */
+
+@keyframes loadingSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mapSlotsMessage--info svg {
+  animation: loadingSpin 1s linear infinite;
+}
+
+/* Accessibility */
+
+@media (prefers-reduced-motion: reduce) {
+  .mapSlotsMessage,
+  .mapSlotsMessage svg {
+    animation: none;
+  }
+}
+
 /*
 ---------------------------------------------------------
 waitingListBanner
@@ -316,6 +467,153 @@ seatWaitingListExplanation
 .seatReservationDialog button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* =========================================================
+   General Waiting List Panel
+   ========================================================= */
+
+.generalWaitingListPanel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px;
+  margin: 16px 0;
+  background: linear-gradient(135deg, #fff8f0, #fff0e3);
+  border: 1px solid #dfb69d;
+  border-left: 5px solid #b87351;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(184, 115, 81, 0.12);
+}
+
+.generalWaitingListContent {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+.generalWaitingListIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  flex-shrink: 0;
+  background-color: #f3dfd0;
+  color: #a65d3d;
+  border-radius: 14px;
+}
+
+.generalWaitingListText h3 {
+  margin: 0 0 6px;
+  color: #8b4c32;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.generalWaitingListText p {
+  margin: 0;
+  color: #4b403a;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* Shared Waiting List Button */
+
+.btn.waitingListButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 12px 20px;
+  background: #b87351;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.btn.waitingListButton:not(:disabled):hover {
+  background: #995638;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(153, 86, 56, 0.25);
+}
+
+.btn.waitingListButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn.waitingListButton:focus-visible {
+  outline: 3px solid #995638;
+  outline-offset: 3px;
+}
+
+/* General Waiting List Button Layout */
+
+.generalWaitingListButton {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.generalWaitingListSpinner {
+  animation: generalWaitingListSpin 1s linear infinite;
+}
+
+@keyframes generalWaitingListSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive layout */
+
+@media (max-width: 768px) {
+  .generalWaitingListPanel {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .generalWaitingListContent {
+    align-items: flex-start;
+  }
+
+  .generalWaitingListButton {
+    width: 100%;
+    white-space: normal;
+  }
+
+  .generalWaitingListText h3 {
+    font-size: 16px;
+  }
+
+  .generalWaitingListIcon {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .generalWaitingListSpinner {
+    animation: none;
+  }
+
+  .generalWaitingListButton {
+    transition: none;
+  }
 }
 
 /*

@@ -127,6 +127,23 @@ export default function SeatReservationSummary({
   );
   const canReserveGroup = maxAvailableGroupSize >= minTableCapacity;
 
+  // בדיקת שינוי בזמינות של כיסא יחיד
+  const currentSeat = items.find(
+    (item) =>
+      String(item.id ?? item.seatId) ===
+      String(selectedSeat.id ?? selectedSeat.seatId),
+  );
+
+  const currentSeatStatus = String(currentSeat?.status || "").toLowerCase();
+
+  const originalSeatStatus = String(selectedSeat?.status || "").toLowerCase();
+
+  const hasSeatStatusChanged =
+    !isTable &&
+    (!currentSeat ||
+      ["held", "blocked"].includes(currentSeatStatus) ||
+      currentSeatStatus !== originalSeatStatus);
+
   return (
     <div className="seatReservationOverlay" onMouseDown={handleOverlayClick}>
       <section
@@ -193,7 +210,7 @@ export default function SeatReservationSummary({
               <select
                 value={groupSize}
                 onChange={(e) => onGroupSizeChange(Number(e.target.value))}
-                disabled={isSubmitting || maxTableCapacity === 0}
+                disabled={isSubmitting || isConnectionError || !canReserveGroup}
                 className="groupSizeSelect"
               >
                 {Array.from(
@@ -229,6 +246,17 @@ export default function SeatReservationSummary({
                 : `Only ${maxAvailableGroupSize} ${
                     maxAvailableGroupSize === 1 ? "Seat" : "Seats"
                   } Available — Group Reservation Unavailable`}
+          </div>
+        ) : hasSeatStatusChanged ? (
+          <div
+            className="mapAvailabilityBanner waitingListBanner"
+            role="status"
+          >
+            {currentSeatStatus === "held"
+              ? "Temporarily Held — Reserved for a Waiting List User"
+              : currentSeatStatus === "blocked"
+                ? "This Seat Is Currently Blocked"
+                : "Seat Availability Has Changed — Please Select Again"}
           </div>
         ) : isSeatAvailable ? (
           <div className="mapAvailabilityBanner availableBanner">
@@ -282,13 +310,16 @@ export default function SeatReservationSummary({
         <div className="mapSummaryButtonRow">
           <Button
             variant={isSeatAvailable ? "primary" : "secondary"}
-            className="confirmSeatReservationButton"
+            className={`confirmSeatReservationButton ${
+              !isSeatAvailable && !isTable ? "waitingListButton" : ""
+            }`}
             onClick={onConfirm}
             disabled={
               isSubmitting ||
               !selectedTime ||
               reservationFeedback?.type === "success" ||
               isConnectionError ||
+              hasSeatStatusChanged ||
               (isTable &&
                 (!canReserveGroup ||
                   groupSize < minTableCapacity ||

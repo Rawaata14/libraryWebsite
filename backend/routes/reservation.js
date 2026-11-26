@@ -319,28 +319,6 @@ router.patch("/:reservationId/cancel", async (req, res) => {
 
     /*
       -------------------------------------------------------
-      הצעת המקום למשתמש הבא
-
-      הפעולה נמצאת ב-try נפרד כדי שכשל בהצעת
-      המקום לא ימנע את החזרת הספרים למלאי.
-      -------------------------------------------------------
-      */
-    try {
-      await waitingListService.offerNextSeat(
-        result.data.seatId,
-        result.data.reservationDate,
-        result.data.startTime,
-        result.data.endTime,
-      );
-    } catch (waitingListError) {
-      console.error(
-        "Reservation was cancelled, but offering the seat to the next user failed:",
-        waitingListError,
-      );
-    }
-
-    /*
-      -------------------------------------------------------
       החזרת הספרים הקשורים להזמנה
 
       לאחר החזרת הספרים למלאי, כל ספר שהתפנה
@@ -420,8 +398,10 @@ router.patch("/:reservationId/librarian-cancel", async (req, res) => {
       });
     }
 
-    const result =
-      await reservationQueries.cancelReservationByLibrarian(reservationId);
+    const result = await reservationQueries.cancelReservationByLibrarian(
+      reservationId,
+      trimmedReason,
+    );
 
     if (result.notFound) {
       return res.status(404).json({
@@ -455,25 +435,6 @@ router.patch("/:reservationId/librarian-cancel", async (req, res) => {
     if (!notificationResult?.success) {
       console.error(
         "Reservation was cancelled, but notification creation failed.",
-      );
-    }
-
-    /*
-      -------------------------------------------------------
-      הצעת המקום למשתמש הבא ברשימת ההמתנה
-      -------------------------------------------------------
-      */
-    try {
-      await waitingListService.offerNextSeat(
-        result.data.seatId,
-        result.data.reservationDate,
-        result.data.startTime,
-        result.data.endTime,
-      );
-    } catch (waitingListError) {
-      console.error(
-        "Librarian cancellation succeeded, but offering the seat to the next user failed:",
-        waitingListError,
       );
     }
 
@@ -780,6 +741,7 @@ router.post("/reserve-table", async (req, res) => {
       date,
       startTime,
       endTime,
+      req.session.user.userId,
     );
 
     if (!mapResult.success) {

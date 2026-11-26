@@ -291,8 +291,6 @@ module.exports = {
 
   cancelSeatEntryByLibrarian: seatWaitingListQueries.cancelSeatEntryByLibrarian,
 
-  processNextInGeneralQueue: seatWaitingListQueries.processNextInGeneralQueue,
-
   getFirstWaitingForSeat: seatWaitingListQueries.getFirstWaitingForSeat,
 
   offerSeatEntry: seatWaitingListQueries.offerSeatEntry,

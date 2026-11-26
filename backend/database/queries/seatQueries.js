@@ -14,7 +14,7 @@ seatQueries.js
 =========================================================
 */
 
-const {doQuery} = require("../query");
+const { doQuery } = require("../query");
 const seatWaitingListQueries = require("./seatWaitingListQueries");
 const sendSeatWaitingListOfferEmail =
   require("../../utils/emailService").sendSeatWaitingListOfferEmail;
@@ -62,31 +62,56 @@ getMapSeatsByTimeSlot
 רק עבור מפת הכיסאות, לפי תאריך וטווח שעות.
 ---------------------------------------------------------
 */
-async function getMapSeatsByTimeSlot(reservationDate, startTime, endTime) {
+async function getMapSeatsByTimeSlot(
+  reservationDate,
+  startTime,
+  endTime,
+  userId = null,
+) {
   try {
     const getMapSQL = `
-    SELECT
-      s.*,
-      CASE
-        WHEN s.status = 'blocked' THEN 'blocked'
-        WHEN EXISTS (
-          SELECT 1
-          FROM seat_reservation sr
-          WHERE sr.seatId = s.seatId
-            AND sr.reservationDate = ?
-            AND LOWER(sr.status) NOT IN ('cancelled', 'canceled')
-            AND sr.startTime < ?
-            AND sr.endTime > ?
-        ) THEN 'occupied'
-        ELSE 'available'
-      END AS status
-    FROM seat s
-  `;
+      SELECT
+        s.*,
+        CASE
+          WHEN s.status = 'blocked' THEN 'blocked'
+
+          WHEN EXISTS (
+            SELECT 1
+            FROM seat_reservation sr
+            WHERE sr.seatId = s.seatId
+              AND sr.reservationDate = ?
+              AND LOWER(sr.status) NOT IN ('cancelled', 'canceled')
+              AND sr.startTime < ?
+              AND sr.endTime > ?
+          ) THEN 'occupied'
+
+          WHEN EXISTS (
+            SELECT 1
+            FROM waiting_list_seat wl
+            WHERE wl.seatId = s.seatId
+              AND wl.requestedDate = ?
+              AND wl.requestedStartTime < ?
+              AND wl.requestedEndTime > ?
+              AND wl.status = 'offered'
+              AND wl.offerExpiresAt > ?
+              AND (? IS NULL OR wl.userId <> ?)
+          ) THEN 'held'
+
+          ELSE 'available'
+        END AS status
+      FROM seat s
+    `;
 
     const mapSeats = await doQuery(getMapSQL, [
       reservationDate,
       endTime,
       startTime,
+      reservationDate,
+      endTime,
+      startTime,
+      getLibraryDateTime().sqlDateTime,
+      userId,
+      userId,
     ]);
 
     return { success: true, map: mapSeats };

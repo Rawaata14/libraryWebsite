@@ -22,7 +22,7 @@ seatWaitingListService.js
 */
 
 const seatWaitingListQueries = require("../database/queries/seatWaitingListQueries");
-
+const { withTransaction } = require("../database/query");
 const notificationQueries = require("../database/queries/notificationQueries");
 
 const { escapeHtml, sendOptionalEmail } = require("../utils/emailService");
@@ -33,6 +33,11 @@ const {
   getLibraryDateTime,
   addMinutesToSqlDateTime,
 } = require("../utils/formatters");
+const {
+  getOpeningHours,
+  isValidReservationSlot,
+} = require("../utils/libraryHours");
+
 /*
 משך הזמן שבו הצעת מקום שמורה למשתמש
 הראשון בתור.
@@ -101,6 +106,29 @@ async function joinSeatWaitingList(details) {
     };
   }
 
+  // בדיקה שהספרייה פתוחה בתאריך המבוקש
+  const openingHours = getOpeningHours(requestedDate);
+
+  if (!openingHours) {
+    return {
+      success: false,
+      statusCode: 400,
+      message: "The library is closed on the selected date.",
+    };
+  }
+
+  // בדיקה שטווח השעות תואם לחלון הזמנה מותר
+  if (
+    !isValidReservationSlot(requestedDate, requestedStartTime, requestedEndTime)
+  ) {
+    return {
+      success: false,
+      statusCode: 400,
+      message:
+        `Invalid waiting-list time slot. ` +
+        `Library opening hours: ${openingHours.open} - ${openingHours.close}`,
+    };
+  }
   const libraryNow = getLibraryDateTime();
 
   const requestedStartKey = `${requestedDate}T` + `${requestedStartTime}`;
@@ -226,6 +254,123 @@ async function joinSeatWaitingList(details) {
   };
 }
 
+async function createSeatOfferInTransaction(
+  connection,
+  seatId,
+  requestedDate,
+  requestedStartTime,
+  requestedEndTime,
+) {
+  if (!connection) {
+    throw new Error("A transaction connection is required.");
+  }
+
+  const normalizedDate = normalizeDate(requestedDate);
+  const normalizedStartTime = normalizeTime(requestedStartTime);
+  const normalizedEndTime = normalizeTime(requestedEndTime);
+
+  if (
+    !normalizedDate ||
+    !normalizedStartTime ||
+    !normalizedEndTime ||
+    !isValidReservationSlot(
+      normalizedDate,
+      normalizedStartTime,
+      normalizedEndTime,
+    )
+  ) {
+    return null;
+  }
+
+  const seat = await seatWaitingListQueries.getSeatForUpdate(
+    seatId,
+    connection,
+  );
+
+  if (
+    !seat ||
+    String(seat.status).toLowerCase() === "blocked" ||
+    !["seat", "single-seat", "computer-seat"].includes(seat.type)
+  ) {
+    return null;
+  }
+
+  const libraryNow = getLibraryDateTime();
+
+  if (`${normalizedDate}T${normalizedStartTime}` <= libraryNow.dateTimeKey) {
+    return null;
+  }
+
+  const isStillReserved = await seatWaitingListQueries.hasSeatReservation(
+    seatId,
+    normalizedDate,
+    normalizedStartTime,
+    normalizedEndTime,
+    connection,
+  );
+
+  if (isStillReserved) {
+    return null;
+  }
+
+  const hasActiveOffer = await seatWaitingListQueries.hasActiveSeatOffer(
+    seatId,
+    normalizedDate,
+    normalizedStartTime,
+    normalizedEndTime,
+    libraryNow.sqlDateTime,
+    connection,
+  );
+
+  if (hasActiveOffer) {
+    return null;
+  }
+
+  const entry = await seatWaitingListQueries.getFirstWaitingForSeat(
+    seatId,
+    normalizedDate,
+    normalizedStartTime,
+    normalizedEndTime,
+    connection,
+  );
+
+  if (!entry) {
+    return null;
+  }
+
+  const offeredNow = getLibraryDateTime();
+
+  if (`${normalizedDate}T${normalizedStartTime}` <= offeredNow.dateTimeKey) {
+    return null;
+  }
+
+  const expiresAt = addMinutesToSqlDateTime(
+    offeredNow.sqlDateTime,
+    SEAT_OFFER_MINUTES,
+  );
+
+  const updateResult = await seatWaitingListQueries.offerSeatEntry(
+    entry.queueSeatId,
+    offeredNow.sqlDateTime,
+    expiresAt,
+    seatId,
+    connection,
+  );
+
+  if (updateResult.affectedRows !== 1) {
+    return null;
+  }
+
+  return {
+    entry,
+    seatId,
+    normalizedDate,
+    normalizedStartTime,
+    normalizedEndTime,
+    expiresAt,
+  };
+}
+
 /*
 ---------------------------------------------------------
 offerNextSeat
@@ -266,105 +411,36 @@ async function offerNextSeat(
   requestedStartTime,
   requestedEndTime,
 ) {
-  /*
-  נרמול שעות המתקבלות מ-MySQL
-  או משכבת ההזמנות.
-  */
-  const normalizedStartTime = normalizeTime(requestedStartTime);
+  const offer = await withTransaction(async (connection) => {
+    return createSeatOfferInTransaction(
+      connection,
+      seatId,
+      requestedDate,
+      requestedStartTime,
+      requestedEndTime,
+    );
+  });
 
-  const normalizedEndTime = normalizeTime(requestedEndTime);
-
-  const normalizedDate = normalizeDate(requestedDate);
-
-  if (!normalizedDate || !normalizedStartTime || !normalizedEndTime) {
+  if (!offer) {
     return null;
   }
 
-  const libraryNow = getLibraryDateTime();
+  return notifySeatOffer(offer);
+}
 
-  /*
-  אם המועד כבר התחיל, אין טעם להציע אותו
-  למשתמש הבא.
-  */
-  if (
-    `${normalizedDate}T` + `${normalizedStartTime}` <=
-    libraryNow.dateTimeKey
-  ) {
+async function notifySeatOffer(offer) {
+  if (!offer) {
     return null;
   }
 
-  /*
-  לפני יצירת ההצעה בודקים שהמקום
-  עדיין פנוי.
-
-  ייתכן שמשתמש אחר הזמין אותו בין
-  פעולת הביטול לבין פעולת ההצעה.
-  */
-  const isStillReserved = await seatWaitingListQueries.hasSeatReservation(
-    seatId,
-    normalizedDate,
-    normalizedStartTime,
-    normalizedEndTime,
-  );
-
-  if (isStillReserved) {
-    return null;
-  }
-
-  /*
-  אין ליצור שתי הצעות פעילות לאותו
-  מקום ומועד.
-  */
-  const hasActiveOffer = await seatWaitingListQueries.hasActiveSeatOffer(
-    seatId,
-    normalizedDate,
-    normalizedStartTime,
-    normalizedEndTime,
-    libraryNow.sqlDateTime,
-  );
-
-  if (hasActiveOffer) {
-    return null;
-  }
-
-  /*
-  בחירת המשתמש הראשון בתור.
-  */
-  const entry = await seatWaitingListQueries.getFirstWaitingForSeat(
-    seatId,
-    normalizedDate,
-    normalizedStartTime,
-    normalizedEndTime,
-  );
-
-  if (!entry) {
-    return null;
-  }
-
-  /*
-  הצעת מקום תקפה ל-15 דקות.
-  */
-  const expiresAt = addMinutesToSqlDateTime(
-    libraryNow.sqlDateTime,
-    SEAT_OFFER_MINUTES,
-  );
-
-  /*
-  העברת הרשומה מ-waiting ל-offered.
-  */
-  const updateResult = await seatWaitingListQueries.offerSeatEntry(
-    entry.queueSeatId,
-    libraryNow.sqlDateTime,
+  const {
+    entry,
     expiresAt,
-  );
-
-  /*
-  אם הרשומה כבר השתנתה,
-  אין לשלוח התראה כפולה.
-  */
-  if (updateResult.affectedRows !== 1) {
-    return null;
-  }
+    seatId,
+    normalizedDate,
+    normalizedStartTime,
+    normalizedEndTime,
+  } = offer;
 
   const shortStartTime = normalizedStartTime.slice(0, 5);
 
@@ -690,6 +766,8 @@ module.exports = {
   SEAT_OFFER_MINUTES,
   joinSeatWaitingList,
   offerNextSeat,
+  createSeatOfferInTransaction,
+  notifySeatOffer,
   validateSeatOfferAccess,
   cancelSeatWaitingEntry,
   cancelSeatEntryByLibrarianService,

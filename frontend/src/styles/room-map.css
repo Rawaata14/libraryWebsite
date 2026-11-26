@@ -25,6 +25,53 @@
   position: relative;
 }
 
+/* ===== מקרא סטטוסים של מקומות הישיבה ===== */
+
+.mapLegend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px 24px;
+  padding: 14px 18px;
+  background: #f7eee8;
+  border: 1px solid #d6b9a8;
+  border-radius: 12px;
+}
+
+.mapLegendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #3d2019;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mapLegendColor {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.mapLegendColor.available {
+  background-color: #39935c;
+}
+
+.mapLegendColor.occupied {
+  background-color: #d64b4b;
+}
+
+.mapLegendColor.blocked {
+  background-color: #777777;
+}
+
+.mapLegendColor.held {
+  background-color: #e68a00;
+}
+
 /* ===== סרגל ניהול ===== */
 
 .mapToolbar {
@@ -332,6 +379,12 @@
 .mapIconItem.occupied:not(.table-4):not(.table-8) img {
   filter: brightness(1.1) sepia(1) hue-rotate(-50deg) saturate(10)
     drop-shadow(0 0 10px #a30303) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+}
+
+/* ===== שמור זמנית לממתין (Held - כתום) ===== */
+.mapIconItem.held:not(.table-4):not(.table-8) img {
+  filter: brightness(1.1) sepia(1) hue-rotate(-15deg) saturate(7)
+    drop-shadow(0 0 10px #e68a00) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
 }
 
 /* ===== בחירה (Selected) ===== */

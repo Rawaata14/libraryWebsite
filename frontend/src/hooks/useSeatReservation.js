@@ -150,6 +150,9 @@ export default function useSeatReservation({
 
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [availableSlots, setAvailableSlots] = useState([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(true);
+  const [slotsLoadError, setSlotsLoadError] = useState(false);
+  const slotsRequestId = useRef(0);
   const [selectedTime, setSelectedTime] = useState(initialTime);
   const [selectedSeat, setSelectedSeat] = useState(null);
   const previousConnectionError = useRef(isMapConnectionError);
@@ -186,31 +189,42 @@ export default function useSeatReservation({
   ---------------------------------------------------------
   */
   const fetchAvailableSlots = useCallback(async (date) => {
+    const requestId = ++slotsRequestId.current;
+
+    setIsLoadingSlots(true);
+    setSlotsLoadError(false);
+
     try {
       const response = await getAvailableReservationSlots(date);
+
+      if (requestId !== slotsRequestId.current) return;
+
       const slots = response.data.slots || [];
 
       setAvailableSlots(slots);
 
       setSelectedTime((currentSelectedTime) => {
         if (slots.length === 0) return "";
-        if (slots.includes(currentSelectedTime)) return currentSelectedTime;
+        if (slots.includes(currentSelectedTime)) {
+          return currentSelectedTime;
+        }
+
         return slots[0];
       });
     } catch (error) {
+      if (requestId !== slotsRequestId.current) return;
+
       console.error("Error fetching available slots:", error);
+
       setAvailableSlots([]);
       setSelectedTime("");
-      setReservationFeedback({
-        type: "error",
-        message: "The available times could not be loaded.",
-      });
+      setSlotsLoadError(true);
+    } finally {
+      if (requestId === slotsRequestId.current) {
+        setIsLoadingSlots(false);
+      }
     }
   }, []);
-
-  useEffect(() => {
-    fetchAvailableSlots(selectedDate);
-  }, [fetchAvailableSlots, selectedDate]);
 
   // טעינת שעות כאשר התאריך משתנה
   useEffect(() => {
@@ -332,7 +346,17 @@ export default function useSeatReservation({
   ---------------------------------------------------------
   */
   const handleDateChange = (date) => {
-    if (!date || date < minimumDate) return;
+    if (!date || date < minimumDate || date === selectedDate) {
+      return;
+    }
+
+    slotsRequestId.current += 1;
+
+    setIsLoadingSlots(true);
+    setSlotsLoadError(false);
+    setAvailableSlots([]);
+    setSelectedTime("");
+
     setSelectedDate(date);
     setSelectedSeat(null);
     setOfferedSeatId(null);
@@ -395,11 +419,62 @@ export default function useSeatReservation({
       return;
     }
 
+    // מציאת מזהה השולחן או הכיסא בצורה בטוחה
+    const targetSeatId = selectedSeat.id ?? selectedSeat.seatId;
+
+    // בדיקת זמינות קבוצתית לפני שליחת הבקשה
+    if (isTable) {
+      const minGroupSize = selectedSeat.type === "table-8" ? 5 : 1;
+      const maxGroupSize = selectedSeat.type === "table-8" ? 8 : 4;
+
+      const availableSeatsCount = items.filter(
+        (item) =>
+          String(item.tableId) === String(targetSeatId) &&
+          normalizeSeatStatus(item) === "available",
+      ).length;
+
+      const maxAvailableGroupSize = Math.min(maxGroupSize, availableSeatsCount);
+
+      if (
+        !Number.isInteger(groupSize) ||
+        groupSize < minGroupSize ||
+        groupSize > maxAvailableGroupSize
+      ) {
+        setReservationFeedback({
+          type: "error",
+          message:
+            "Seat availability has changed. Please select a valid group size.",
+        });
+
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setReservationFeedback(null);
 
-    // מציאת מזהה השולחן או הכיסא בצורה בטוחה
-    const targetSeatId = selectedSeat.id ?? selectedSeat.seatId;
+    // בדיקת זמינות עדכנית של כיסא יחיד
+    if (!isTable) {
+      const currentSeat = items.find(
+        (item) => String(item.seatId ?? item.id) === String(targetSeatId),
+      );
+
+      const currentStatus = normalizeSeatStatus(currentSeat);
+      const originalStatus = normalizeSeatStatus(selectedSeat);
+
+      if (
+        !currentSeat ||
+        ["held", "blocked"].includes(currentStatus) ||
+        currentStatus !== originalStatus
+      ) {
+        setReservationFeedback({
+          type: "error",
+          message: "Seat availability has changed. Please choose a seat again.",
+        });
+
+        return;
+      }
+    }
 
     try {
       if (isTable) {
@@ -452,7 +527,8 @@ export default function useSeatReservation({
             message: `Seat ${targetSeatId} was reserved for ${selectedDate}, ${selectedTime}.`,
           });
         } else {
-          const result = await joinGeneralSeatWaitingList({
+          const result = await joinSeatWaitingList({
+            seatId: targetSeatId,
             requestedDate: selectedDate,
             requestedStartTime: startTime,
             requestedEndTime: endTime,
@@ -462,7 +538,7 @@ export default function useSeatReservation({
             type: "success",
             message:
               result.message ||
-              `You successfully joined the waiting list for ${selectedDate}, ${startTime} - ${endTime}.`,
+              `You successfully joined the waiting list for Seat ${targetSeatId} on ${selectedDate}, ${startTime} - ${endTime}.`,
           });
         }
       }
@@ -487,10 +563,97 @@ export default function useSeatReservation({
     }
   };
 
+  /*
+---------------------------------------------------------
+handleJoinGeneralWaitingList
+
+תפקיד:
+מצרפת את המשתמש לרשימת ההמתנה הכללית
+כאשר כל מקומות הישיבה תפוסים בחלון הזמן הנבחר.
+---------------------------------------------------------
+*/
+  const handleJoinGeneralWaitingList = async () => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    if (isSubmitting) return;
+
+    if (
+      isLoadingSlots ||
+      slotsLoadError ||
+      isMapConnectionError ||
+      !selectedDate ||
+      !selectedTime ||
+      !availableSlots.includes(selectedTime)
+    ) {
+      setReservationFeedback({
+        type: "error",
+        message: "Please select a valid reservation time slot.",
+      });
+      return;
+    }
+
+    const [startTime, endTime] = selectedTime.split(" - ");
+
+    if (!startTime || !endTime) {
+      setReservationFeedback({
+        type: "error",
+        message: "The selected reservation time is invalid.",
+      });
+      return;
+    }
+
+    const selectedStartKey = `${selectedDate}T${startTime.substring(0, 5)}`;
+
+    if (selectedStartKey <= getLibraryDateTimeKey()) {
+      setReservationFeedback({
+        type: "error",
+        message: "Please select a future reservation time slot.",
+      });
+
+      await fetchAvailableSlots(selectedDate);
+      return;
+    }
+
+    setSelectedSeat(null);
+    setIsSubmitting(true);
+    setReservationFeedback(null);
+
+    try {
+      const result = await joinGeneralSeatWaitingList({
+        requestedDate: selectedDate,
+        requestedStartTime: startTime,
+        requestedEndTime: endTime,
+      });
+
+      setReservationFeedback({
+        type: "success",
+        message:
+          result.message || "You successfully joined the general waiting list.",
+      });
+    } catch (error) {
+      console.error("Error joining general waiting list:", error);
+
+      setReservationFeedback({
+        type: "error",
+        message: getRequestErrorMessage(
+          error,
+          "Unable to join the general waiting list.",
+        ),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return {
     minimumDate,
     selectedDate,
     availableSlots,
+    isLoadingSlots,
+    slotsLoadError,
     selectedTime,
     selectedSeat,
     offeredSeatId,
@@ -507,5 +670,6 @@ export default function useSeatReservation({
     handleDateChange,
     handleTimeChange,
     handleConfirmReservation,
+    handleJoinGeneralWaitingList,
   };
 }
