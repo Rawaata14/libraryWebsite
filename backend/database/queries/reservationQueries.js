@@ -36,6 +36,7 @@ const {
   createSeatOfferInTransaction,
   notifySeatOffer,
 } = require("../../services/seatWaitingListService");
+const { completeSeatOffer } = require("./waitingListMaintenanceQueries");
 
 /*
 ---------------------------------------------------------
@@ -330,6 +331,29 @@ async function reserveSeat(reservationDetails) {
         throw error;
       }
 
+      // איתור ונעילת הצעה פעילה השייכת למשתמש הנוכחי
+      const [ownOffers] = await connection.query(
+        `SELECT queueSeatId
+   FROM waiting_list_seat
+   WHERE seatId = ?
+     AND userId = ?
+     AND requestedDate = ?
+     AND requestedStartTime = ?
+     AND requestedEndTime = ?
+     AND status = 'offered'
+     AND offerExpiresAt > ?
+   ORDER BY queueSeatId ASC
+   FOR UPDATE`,
+        [
+          seatId,
+          userId,
+          validation.reservationDate,
+          validation.startTime,
+          validation.endTime,
+          getLibraryDateTime().sqlDateTime,
+        ],
+      );
+
       // 6. שמירת ההזמנה
       const [result] = await connection.query(
         `INSERT INTO seat_reservation
@@ -345,6 +369,22 @@ async function reserveSeat(reservationDetails) {
           status,
         ],
       );
+
+      // השלמת ההצעות הפעילות באותה טרנזקציה
+      for (const offer of ownOffers) {
+        const completionResult = await completeSeatOffer(
+          offer.queueSeatId,
+          getLibraryDateTime().sqlDateTime,
+          connection,
+        );
+
+        if (completionResult.affectedRows !== 1) {
+          const error = new Error("Failed to complete the waiting list offer.");
+
+          error.conflict = true;
+          throw error;
+        }
+      }
 
       return {
         result,
@@ -526,6 +566,9 @@ async function reserveGroupSeats(reservationDetails) {
         throw error;
       }
 
+      // שמירת ההצעות הפעילות של המשתמש
+      const groupOwnOffers = [];
+
       // בדיקה שכל הכיסאות פנויים בחלון הזמן
       for (const seatId of orderedSeatIds) {
         const [overlaps] = await connection.query(
@@ -582,6 +625,30 @@ async function reserveGroupSeats(reservationDetails) {
           error.conflict = true;
           throw error;
         }
+        // איתור ונעילת הצעות המשתמש עבור הכיסא הנוכחי
+        const [ownOffers] = await connection.query(
+          `SELECT queueSeatId
+   FROM waiting_list_seat
+   WHERE seatId = ?
+     AND userId = ?
+     AND requestedDate = ?
+     AND requestedStartTime = ?
+     AND requestedEndTime = ?
+     AND status = 'offered'
+     AND offerExpiresAt > ?
+   ORDER BY queueSeatId ASC
+   FOR UPDATE`,
+          [
+            seatId,
+            userId,
+            validation.reservationDate,
+            validation.startTime,
+            validation.endTime,
+            getLibraryDateTime().sqlDateTime,
+          ],
+        );
+
+        groupOwnOffers.push(...ownOffers);
       }
 
       // שמירת כל הכיסאות באותה Transaction
@@ -604,6 +671,22 @@ async function reserveGroupSeats(reservationDetails) {
         );
 
         reservationIds.push(result.insertId);
+      }
+
+      // השלמת ההצעות הפעילות באותה טרנזקציה
+      for (const offer of groupOwnOffers) {
+        const completionResult = await completeSeatOffer(
+          offer.queueSeatId,
+          getLibraryDateTime().sqlDateTime,
+          connection,
+        );
+
+        if (completionResult.affectedRows !== 1) {
+          const error = new Error("Failed to complete the waiting list offer.");
+
+          error.conflict = true;
+          throw error;
+        }
       }
 
       return {

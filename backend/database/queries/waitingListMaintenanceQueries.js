@@ -21,7 +21,7 @@ waitingListMaintenanceQueries.js
 =========================================================
 */
 
-const {doQuery} = require("../query");
+const { doQuery } = require("../query");
 
 const { getConnection } = require("../dbSingleton");
 
@@ -216,7 +216,7 @@ completeSeatOffer
 תוצאת פעולת ה-UPDATE.
 ---------------------------------------------------------
 */
-async function completeSeatOffer(waitingId, completedAt) {
+async function completeSeatOffer(waitingId, completedAt, connection = null) {
   const sql = `
     UPDATE waiting_list_seat
 
@@ -226,9 +226,10 @@ async function completeSeatOffer(waitingId, completedAt) {
 
     WHERE queueSeatId = ?
       AND status = 'offered'
+      AND offerExpiresAt > ?
   `;
 
-  return doQuery(sql, [completedAt, waitingId]);
+  return doQuery(sql, [completedAt, waitingId, completedAt], connection);
 }
 
 /*

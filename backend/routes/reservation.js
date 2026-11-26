@@ -59,31 +59,6 @@ router.post("/reserve-seat", async (req, res) => {
 
     /*
     -------------------------------------------------------
-    בדיקת גישה להצעת רשימת ההמתנה
-
-    אם קיימת הצעה פעילה עבור המקום וטווח הזמן,
-    משתמש אחר אינו יכול להזמין אותו לפני פקיעת
-    ההצעה.
-    -------------------------------------------------------
-    */
-    const offerAccess = await waitingListService.validateSeatOfferAccess(
-      seatId,
-      req.session.user.userId,
-      date,
-      startTime,
-      endTime,
-    );
-
-    if (!offerAccess.success) {
-      return res.status(offerAccess.status || 409).json({
-        message:
-          offerAccess.message ||
-          "This seat is currently offered to another user.",
-      });
-    }
-
-    /*
-    -------------------------------------------------------
     יצירת הזמנת המקום
 
     reserveSeat מבצעת מחדש בדיקת תאריך, שעה
@@ -137,25 +112,6 @@ router.post("/reserve-seat", async (req, res) => {
       console.error(
         "Reservation was created, but notification creation failed.",
       );
-    }
-
-    /*
-    -------------------------------------------------------
-    השלמת הצעת רשימת ההמתנה
-
-    ההצעה מסומנת כמומשה רק לאחר שהזמנת המקום
-    נוצרה בהצלחה.
-    -------------------------------------------------------
-    */
-    if (offerAccess.waitingId) {
-      try {
-        await waitingListService.completeOffer("seat", offerAccess.waitingId);
-      } catch (waitingListError) {
-        console.error(
-          "Seat was reserved, but completing the waiting-list offer failed:",
-          waitingListError,
-        );
-      }
     }
 
     return res.status(201).json({

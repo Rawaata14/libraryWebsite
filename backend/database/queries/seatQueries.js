@@ -14,11 +14,13 @@ seatQueries.js
 =========================================================
 */
 
-const { doQuery } = require("../query");
-const seatWaitingListQueries = require("./seatWaitingListQueries");
-const sendSeatWaitingListOfferEmail =
-  require("../../utils/emailService").sendSeatWaitingListOfferEmail;
+const { doQuery, withTransaction } = require("../query");
 const getLibraryDateTime = require("../../utils/formatters").getLibraryDateTime;
+
+const {
+  createSeatOfferInTransaction,
+  notifySeatOffer,
+} = require("../../services/seatWaitingListService");
 
 /*
 ---------------------------------------------------------
@@ -131,98 +133,133 @@ updateSeat
 */
 async function updateSeat(seatId, seatDetails) {
   const { location, status, rotation, x, y, type, tableId } = seatDetails;
+
   const normalizedStatus = status || "available";
   const normalizedType = type || "single-seat";
-  try {
-    const updateSeatSQL = `
-  UPDATE seat
-  SET location = ?,
-      status = ?,
-      rotation = ?,
-      x = ?,
-      y = ?,
-      type = ?,
-      tableId = COALESCE(?, tableId)
-  WHERE seatId = ?
-`;
-    const result = await doQuery(updateSeatSQL, [
-      location,
-      normalizedStatus,
-      rotation,
-      x,
-      y,
-      normalizedType,
-      seatDetails.tableId === undefined ? null : tableId,
-      seatId,
-    ]);
-    if (result.affectedRows === 0) {
-      return { success: false, message: "Seat not found" };
-    }
 
-    if (normalizedStatus.toLowerCase() === "available") {
-      try {
-        // 1. שליפת הממתין הראשון ברשימת ההמתנה לכיסא הספציפי הזה
-        const findWaitingSQL = `
-          SELECT
-            waiting.queueSeatId,
-            waiting.userId,
-            waiting.requestedDate,
-            waiting.requestedStartTime,
-            waiting.requestedEndTime,
-            user.fullName,
-            user.email
-          FROM waiting_list_seat AS waiting
-          INNER JOIN user AS user ON waiting.userId = user.userId
-          WHERE (waiting.seatId IS NULL OR waiting.seatId = ?)
-            AND waiting.status = 'waiting'
-          ORDER BY waiting.createdAt ASC, waiting.queueSeatId ASC
-          LIMIT 1
+  try {
+    const transactionResult = await withTransaction(async (connection) => {
+      // 1. נעילת הכיסא ושליפת הסטטוס הקודם
+      const [existingSeats] = await connection.query(
+        `SELECT seatId, status
+           FROM seat
+           WHERE seatId = ?
+           FOR UPDATE`,
+        [seatId],
+      );
+
+      if (existingSeats.length === 0) {
+        return {
+          success: false,
+          message: "Seat not found",
+        };
+      }
+
+      const previousStatus = String(existingSeats[0].status).toLowerCase();
+
+      // 2. עדכון פרטי הכיסא
+      const updateSeatSQL = `
+          UPDATE seat
+          SET location = ?,
+              status = ?,
+              rotation = ?,
+              x = ?,
+              y = ?,
+              type = ?,
+              tableId = COALESCE(?, tableId)
+          WHERE seatId = ?
         `;
 
-        const waitingEntries = await doQuery(findWaitingSQL, [seatId]);
+      const [result] = await connection.query(updateSeatSQL, [
+        location,
+        normalizedStatus,
+        rotation,
+        x,
+        y,
+        normalizedType,
+        seatDetails.tableId === undefined ? null : tableId,
+        seatId,
+      ]);
 
-        if (waitingEntries.length > 0) {
-          const nextUser = waitingEntries[0];
+      const offers = [];
 
-          const libraryNow = getLibraryDateTime(); // ודאי שהפונקציה זמינה בקובץ או ייבאי אותה
-          const offeredAt = libraryNow.dateTimeKey.replace("T", " ");
-          const offerExpiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000)
-            .toISOString()
-            .slice(0, 19)
-            .replace("T", " ");
+      // 3. בדיקה האם הוסרה חסימה בפועל
+      const wasUnblocked =
+        previousStatus === "blocked" &&
+        normalizedStatus.toLowerCase() === "available";
 
-          // 2. עדכון הסטטוס ל-offered
-          await seatWaitingListQueries.offerSeatEntry(
-            nextUser.queueSeatId,
-            offeredAt,
-            offerExpiresAt,
+      // 4. יצירת הצעות רק לאחר הסרת חסימה
+      if (wasUnblocked) {
+        const [waitingSlots] = await connection.query(
+          `SELECT DISTINCT
+               DATE_FORMAT(
+                 requestedDate, '%Y-%m-%d'
+               ) AS requestedDate,
+               TIME_FORMAT(
+                 requestedStartTime, '%H:%i:%s'
+               ) AS requestedStartTime,
+               TIME_FORMAT(
+                 requestedEndTime, '%H:%i:%s'
+               ) AS requestedEndTime
+             FROM waiting_list_seat
+             WHERE (seatId IS NULL OR seatId = ?)
+               AND status = 'waiting'
+             ORDER BY
+               requestedDate,
+               requestedStartTime,
+               requestedEndTime`,
+          [seatId],
+        );
+
+        for (const slot of waitingSlots) {
+          const offer = await createSeatOfferInTransaction(
+            connection,
+            seatId,
+            slot.requestedDate,
+            slot.requestedStartTime,
+            slot.requestedEndTime,
           );
 
-          // 3. שליחת מייל למשתמש
-          if (nextUser.email) {
-            await sendSeatWaitingListOfferEmail(
-              nextUser.email,
-              nextUser.fullName,
-              {
-                requestedDate: nextUser.requestedDate,
-                requestedStartTime: nextUser.requestedStartTime,
-                requestedEndTime: nextUser.requestedEndTime,
-                offerExpiresAt,
-              },
-            );
+          if (offer) {
+            offers.push(offer);
           }
         }
-      } catch (queueError) {
+      }
+
+      return {
+        success: true,
+        data: result,
+        offers,
+      };
+    });
+
+    if (!transactionResult.success) {
+      return transactionResult;
+    }
+
+    // 5. שליחת התראות ומיילים לאחר COMMIT
+    for (const offer of transactionResult.offers) {
+      try {
+        await notifySeatOffer(offer);
+      } catch (notificationError) {
         console.error(
-          "Error processing waiting list after seat update:",
-          queueError,
+          "Seat updated, but waiting list notification failed:",
+          notificationError,
         );
       }
     }
-    return { success: true, data: result };
+
+    return {
+      success: true,
+      data: transactionResult.data,
+    };
   } catch (error) {
     console.error("Error in updating seat:", error);
-    return { success: false, message: "Failed to update seat" };
+
+    return {
+      success: false,
+      message: "Failed to update seat",
+    };
   }
 }
 
