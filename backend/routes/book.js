@@ -320,6 +320,76 @@ router.get("/all-books", async (req, res) => {
 
 /*
 ---------------------------------------------------------
+GET /books/:id/availability
+
+תפקיד:
+מחזירה את זמינות הספר בהתאם לתאריך ולשעות
+של הזמנת הכיסא שנבחרה על ידי המשתמש.
+
+פרמטרים:
+- id: מזהה הספר מתוך כתובת הנתיב.
+- reservationId: מזהה הזמנת הכיסא מתוך ה-Query.
+
+גישה:
+רק משתמש מחובר בעל הזמנת כיסא תקפה השייכת לו.
+
+הנתיב מבצע:
+- אימות המשתמש באמצעות ה-Session.
+- בדיקת תקינות המזהים.
+- הפעלת פונקציית חישוב הזמינות.
+- החזרת כמות העותקים הזמינים ל-Frontend.
+
+הפעולה מיועדת לקריאה בלבד ואינה יוצרת שריון.
+---------------------------------------------------------
+*/
+router.get("/:id/availability", async (req, res) => {
+  try {
+    if (!req.session?.user?.userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Please log in to check book availability.",
+      });
+    }
+
+    const bookId = Number(req.params.id);
+    const seatReservationId = Number(req.query.reservationId);
+    const userId = Number(req.session.user.userId);
+
+    if (!Number.isInteger(bookId) || bookId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid book ID.",
+      });
+    }
+
+    if (!Number.isInteger(seatReservationId) || seatReservationId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid seat reservation ID.",
+      });
+    }
+
+    const result = await loanQueries.getBookAvailabilityByReservation(
+      userId,
+      bookId,
+      seatReservationId,
+    );
+
+    return res
+      .status(result.statusCode || (result.success ? 200 : 400))
+      .json(result);
+  } catch (error) {
+    console.error("Error checking book availability:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+});
+
+/*
+---------------------------------------------------------
 GET /books/:id
 
 תפקיד:

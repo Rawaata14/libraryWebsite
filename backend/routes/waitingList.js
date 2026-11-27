@@ -37,6 +37,7 @@ const {
 } = require("../utils/formatters");
 const { doQuery } = require("../database/query");
 const seatQueries = require("../database/queries/seatQueries");
+const loanQueries = require("../database/queries/loanQueries");
 
 const router = express.Router();
 
@@ -90,19 +91,46 @@ router.post("/books/:bookId", requireAuth, async (req, res) => {
     const userId = Number(req.session.user.userId);
 
     /*
-      בדיקה האם למשתמש יש כבר השאלה פעילה או באיחור לספר הזה.
-      אם כן, חוסמים את האפשרות להירשם לרשימת ההמתנה.
-      */
-    const hasActiveLoan = await loanQueries.hasActiveLoanForBook(
-      bookId,
-      userId,
-    );
+---------------------------------------------------------
+בדיקת זמינות הספר לפני הצטרפות לרשימת ההמתנה
 
-    if (hasActiveLoan) {
-      return res.status(400).json({
+לוגיקה:
+- בדיקת קיום הספר.
+- בדיקת בעלות המשתמש על הזמנת המקום.
+- בדיקת תקפות הזמנת המקום.
+- מניעת הצטרפות לתור בחלון זמן שכבר שוריין.
+- מניעת הצטרפות לתור כאשר קיימים עותקים זמינים.
+---------------------------------------------------------
+*/
+    const availabilityResult =
+      await loanQueries.getBookAvailabilityByReservation(
+        userId,
+        bookId,
+        reservationId,
+      );
+
+    if (!availabilityResult.success) {
+      return res
+        .status(availabilityResult.statusCode || 400)
+        .json(availabilityResult);
+    }
+
+    const { blockedReservationIds, available_quantity } =
+      availabilityResult.data;
+
+    if (blockedReservationIds.includes(reservationId)) {
+      return res.status(409).json({
         success: false,
         message:
-          "You already have an active loan for this book and cannot join the waiting list.",
+          "You have already reserved this book for an overlapping time slot.",
+      });
+    }
+
+    if (Number(available_quantity) > 0) {
+      return res.status(409).json({
+        success: false,
+        message:
+          "The book is available for this time slot. Please reserve it instead.",
       });
     }
 

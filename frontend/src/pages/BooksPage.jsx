@@ -266,35 +266,35 @@ export default function BooksPage() {
           )}
 
           <div className="booksToolbar">
-            <label className="visuallyHidden" htmlFor="books-search">
-              Search books
-            </label>
+            <div className="booksFilterGroup">
+              <label htmlFor="books-search">Search books</label>
 
-            <input
-              id="books-search"
-              type="search"
-              className="booksSearchInput"
-              placeholder={"Search by title or author"}
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-            />
+              <input
+                id="books-search"
+                type="search"
+                className="booksSearchInput"
+                placeholder="Search by title or author"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+              />
+            </div>
 
-            <label className="visuallyHidden" htmlFor="books-category">
-              Filter by category
-            </label>
+            <div className="booksFilterGroup">
+              <label htmlFor="books-category">Filter by category</label>
 
-            <select
-              id="books-category"
-              className="booksCategorySelect"
-              value={selectedCategory}
-              onChange={(event) => setSelectedCategory(event.target.value)}
-            >
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
+              <select
+                id="books-category"
+                className="booksCategorySelect"
+                value={selectedCategory}
+                onChange={(event) => setSelectedCategory(event.target.value)}
+              >
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="booksResultsInfo" role="status" aria-live="polite">

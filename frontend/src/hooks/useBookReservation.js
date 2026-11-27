@@ -7,12 +7,23 @@ Custom Hook המרכז את הלוגיקה של דף שריון הספר
 והצטרפות לרשימת ההמתנה.
 
 אחריות:
+- זיהוי האם הזמנת הכיסא שנבחרה חסומה לשריון נוסף.
+- מניעת שריון או הצטרפות לרשימת המתנה בחלון זמן שכבר שוריין.
+- ניהול רשימת הזמנות כיסאות החסומות לשריון כפול.
+- עדכון רשימת החסימות בהתאם לתשובת השרת.
+- איפוס החסימות בעת החלפת ספר או משתמש.
 - טעינת הספר שנבחר.
 - שחזור הספר לאחר רענון הדף.
 - טעינת הזמנות המקום של המשתמש.
 - סינון הזמנות תקפות.
 - ניהול בחירת הזמנת מקום.
+- חישוב זמינות ספר בהתאם לתאריך ולשעות ההזמנה שנבחרה.
+- עדכון זמינות בעת החלפת הזמנת מקום.
+- ניהול מצב טעינה ושגיאות בבדיקת זמינות.
+- מניעת שימוש בתוצאות בדיקת זמינות ישנות.
+- מניעת שריון לפני השלמת בדיקת הזמינות.
 - שריון ספר זמין.
+- רענון זמינות העותקים ורשימת החסימות לאחר שריון מוצלח.
 - הצטרפות לרשימת המתנה לספר שאינו זמין.
 =========================================================
 */
@@ -23,7 +34,11 @@ import { useLocation, useParams } from "react-router-dom";
 
 import { AuthContext } from "../context/AuthContext";
 
-import { getBookById, reserveBook } from "../services/bookService";
+import {
+  getBookById,
+  reserveBook,
+  getBookAvailabilityByReservation,
+} from "../services/bookService";
 
 import { getReservations } from "../services/reservationService";
 
@@ -87,10 +102,41 @@ export function useBookReservation() {
   const [isPageLoading, setIsPageLoading] = useState(true);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [availability, setAvailability] = useState(null);
+  /*
+מונה המפעיל בדיקת זמינות חוזרת מול השרת
+לאחר שריון מוצלח, גם כאשר הזמנת הכיסא
+שנבחרה לא השתנתה.
+*/
+  const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
+  /*
+---------------------------------------------------------
+ניהול רשימת הזמנות הכיסאות החסומות
+
+הרשימה מכילה מזהי הזמנות כיסאות שבהן המשתמש
+כבר שריין את אותו הספר בחלון זמן חופף.
+
+הרשימה נשמרת בנפרד מנתוני זמינות המלאי,
+כדי שלא תתאפס בעת מעבר בין הזמנות כיסאות.
+---------------------------------------------------------
+*/
+  const [blockedReservationIds, setBlockedReservationIds] = useState([]);
+
+  const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
+
+  const [availabilityError, setAvailabilityError] = useState("");
 
   const [error, setError] = useState("");
 
   const [successMessage, setSuccessMessage] = useState("");
+
+  /*
+שמירת סוג הפעולה שהסתיימה בהצלחה:
+reservation - שריון ספר.
+waitingList - הצטרפות לרשימת המתנה.
+null - טרם הושלמה פעולה.
+*/
+  const [completedAction, setCompletedAction] = useState(null);
 
   /*
   ---------------------------------------------------------
@@ -193,18 +239,170 @@ export function useBookReservation() {
   }, [location.state, routeBookId, user?.userId]);
 
   /*
-  ---------------------------------------------------------
-  isBookAvailable
+---------------------------------------------------------
+בדיקת זמינות דינמית של הספר
+
+תפקיד:
+מחשבת מחדש את כמות העותקים הזמינים בכל פעם
+שנבחרת הזמנת כיסא אחרת או נטען ספר אחר.
+
+הבדיקה מתבצעת מול השרת בהתאם לתאריך ולשעות
+של הזמנת הכיסא שנבחרה.
+
+מנגנון isCurrentRequest מונע מתגובה ישנה
+לעדכן את הזמינות לאחר שהמשתמש החליף הזמנה.
+---------------------------------------------------------
+*/
+  const bookId = book?.bookId;
+
+  /*
+---------------------------------------------------------
+איפוס רשימת ההזמנות החסומות
+
+בעת החלפת ספר או משתמש, הרשימה מתאפסת
+כדי למנוע שימוש בחסימות השייכות לספר
+או למשתמש אחר.
+
+הרשימה אינה מתאפסת בעת החלפת כיסא,
+שעה או תאריך עבור אותו ספר ואותו משתמש.
+---------------------------------------------------------
+*/
+  useEffect(() => {
+    setBlockedReservationIds([]);
+  }, [bookId, user?.userId]);
+
+  useEffect(() => {
+    let isCurrentRequest = true;
+
+    setAvailability(null);
+    setAvailabilityError("");
+
+    if (!bookId || !selectedReservationId || !user?.userId) {
+      setIsAvailabilityLoading(false);
+      return;
+    }
+
+    /*
+  -------------------------------------------------------
+  checkBookAvailability
 
   תפקיד:
-  קובעת אם קיים כרגע לפחות עותק זמין.
+  שולחת בקשה לשרת לקבלת זמינות הספר בהתאם
+  להזמנת הכיסא שנבחרה.
 
-  הערך קובע איזו פעולה תתבצע:
-  - true: שריון ספר.
-  - false: הצטרפות לרשימת המתנה.
-  ---------------------------------------------------------
+  במקרה של שגיאה נשמרת הודעה מתאימה,
+  ולא מתאפשר ביצוע שריון על סמך מידע ישן.
+  -------------------------------------------------------
   */
-  const isBookAvailable = Number(book?.available_quantity) > 0;
+    const checkBookAvailability = async () => {
+      try {
+        setIsAvailabilityLoading(true);
+
+        const result = await getBookAvailabilityByReservation(
+          bookId,
+          Number(selectedReservationId),
+        );
+
+        if (!isCurrentRequest) {
+          return;
+        }
+
+        if (!result.success || !result.data) {
+          throw new Error(
+            result.message || "Failed to check book availability.",
+          );
+        }
+
+        setAvailability({
+          ...result.data,
+          userId: user.userId,
+        });
+        /*
+שמירת מזהי הזמנות הכיסאות החסומות שהתקבלו מהשרת.
+הרשימה כוללת את כל ההזמנות החופפות לשריונים
+קיימים של אותו הספר עבור המשתמש הנוכחי.
+*/
+        setBlockedReservationIds(
+          (result.data.blockedReservationIds || []).map(Number),
+        );
+      } catch (availabilityRequestError) {
+        if (isCurrentRequest) {
+          setAvailabilityError(
+            getRequestErrorMessage(
+              availabilityRequestError,
+              "Failed to check book availability.",
+            ),
+          );
+        }
+      } finally {
+        if (isCurrentRequest) {
+          setIsAvailabilityLoading(false);
+        }
+      }
+    };
+
+    checkBookAvailability();
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [bookId, selectedReservationId, user?.userId, availabilityRefreshKey]);
+
+  /*
+---------------------------------------------------------
+isAvailabilityReady
+
+תפקיד:
+מוודא שנתוני הזמינות שהתקבלו מהשרת שייכים
+לספר, למשתמש ולהזמנת הכיסא שנבחרו כרגע.
+---------------------------------------------------------
+*/
+  const isAvailabilityReady =
+    !isAvailabilityLoading &&
+    availability !== null &&
+    String(availability.bookId) === String(bookId) &&
+    String(availability.seatReservationId) === String(selectedReservationId) &&
+    String(availability.userId) === String(user?.userId);
+
+  /*
+---------------------------------------------------------
+availableQuantity
+
+תפקיד:
+מייצג את כמות העותקים הזמינים בחלון הזמן
+שנבחר. ערך null מציין שהזמינות טרם אומתה.
+---------------------------------------------------------
+*/
+  const availableQuantity = isAvailabilityReady
+    ? Number(availability.available_quantity)
+    : null;
+
+  /*
+---------------------------------------------------------
+isBookAvailable
+
+תפקיד:
+קובע האם קיים לפחות עותק אחד זמין
+בהתאם להזמנת הכיסא שנבחרה.
+---------------------------------------------------------
+*/
+  const isBookAvailable = isAvailabilityReady && availableQuantity > 0;
+
+  /*
+---------------------------------------------------------
+isSelectedReservationBlocked
+
+תפקיד:
+מציין האם הזמנת הכיסא שנבחרה חסומה לשריון
+נוסף של אותו הספר עקב חפיפת זמנים.
+
+הבדיקה מתבצעת באמצעות רשימת מזהי ההזמנות
+החסומות שהתקבלה מהשרת.
+---------------------------------------------------------
+*/
+  const isSelectedReservationBlocked =
+    Boolean(selectedReservationId) &&
+    blockedReservationIds.includes(Number(selectedReservationId));
 
   /*
   ---------------------------------------------------------
@@ -224,20 +422,35 @@ export function useBookReservation() {
   );
 
   /*
-  ---------------------------------------------------------
-  handleReservationChange
+---------------------------------------------------------
+handleReservationChange
 
-  תפקיד:
-  מעדכנת את הזמנת המקום שנבחרה ומנקה
-  הודעות קודמות.
-  ---------------------------------------------------------
-  */
+תפקיד:
+מעדכנת את הזמנת הכיסא שנבחרה ומנקה
+את נתוני הזמינות וההודעות הקודמות.
+
+פרמטרים:
+- reservationId: מזהה הזמנת הכיסא שנבחרה.
+
+לוגיקה:
+- מונעת החלפת הזמנה בזמן ביצוע שריון.
+- מונעת בדיקה חוזרת אם נבחרה אותה הזמנה.
+- מאפסת את נתוני הזמינות הקודמים.
+- שינוי מזהה ההזמנה מפעיל בדיקת זמינות
+  חדשה באמצעות useEffect.
+---------------------------------------------------------
+*/
   const handleReservationChange = (reservationId) => {
+    if (isLoading || reservationId === selectedReservationId) {
+      return;
+    }
+
+    setAvailability(null);
+    setAvailabilityError("");
     setSelectedReservationId(reservationId);
-
     setError("");
-
     setSuccessMessage("");
+    setCompletedAction(null);
   };
 
   /*
@@ -249,7 +462,7 @@ export function useBookReservation() {
 
   אם הספר זמין:
   - נשלחת בקשת שריון.
-  - הכמות הזמינה מתעדכנת מקומית.
+  - נתוני הזמינות ורשימת החסימות מתעדכנים מחדש מול השרת.
 
   אם הספר אינו זמין:
   - המשתמש מצטרף לרשימת ההמתנה.
@@ -274,6 +487,37 @@ export function useBookReservation() {
       return;
     }
 
+    /*
+מניעת ביצוע שריון או הצטרפות לרשימת המתנה
+כאשר בדיקת הזמינות טרם הסתיימה או נכשלה.
+*/
+    if (!isAvailabilityReady) {
+      setError("Book availability must be checked before continuing.");
+
+      return;
+    }
+
+    /*
+מניעת שריון נוסף או הצטרפות לרשימת המתנה
+כאשר המשתמש כבר שריין את אותו הספר
+בחלון זמן חופף.
+*/
+    if (isSelectedReservationBlocked) {
+      setError(
+        "You have already reserved this book for an overlapping time slot.",
+      );
+
+      return;
+    }
+
+    /*
+מניעת שליחת בקשה נוספת בזמן ביצוע פעולה
+או לאחר שהפעולה כבר הסתיימה בהצלחה.
+*/
+    if (isLoading || successMessage) {
+      return;
+    }
+
     try {
       setIsLoading(true);
 
@@ -294,19 +538,18 @@ export function useBookReservation() {
         setSuccessMessage(
           response.data?.message || "Book reserved successfully.",
         );
+        setCompletedAction("reservation");
 
         /*
-        עדכון מקומי של הכמות מונע הצגת מלאי
-        ישן לאחר השלמת השריון.
-        */
-        setBook((currentBook) => ({
-          ...currentBook,
+רענון נתוני הזמינות מול השרת לאחר שריון מוצלח.
 
-          available_quantity: Math.max(
-            Number(currentBook.available_quantity) - 1,
-            0,
-          ),
-        }));
+הבדיקה מעדכנת את כמות העותקים הזמינים
+ואת רשימת הזמנות הכיסאות החסומות,
+כולל הזמנות בחלונות זמן חופפים.
+*/
+        setAvailability(null);
+        setIsAvailabilityLoading(true);
+        setAvailabilityRefreshKey((previousKey) => previousKey + 1);
 
         return;
       }
@@ -327,6 +570,7 @@ export function useBookReservation() {
       setSuccessMessage(
         result.message || "You joined the book waiting list successfully.",
       );
+      setCompletedAction("waitingList");
     } catch (reservationError) {
       console.error(
         isBookAvailable
@@ -354,11 +598,18 @@ export function useBookReservation() {
     eligibleReservations,
     selectedReservation,
     selectedReservationId,
+    blockedReservationIds,
+    isSelectedReservationBlocked,
     isBookAvailable,
+    availableQuantity,
+    isAvailabilityReady,
+    isAvailabilityLoading,
+    availabilityError,
     isPageLoading,
     isLoading,
     error,
     successMessage,
+    completedAction,
     handleReservationChange,
     handleReserveBook,
   };

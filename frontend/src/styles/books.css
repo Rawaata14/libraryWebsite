@@ -24,28 +24,204 @@ books.css
 ---------------------------------------------------------
 */
 .bookCard {
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
-  padding-bottom: 14px;
+  height: 100%;
   border: 2px solid #6e4137;
-  border-radius: 12px;
+  border-radius: 16px;
   background: #4a231f;
   color: #fff5ec;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
 }
 
-.bookCard img {
+.bookCard:hover {
+  transform: translateY(-5px);
+  border-color: #b58a74;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Book cover */
+.bookCover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 280px;
+  flex-shrink: 0;
+  padding: 16px;
+  box-sizing: border-box;
+  background: #2f1a15;
+}
+
+.bookCover img {
+  display: block;
   width: 100%;
-  height: 260px;
-  object-fit: cover;
+  height: 100%;
+  object-fit: contain;
 }
 
-.bookCardBody {
-  padding: 14px;
+.bookCoverPlaceholder {
+  color: #d9b9a5;
+  font-size: 14px;
   text-align: center;
 }
 
+/* Card content */
+.bookCardBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  gap: 10px;
+  padding: 18px 14px;
+  text-align: center;
+}
+
+/* Category */
 .bookCategory {
-  margin-bottom: 10px;
-  opacity: 0.8;
+  color: #dfc7b9;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+/* Availability */
+.bookAvailability {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bookAvailability::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.bookAvailability.available {
+  background: #294c2d;
+  color: #bce3b9;
+}
+
+.bookAvailability.unavailable {
+  background: #672e2e;
+  color: #ffc2bc;
+}
+
+/* Book title */
+.bookTitle {
+  margin: 4px 0 0;
+  color: #fff5ec;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+/* Author */
+.bookAuthor {
+  margin: 0;
+  color: #dfc7b9;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Action buttons */
+.bookCardActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 14px;
+}
+
+.bookCardActions button {
+  flex: 1;
+  min-height: 42px;
+  border-radius: 10px;
+}
+
+/*
+---------------------------------------------------------
+כפתורי שריון ספר ובדיקת זמינות עתידית
+---------------------------------------------------------
+*/
+
+.bookCardActions .btn.bookReserveButton,
+.bookCardActions .btn.bookAvailabilityButton {
+  min-height: 42px;
+  padding: 10px 8px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+/* כפתור בדיקת זמינות עתידית */
+.bookCardActions .btn.bookAvailabilityButton {
+  background: linear-gradient(135deg, #c99d5e, #ac8043);
+  color: #211409;
+  border: 1px solid #c99d5e;
+  transition:
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+/* מעבר העכבר מעל כפתור בדיקת הזמינות */
+.bookCardActions .btn.bookAvailabilityButton:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dfb77b, #c99d5e);
+  box-shadow: 0 4px 12px rgba(201, 157, 94, 0.3);
+}
+
+/* סימון הכפתור בעת ניווט באמצעות המקלדת */
+.bookCardActions .btn.bookAvailabilityButton:focus-visible {
+  outline: 2px solid #dfb77b;
+  outline-offset: 3px;
+}
+
+/* Librarian - Edit button */
+.bookCardActions .btn.bookEditButton {
+  background: linear-gradient(135deg, #3978b8, #24558a);
+  color: #ffffff;
+  border: 1px solid #3978b8;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.bookCardActions .btn.bookEditButton:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2d659e, #1c426d);
+}
+
+/* Librarian - Delete button */
+.bookCardActions .btn.bookDeleteButton {
+  background: linear-gradient(135deg, #bd4b40, #922f29);
+  color: #ffffff;
+  border: 1px solid #bd4b40;
+  font-weight: 600;
+  transition: background 0.2s ease;
+}
+
+.bookCardActions .btn.bookDeleteButton:hover:not(:disabled) {
+  background: linear-gradient(135deg, #a33d32, #75231f);
+}
+
+/* Disabled buttons */
+.bookCardActions .btn.bookEditButton:disabled,
+.bookCardActions .btn.bookDeleteButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 /*
@@ -76,25 +252,64 @@ books.css
 */
 .booksToolbar {
   display: grid;
-  grid-template-columns: 1.6fr 220px;
-  gap: 16px;
-  margin-bottom: 18px;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 20px;
+  margin-bottom: 22px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.booksFilterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.booksFilterGroup label {
+  color: #f4e5db;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 .booksSearchInput,
 .booksCategorySelect {
+  box-sizing: border-box;
   width: 100%;
-  padding: 14px 16px;
+  min-height: 48px;
+  padding: 12px 16px;
   border: 2px solid #8d6550;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.94);
+  border-radius: 10px;
+  background: #fffaf6;
+  color: #3f211d;
+  font-family: inherit;
   font-size: 16px;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.booksSearchInput::placeholder {
+  color: #9a8478;
+}
+
+.booksCategorySelect {
+  cursor: pointer;
+}
+
+.booksSearchInput:hover,
+.booksCategorySelect:hover {
+  border-color: #b58a74;
 }
 
 .booksSearchInput:focus,
 .booksCategorySelect:focus {
-  border-color: #6f3c34;
-  outline: 3px solid rgba(255, 232, 218, 0.3);
+  border-color: #b58a74;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(181, 138, 116, 0.25);
 }
 
 /*
@@ -407,8 +622,9 @@ books.css
     grid-template-columns: 1fr;
   }
 
-  .bookCard img {
-    height: 220px;
+  .bookCover {
+    height: 260px;
+    padding: 12px;
   }
 
   .bookEditOverlay {

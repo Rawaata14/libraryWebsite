@@ -14,7 +14,7 @@ loanQueries.js
 =========================================================
 */
 
-const {doQuery} = require("../query");
+const { doQuery } = require("../query");
 const { getConnection } = require("../dbSingleton");
 const { sendBookLoanEmail } = require("../../utils/emailService");
 const {
@@ -84,16 +84,20 @@ async function reserveBook(userId, bookId, seatReservationId) {
     */
     const [seats] = await connection.query(
       `
-        SELECT
-          reservationId,
-          TIME_FORMAT(startTime, '%H:%i:%s') AS startTime,
-          TIME_FORMAT(endTime, '%H:%i:%s') AS endTime,
-          DATE_FORMAT(reservationDate, '%Y-%m-%d') AS reservationDate
-        FROM seat_reservation
-        WHERE reservationId = ?
-        LIMIT 1
-      `,
-      [seatReservationId],
+    SELECT
+      reservationId,
+      TIME_FORMAT(startTime, '%H:%i:%s') AS startTime,
+      TIME_FORMAT(endTime, '%H:%i:%s') AS endTime,
+      DATE_FORMAT(reservationDate, '%Y-%m-%d') AS reservationDate
+    FROM seat_reservation
+    WHERE reservationId = ?
+      AND userId = ?
+      AND status IN ('pending', 'active', 'occupied', 'confirmed')
+      AND TIMESTAMP(reservationDate, endTime) > NOW()
+    LIMIT 1
+    FOR UPDATE
+  `,
+      [seatReservationId, userId],
     );
 
     if (seats.length === 0) {
@@ -101,7 +105,7 @@ async function reserveBook(userId, bookId, seatReservationId) {
       return {
         success: false,
         statusCode: 404,
-        message: "Seat reservation not found.",
+        message: "Seat reservation not found or no longer valid.",
       };
     }
 
@@ -117,21 +121,33 @@ async function reserveBook(userId, bookId, seatReservationId) {
     const dueDateTime = `${cleanDate} ${cleanTime}`;
 
     /*
-    -------------------------------------------------------
-    3. בדיקה האם המשתמש כבר הזמין את אותו הספר באותו יום (שימוש ב-cleanDate)
-    -------------------------------------------------------
-    */
+-------------------------------------------------------
+3. מניעת שריון כפול של אותו ספר בחלון זמן חופף
+
+הבדיקה מתבצעת לפי מזהה המשתמש, מזהה הספר,
+תאריך ההזמנה ושעות ההתחלה והסיום.
+
+- חוסמת שריון נוסף בחלון זמן חופף,
+  גם כאשר נבחר כיסא אחר בהזמנה קבוצתית.
+- מאפשרת שריון נוסף בחלון זמן שאינו חופף
+  באותו יום או בתאריך אחר.
+- מתחשבת בהשאלות פעילות ובהשאלות באיחור.
+-------------------------------------------------------
+*/
     const [existingUserLoans] = await connection.query(
       `
-        SELECT l.loanId
-        FROM loan l
-        JOIN seat_reservation sr ON l.seatReservationId = sr.reservationId
-        WHERE l.userId = ?
-          AND l.bookId = ?
-          AND l.status = 'active'
-          AND sr.reservationDate = ?
-      `,
-      [userId, bookId, cleanDate],
+    SELECT l.loanId
+    FROM loan l
+    JOIN seat_reservation sr
+      ON l.seatReservationId = sr.reservationId
+    WHERE l.userId = ?
+      AND l.bookId = ?
+      AND l.status IN ('active', 'overdue')
+      AND sr.reservationDate = ?
+      AND sr.startTime < ?
+      AND sr.endTime > ?
+  `,
+      [userId, bookId, cleanDate, cleanTime, cleanStartTime],
     );
 
     if (existingUserLoans.length > 0) {
@@ -139,27 +155,47 @@ async function reserveBook(userId, bookId, seatReservationId) {
       return {
         success: false,
         statusCode: 409,
-        message: "You have already reserved this book for this date.",
+        message:
+          "You have already reserved this book for an overlapping time slot.",
       };
     }
 
     /*
-    -------------------------------------------------------
-    4. חישוב דינמי של עותקים תפוסים בחלון הזמן המבוקש (שימוש ב-cleanDate)
-    -------------------------------------------------------
-    */
+-------------------------------------------------------
+4. חישוב דינמי של עותקים שאינם זמינים
+
+החישוב כולל:
+- השאלות פעילות שחופפות לחלון הזמן המבוקש.
+- השאלות בסטטוס overdue שטרם הוחזרו.
+- השאלות פעילות שמועד החזרתן כבר חלף,
+  גם אם הסטטוס שלהן טרם עודכן ל-overdue.
+
+ספר שלא הוחזר ממשיך לתפוס עותק עד שהספרנית
+מסמנת אותו כמוחזר, ללא תלות בתאריך המבוקש.
+-------------------------------------------------------
+*/
     const [overlappingLoans] = await connection.query(
       `
-        SELECT COUNT(*) AS activeCount
-        FROM loan l
-        JOIN seat_reservation sr ON l.seatReservationId = sr.reservationId
-        WHERE l.bookId = ?
-          AND l.status = 'active'
-          AND sr.reservationDate = ?
+    SELECT COUNT(*) AS activeCount
+    FROM loan l
+    LEFT JOIN seat_reservation sr
+      ON l.seatReservationId = sr.reservationId
+    WHERE l.bookId = ?
+      AND (
+        l.status = 'overdue'
+        OR (
+          l.status = 'active'
           AND (
-                (sr.startTime < ? AND sr.endTime > ?)
-              )
-      `,
+            l.dueDate <= NOW()
+            OR (
+              sr.reservationDate = ?
+              AND sr.startTime < ?
+              AND sr.endTime > ?
+            )
+          )
+        )
+      )
+  `,
       [bookId, cleanDate, cleanTime, cleanStartTime],
     );
 
@@ -253,6 +289,184 @@ async function reserveBook(userId, bookId, seatReservationId) {
     if (connection) {
       connection.release();
     }
+  }
+}
+
+/*
+---------------------------------------------------------
+getBookAvailabilityByReservation
+
+תפקיד:
+מחשבת את כמות העותקים הזמינים של ספר בהתאם
+לתאריך ולחלון הזמן של הזמנת הכיסא שנבחרה,
+ומזהה הזמנות כיסאות שבהן המשתמש אינו רשאי
+לשריין שוב את אותו הספר עקב חפיפת זמנים.
+
+פרמטרים:
+- userId: מזהה המשתמש.
+- bookId: מזהה הספר.
+- seatReservationId: מזהה הזמנת הכיסא.
+
+הפונקציה מבצעת:
+- בדיקת קיום הספר.
+- בדיקת בעלות ותוקף הזמנת הכיסא.
+- זיהוי הזמנות כיסאות החופפות לשריוני הספר של המשתמש.
+- ספירת השאלות החופפות לחלון הזמן המבוקש.
+- ספירת השאלות באיחור שטרם הוחזרו.
+- חישוב כמות העותקים הזמינים.
+
+ערך מוחזר:
+אובייקט הכולל תוצאת הפעולה, כמות העותקים הכוללת,
+כמות העותקים התפוסים, כמות העותקים הזמינים,
+סטטוס זמינות הספר ורשימת מזהי הזמנות הכיסאות
+החסומות לשריון נוסף של אותו הספר.
+
+---------------------------------------------------------
+*/
+async function getBookAvailabilityByReservation(
+  userId,
+  bookId,
+  seatReservationId,
+) {
+  try {
+    const books = await doQuery(
+      `
+        SELECT bookId, total_quantity
+        FROM book
+        WHERE bookId = ?
+        LIMIT 1
+      `,
+      [bookId],
+    );
+
+    if (books.length === 0) {
+      return {
+        success: false,
+        statusCode: 404,
+        message: "Book not found.",
+      };
+    }
+
+    const seats = await doQuery(
+      `
+        SELECT
+          DATE_FORMAT(reservationDate, '%Y-%m-%d')
+            AS reservationDate,
+          TIME_FORMAT(startTime, '%H:%i:%s')
+            AS startTime,
+          TIME_FORMAT(endTime, '%H:%i:%s')
+            AS endTime
+        FROM seat_reservation
+        WHERE reservationId = ?
+          AND userId = ?
+          AND status IN (
+            'pending', 'active', 'occupied', 'confirmed'
+          )
+          AND TIMESTAMP(reservationDate, endTime) > NOW()
+        LIMIT 1
+      `,
+      [seatReservationId, userId],
+    );
+
+    if (seats.length === 0) {
+      return {
+        success: false,
+        statusCode: 404,
+        message: "Seat reservation not found or no longer valid.",
+      };
+    }
+
+    const seat = seats[0];
+
+    /*
+-------------------------------------------------------
+שליפת הזמנות הכיסאות החופפות לשריוני הספר של המשתמש
+
+הבדיקה כוללת את כל הזמנות הכיסאות התקפות של המשתמש
+שחלונות הזמן שלהן חופפים להשאלה קיימת של אותו ספר.
+
+מטרת הבדיקה היא למנוע שריון כפול, גם כאשר המשתמש
+בוחר כיסא אחר באותו חלון זמן בהזמנה קבוצתית.
+-------------------------------------------------------
+*/
+    const blockedReservations = await doQuery(
+      `
+    SELECT DISTINCT sr.reservationId
+    FROM seat_reservation sr
+    JOIN loan l
+      ON l.userId = sr.userId
+    JOIN seat_reservation loanSeat
+      ON l.seatReservationId = loanSeat.reservationId
+    WHERE sr.userId = ?
+      AND l.bookId = ?
+      AND l.status IN ('active', 'overdue')
+      AND sr.status IN (
+        'pending', 'active', 'occupied', 'confirmed'
+      )
+      AND TIMESTAMP(sr.reservationDate, sr.endTime) > NOW()
+      AND sr.reservationDate = loanSeat.reservationDate
+      AND sr.startTime < loanSeat.endTime
+      AND sr.endTime > loanSeat.startTime
+  `,
+      [userId, bookId],
+    );
+
+    const blockedReservationIds = blockedReservations.map((reservation) =>
+      Number(reservation.reservationId),
+    );
+
+    const overlappingLoans = await doQuery(
+      `
+        SELECT COUNT(*) AS activeCount
+        FROM loan l
+        LEFT JOIN seat_reservation sr
+          ON l.seatReservationId = sr.reservationId
+        WHERE l.bookId = ?
+          AND (
+            l.status = 'overdue'
+            OR (
+              l.status = 'active'
+              AND (
+                l.dueDate <= NOW()
+                OR (
+                  sr.reservationDate = ?
+                  AND sr.startTime < ?
+                  AND sr.endTime > ?
+                )
+              )
+            )
+          )
+      `,
+      [bookId, seat.reservationDate, seat.endTime, seat.startTime],
+    );
+
+    const totalQuantity = Number(books[0].total_quantity) || 0;
+
+    const activeCount = Number(overlappingLoans[0]?.activeCount) || 0;
+
+    const availableQuantity = Math.max(0, totalQuantity - activeCount);
+
+    return {
+      success: true,
+      statusCode: 200,
+      data: {
+        bookId,
+        seatReservationId,
+        total_quantity: totalQuantity,
+        occupied_quantity: activeCount,
+        available_quantity: availableQuantity,
+        isAvailable: availableQuantity > 0,
+        blockedReservationIds,
+      },
+    };
+  } catch (error) {
+    console.error("Error checking book availability:", error);
+
+    return {
+      success: false,
+      statusCode: 500,
+      message: "Failed to check book availability.",
+    };
   }
 }
 
@@ -479,6 +693,7 @@ async function getAllLoansListForLibrarian(
 */
 module.exports = {
   reserveBook,
+  getBookAvailabilityByReservation,
   getLoansCountByStatus,
   returnBookByLibrarian,
   getTodaysLoansListForLibrarian,

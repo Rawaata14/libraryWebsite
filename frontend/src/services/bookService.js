@@ -8,6 +8,7 @@ bookService.js
 השירות אחראי על:
 - שליפת כל הספרים.
 - שליפת ספר לפי מזהה.
+- חישוב זמינות ספר בהתאם להזמנת כיסא שנבחרה.
 - הוספת ספר.
 - שריון ספר במסגרת הזמנת כיסא.
 - עריכת פרטי ספר וכמות עותקים.
@@ -50,6 +51,45 @@ export const getBookById = async (bookId) => {
   const response = await axios.get(buildApiUrl(`/books/${bookId}`), {
     withCredentials: true,
   });
+
+  return response.data;
+};
+
+/*
+---------------------------------------------------------
+getBookAvailabilityByReservation
+
+תפקיד:
+שולחת בקשה לשרת לקבלת כמות העותקים הזמינים
+של ספר בהתאם להזמנת הכיסא שנבחרה.
+
+פרמטרים:
+- bookId: מזהה הספר.
+- reservationId: מזהה הזמנת הכיסא.
+
+הפונקציה שולחת את פרטי ה-Session באמצעות
+withCredentials לצורך אימות המשתמש.
+
+ערך מוחזר:
+אובייקט המכיל את תוצאת הבדיקה, כמות העותקים
+הכוללת, כמות העותקים התפוסים והכמות הזמינה.
+
+הפעולה אינה יוצרת שריון ואינה משנה נתונים במסד.
+---------------------------------------------------------
+*/
+export const getBookAvailabilityByReservation = async (
+  bookId,
+  reservationId,
+) => {
+  const response = await axios.get(
+    buildApiUrl(`/books/${bookId}/availability`),
+    {
+      params: {
+        reservationId,
+      },
+      withCredentials: true,
+    },
+  );
 
   return response.data;
 };

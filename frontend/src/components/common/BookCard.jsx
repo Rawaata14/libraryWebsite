@@ -9,8 +9,9 @@ BookCard.jsx
 - הצגת תמונת הספר.
 - הצגת שם הספר, המחבר והקטגוריה.
 - הצגת זמינות הספר.
-- מעבר להזמנת ספר זמין.
-- מעבר להצטרפות לרשימת המתנה לספר שאינו זמין.
+- מעבר לדף שריון ספר.
+- אפשרות לבדיקת זמינות עתידית של ספר שאינו זמין.
+- הצגת כפתור פעולה בהתאם לזמינות הספר בקטלוג.
 - הצגת פעולות עריכה ומחיקה לספרנית רק כאשר
   התקבלו פעולות מתאימות מהקומפוננטה ההורה.
 =========================================================
@@ -68,13 +69,18 @@ BookCard
 להרשאות המשתמש ולזמינות הספר.
 
 עבור משתמש רגיל:
-- ספר זמין מציג Reserve.
-- ספר שאינו זמין מציג Join Waiting List.
+- ספר זמין מציג Reserve Book.
+- ספר שאינו זמין מציג Check Future Availability.
 
-שני הכפתורים מעבירים לדף הספר:
-- בספר זמין המשתמש בוחר הזמנת מקום ושומר ספר.
-- בספר לא זמין המשתמש בוחר הזמנת מקום ומצטרף
-  לרשימת ההמתנה.
+שני הכפתורים מעבירים לדף שריון הספר,
+ללא ביצוע שריון או הצטרפות ישירה לרשימת המתנה.
+
+בדף שריון הספר:
+- המשתמש בוחר הזמנת מקום תקפה.
+- המערכת בודקת זמינות בהתאם לתאריך ולשעות
+  של הזמנת המקום שנבחרה.
+- אם קיים עותק זמין, ניתן לשריין את הספר.
+- אם אין עותק זמין, ניתן להצטרף לרשימת ההמתנה.
 
 עבור ספרנית:
 - פעולת ההזמנה אינה מוצגת.
@@ -101,88 +107,116 @@ export default function BookCard({
 
   return (
     <article className="bookCard">
-      {bookImageSrc && (
-        <img src={bookImageSrc} alt={`Cover of ${book.title}`} loading="lazy" />
-      )}
+      <div className="bookCover">
+        {bookImageSrc ? (
+          <img
+            src={bookImageSrc}
+            alt={`Cover of ${book.title}`}
+            loading="lazy"
+          />
+        ) : (
+          <div className="bookCoverPlaceholder">No cover available</div>
+        )}
+      </div>
 
       <div className="bookCardBody">
-        <div className="bookCategory">
-          {book.category || "General"}
-          {" · "}
+        <div className="bookCategory">{book.category || "General"}</div>
 
-          <span className={isAvailable ? "available" : "unavailable"}>
-            {isAvailable ? "Available" : "Out of Stock"}
-          </span>
+        <div
+          className={`bookAvailability ${
+            isAvailable ? "available" : "unavailable"
+          }`}
+        >
+          {isAvailable ? "Available" : "Out of Stock"}
         </div>
 
-        <h3>{book.title}</h3>
+        <h3 className="bookTitle">{book.title}</h3>
 
-        <p>{book.author}</p>
+        <p className="bookAuthor">{book.author}</p>
 
-        {/*
-        פעולת המשתמש מוצגת רק לקורא.
+        <div className="bookCardActions">
+          {/*
+פעולת המשתמש מוצגת רק לקורא.
 
-        הכפתור נשאר פעיל גם כאשר הספר אינו
-        זמין, משום שבמקרה כזה הוא מוביל
-        להצטרפות לרשימת ההמתנה.
-        */}
-        {!isLibrarian && onReserve && (
-          <>
-            {book.userHasActiveLoan && !isAvailable ? (
-              <span
-                className="userHasLoanMessage"
-                style={{
-                  color: "#d9534f",
-                  fontSize: "0.9rem",
-                  display: "block",
-                  margin: "8px 0",
-                }}
-              >
-                You currently have this book on loan
-              </span>
-            ) : (
-              <Button
-                variant={isAvailable ? "success" : "secondary"}
-                onClick={onReserve}
-                aria-label={
-                  isAvailable
-                    ? `Reserve ${book.title}`
-                    : `Join the waiting list for ${book.title}`
-                }
-              >
-                {isAvailable ? "Reserve" : "Join Waiting List"}
-              </Button>
-            )}
-          </>
-        )}
-        {/*
+כאשר הספר זמין:
+- מוצג כפתור Reserve Book.
+
+כאשר הספר אינו זמין:
+- מוצג כפתור Check Future Availability.
+
+שני הכפתורים מובילים לדף שריון הספר,
+שבו מתבצעת בדיקת זמינות בהתאם לתאריך
+ולשעות של הזמנת המקום שנבחרה.
+
+בהתאם לתוצאות הבדיקה, המשתמש יכול
+לשריין ספר או להצטרף לרשימת ההמתנה.
+
+הלחיצה על הכפתור בכרטיס אינה מבצעת
+שריון או הצטרפות לרשימת המתנה באופן ישיר.
+*/}
+          {!isLibrarian && onReserve && (
+            <>
+              {book.userHasActiveLoan && !isAvailable ? (
+                <span
+                  className="userHasLoanMessage"
+                  style={{
+                    color: "#d9534f",
+                    fontSize: "0.9rem",
+                    display: "block",
+                    margin: "8px 0",
+                  }}
+                >
+                  You currently have this book on loan
+                </span>
+              ) : (
+                <Button
+                  variant={isAvailable ? "success" : "secondary"}
+                  className={
+                    isAvailable ? "bookReserveButton" : "bookAvailabilityButton"
+                  }
+                  onClick={onReserve}
+                  aria-label={
+                    isAvailable
+                      ? `Reserve ${book.title}`
+                      : `Check future availability for ${book.title}`
+                  }
+                >
+                  {isAvailable ? "Reserve Book" : "Check Future Availability"}
+                </Button>
+              )}
+            </>
+          )}
+          {/*
         כפתור העריכה מוצג רק לספרנית ורק אם
         הקומפוננטה ההורה העבירה פעולת onEdit.
         */}
-        {isLibrarian && onEdit && (
-          <Button
-            variant="secondary"
-            onClick={() => onEdit(book)}
-            aria-label={`Edit ${book.title}`}
-          >
-            Edit
-          </Button>
-        )}
+          {isLibrarian && onEdit && (
+            <Button
+              variant="secondary"
+              className="bookEditButton"
+              onClick={() => onEdit(book)}
+              aria-label={`Edit ${book.title}`}
+            >
+              Edit
+            </Button>
+          )}
 
-        {/*
+          {/*
         כפתור המחיקה מוצג רק לספרנית ורק אם
         הקומפוננטה ההורה העבירה פעולת onDelete.
         */}
-        {isLibrarian && onDelete && (
-          <Button
-            variant="danger"
-            onClick={() => onDelete(book)}
-            disabled={isDeleting}
-            aria-label={`Delete ${book.title}`}
-          >
-            {isDeleting ? "Deleting..." : "Delete"}
-          </Button>
-        )}
+          {isLibrarian && onDelete && (
+            <Button
+              variant="danger"
+              className="bookDeleteButton"
+              onClick={() => onDelete(book)}
+              disabled={isDeleting}
+              aria-label={`Delete ${book.title}`}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          )}
+        </div>
       </div>
     </article>
   );

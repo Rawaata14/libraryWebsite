@@ -14,7 +14,7 @@ bookQueries.js
 =========================================================
 */
 
-const {doQuery} = require("../query");
+const { doQuery } = require("../query");
 const { getConnection } = require("../dbSingleton");
 
 /*
@@ -182,15 +182,19 @@ async function getAllBooks(userId = null) {
       SELECT 
         b.*,
         (b.total_quantity - COUNT(l.bookId)) AS available_quantity
-        ${userId ? `, (
+        ${
+          userId
+            ? `, (
           SELECT COUNT(1) 
           FROM loan active_l 
           WHERE active_l.bookId = b.bookId 
             AND active_l.userId = ? 
             AND active_l.status IN ('active', 'overdue')
-        ) > 0 AS userHasActiveLoan` : `, 0 AS userHasActiveLoan`}
+        ) > 0 AS userHasActiveLoan`
+            : `, 0 AS userHasActiveLoan`
+        }
       FROM book b 
-      LEFT JOIN loan l ON b.bookId = l.bookId AND l.status = 'active'
+      LEFT JOIN loan l ON b.bookId = l.bookId AND l.status IN ('active', 'overdue')
       GROUP BY b.bookId
       ORDER BY b.category ASC, b.title ASC
     `;
@@ -213,6 +217,41 @@ async function getAllBooks(userId = null) {
 
 /*
 ---------------------------------------------------------
+hasActiveLoanForBook
+
+תפקיד:
+בודקת האם למשתמש קיימת השאלה פעילה או השאלה
+באיחור עבור ספר מסוים.
+
+פרמטרים:
+- bookId: מזהה הספר.
+- userId: מזהה המשתמש.
+
+ערך מוחזר:
+- true: קיימת השאלה פעילה או השאלה באיחור.
+- false: לא קיימת השאלה כזו.
+
+למה:
+השאלה בסטטוס overdue עדיין נחשבת להשאלה פתוחה,
+מכיוון שהספר טרם סומן כמוחזר על ידי הספרנית.
+---------------------------------------------------------
+*/
+async function hasActiveLoanForBook(bookId, userId) {
+  const sql = `
+    SELECT COUNT(*) AS count
+    FROM loan
+    WHERE bookId = ?
+      AND userId = ?
+      AND status IN ('active', 'overdue')
+  `;
+
+  const result = await doQuery(sql, [bookId, userId]);
+
+  return Number(result[0]?.count) > 0;
+}
+
+/*
+---------------------------------------------------------
 getBookById
 
 תפקיד:
@@ -227,7 +266,7 @@ async function getBookById(bookId, userId = null) {
         b.*,
         (b.total_quantity - COUNT(l.bookId)) AS available_quantity
       FROM book b 
-      LEFT JOIN loan l ON b.bookId = l.bookId AND l.status = 'active'
+      LEFT JOIN loan l ON b.bookId = l.bookId AND l.status IN ('active', 'overdue')
       WHERE b.bookId = ?
       GROUP BY b.bookId
       LIMIT 1
@@ -350,7 +389,7 @@ async function updateBook(bookId, bookDetails) {
           COUNT(l.bookId) AS loanedCopies
         FROM book b LEFT JOIN loan l
         ON b.bookId = l.bookId
-        AND l.status = 'active'
+        AND l.status IN ('active', 'overdue')
         WHERE b.bookId = ?
         GROUP BY b.bookId
         LIMIT 1

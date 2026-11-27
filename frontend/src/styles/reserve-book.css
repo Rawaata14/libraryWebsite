@@ -16,12 +16,15 @@ reserve-book.css
 
 .reservePage {
   padding: 24px;
+  font-family: "Segoe UI", Arial, sans-serif;
 }
 
 .reserveContainer {
-  max-width: 1100px;
+  width: 100%;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 24px;
+  box-sizing: border-box;
 
   background: rgba(239, 224, 215, 0.96);
 
@@ -46,7 +49,7 @@ reserve-book.css
 
   text-align: center;
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .reserveSuccess {
@@ -63,107 +66,493 @@ reserve-book.css
 
 .reserveContent {
   display: grid;
-  grid-template-columns: minmax(260px, 350px) 1fr;
-  gap: 28px;
-  align-items: start;
+  grid-template-columns:
+    minmax(220px, 0.8fr)
+    minmax(0, 1.6fr)
+    minmax(300px, 1.2fr);
+
+  gap: 20px;
+  align-items: stretch;
 }
+
+/* פריסת הדף כאשר אין למשתמש הזמנות מקום תקפות */
+.reserveContentWithoutReservations {
+  grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+}
+
+/* פריסה אנכית כאשר אין הזמנות מקום */
+.reserveContentWithoutReservations .reserveDetails {
+  display: flex;
+  flex-direction: column;
+}
+
+/*
+---------------------------------------------------------
+כרטיס פרטי הספר
+---------------------------------------------------------
+*/
 
 .reserveBook {
-  color: #3d2019;
+  padding: 22px;
+  box-sizing: border-box;
+
+  color: #fff5ec;
+  background: linear-gradient(160deg, #4a231f, #301915);
+
+  border: 2px solid #805044;
+  border-radius: 16px;
+
+  text-align: center;
+
+  box-shadow: 0 8px 22px rgba(61, 32, 25, 0.25);
 }
 
+/* תמונת הספר */
 .reserveBook img {
   display: block;
 
   width: 100%;
-  max-width: 290px;
-  max-height: 430px;
-  margin: 0 auto 18px;
+  max-width: 260px;
+  max-height: 390px;
+  margin: 0 auto 22px;
 
-  object-fit: cover;
+  object-fit: contain;
 
-  border: 3px solid #6a4035;
-  border-radius: 8px;
+  border: 2px solid #956a55;
+  border-radius: 10px;
 
-  box-shadow: 0 10px 22px rgba(61, 32, 25, 0.25);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
 }
 
+/* שם הספר */
 .reserveBook h2 {
-  margin-bottom: 14px;
+  margin: 0 0 16px;
 
+  color: #fff5ec;
   font-size: 24px;
-  line-height: 1.3;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
+/* פרטי הספר */
 .reserveBook p {
-  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
 
-  font-size: 17px;
+  margin: 0;
+  padding: 12px 0;
+
+  color: #dfc7b9;
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: left;
+
+  border-top: 1px solid rgba(223, 199, 185, 0.18);
+  font-weight: 500;
 }
 
-.reserveDetails {
-  padding: 24px;
+/* הצגת שם המחבר במרכז הכרטיס */
+.reserveBook h2 + p {
+  justify-content: center;
+  padding: 0 0 18px;
+  border-top: none;
+  text-align: center;
+}
+
+.reserveBook h2 + p strong {
+  display: none;
+}
+
+.reserveBook p strong {
+  color: #fff5ec;
+  font-weight: 700;
+}
+
+/*
+---------------------------------------------------------
+תגיות סטטוס זמינות הספר
+---------------------------------------------------------
+*/
+
+.reserveBook span[aria-live="polite"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  margin: 5px 0;
+  padding: 7px 14px;
+
+  background: #60483d;
+  color: #f1ded0;
+
+  border-radius: 20px;
+
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* נקודת חיווי לצד הסטטוס */
+.reserveBook span[aria-live="polite"]::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* ספר זמין או שריון מוצלח */
+.reserveBook span.available {
+  background: #294c2d;
+  color: #bce3b9;
+}
+
+/* ספר שאינו זמין או הצטרפות לרשימת המתנה */
+.reserveBook span.unavailable {
+  background: #672e2e;
+  color: #ffc2bc;
+}
+
+/*
+---------------------------------------------------------
+כרטיס פרטי המשתמש והזמנת המקום
+---------------------------------------------------------
+*/
+
+/* עיצוב משותף לכרטיס בחירת הביקור ולכרטיס סיכום ההזמנה */
+.reserveDetails,
+.reserveSummary {
+  min-width: 0;
+  padding: 20px;
+  box-sizing: border-box;
 
   color: #3d2019;
-  background: rgba(248, 235, 225, 0.95);
+  background: #fff8f1;
 
-  border: 2px solid #9e7464;
-  border-radius: 14px;
+  border: 1px solid #c6a18d;
+  border-radius: 16px;
+
+  box-shadow: 0 8px 22px rgba(61, 32, 25, 0.12);
 }
 
-.reserveDetails > h2 {
-  margin-bottom: 20px;
-
-  font-size: 28px;
+/* פריסה אנכית של כרטיס סיכום ההזמנה */
+.reserveSummary {
+  display: flex;
+  flex-direction: column;
 }
 
-.reserveDetails > p {
-  margin-bottom: 12px;
+/* כותרות אזור בחירת הביקור וסיכום ההזמנה */
+.reserveDetails > h2,
+.reserveSummary > h2 {
+  margin: 0 0 16px;
+  padding-bottom: 12px;
 
-  font-size: 18px;
+  color: #4a231f;
+  font-size: 22px;
+  font-weight: 600;
+
+  border-bottom: 2px solid #c99d5e;
 }
+
+/* פרטי המשתמש בכרטיס סיכום ההזמנה */
+.reserveSummary > p {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+
+  margin: 0;
+  padding: 10px 12px;
+
+  background: #f4e8de;
+
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.reserveSummary > h2 + p {
+  border-radius: 10px 10px 0 0;
+}
+
+.reserveSummary > p + p {
+  border-top: 1px solid #dfc7b9;
+  border-radius: 0 0 10px 10px;
+}
+
+.reserveSummary > p strong {
+  color: #4a231f;
+  font-weight: 600;
+}
+
+/*
+---------------------------------------------------------
+בחירת תאריך ביקור בספרייה
+---------------------------------------------------------
+*/
+
+.reserveDateField {
+  margin-top: 24px;
+}
+
+.reserveDateField h3 {
+  margin: 0 0 12px;
+
+  color: #4a231f;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+/* פריסת כרטיסי התאריכים */
+.reserveDateCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+  gap: 10px;
+
+  max-height: 250px;
+  padding: 3px;
+
+  overflow-y: auto;
+}
+
+/* כרטיס תאריך */
+.reserveDateCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  padding: 12px 8px;
+
+  color: #4a231f;
+  background: #f4e8de;
+
+  border: 1px solid #c6a18d;
+  border-radius: 12px;
+
+  font-family: inherit;
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.reserveDateWeekday {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.reserveDateDay {
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.reserveDateMonth {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.reserveDateYear {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* תאריך שנבחר */
+.reserveDateCard.selected {
+  color: #fff5ec;
+  background: #4a231f;
+  border-color: #805044;
+}
+
+/* מעבר העכבר מעל תאריך שלא נבחר */
+.reserveDateCard:hover:not(.selected):not(:disabled) {
+  background: #ead7c5;
+  border-color: #ac8043;
+}
+
+/*
+---------------------------------------------------------
+בחירת הזמנת מקום בתאריך שנבחר
+---------------------------------------------------------
+*/
 
 .reserveField {
   margin-top: 24px;
 }
 
-.reserveField label {
-  display: block;
+/* כותרת ומספר ההזמנות */
+.reserveSlotHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
 
-  margin-bottom: 9px;
-
-  font-size: 17px;
-  font-weight: 800;
+  margin-bottom: 12px;
 }
 
-.reserveReservationSelect {
-  width: 100%;
-  min-height: 52px;
-  padding: 10px 14px;
+.reserveSlotHeader h3 {
+  margin: 0;
 
-  color: #3d2019;
-  background: #fffaf7;
-
-  border: 2px solid #8c5c4b;
-  border-radius: 10px;
-
-  font-size: 16px;
+  color: #4a231f;
+  font-size: 17px;
   font-weight: 600;
 }
 
-.reserveReservationSelect:focus-visible {
-  outline: 3px solid #1f57a8;
-  outline-offset: 3px;
+.reserveSlotCount {
+  color: #805044;
+  font-size: 13px;
+  font-weight: 400;
 }
 
-.reserveReservationSelect:disabled {
+/* טבלת חלונות הזמן והכיסאות */
+.reserveSlotTable {
+  overflow: hidden;
+
+  background: #fffaf7;
+
+  border: 1px solid #c6a18d;
+  border-radius: 12px;
+}
+
+/* כותרות הטבלה */
+.reserveSlotTableHeader {
+  display: grid;
+  grid-template-columns: 145px minmax(0, 1fr);
+  gap: 10px;
+
+  padding: 12px;
+
+  color: #fff5ec;
+  background: #4a231f;
+
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* גוף הטבלה */
+.reserveSlotTableBody {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* הסבר על משמעות הכיסאות החסומים */
+.reserveBlockedLegend {
+  margin: 0 0 10px;
+  color: #a12828;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* שורת חלון זמן */
+.reserveSlotRow {
+  display: grid;
+  grid-template-columns: 145px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+
+  min-height: 52px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+
+  border-bottom: 1px solid #dfc7b9;
+}
+
+.reserveSlotRow:last-child {
+  border-bottom: none;
+}
+
+/* שעות ההזמנה */
+.reserveSlotTime {
+  color: #4a231f;
+
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* קבוצת הכיסאות בחלון הזמן */
+.reserveSlotSeats {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* כפתור בחירת כיסא */
+.reserveSeatButton {
+  min-width: 70px;
+  padding: 8px 10px;
+
+  color: #4a231f;
+  background: #f0dfc6;
+
+  border: 1px solid #c6a18d;
+  border-radius: 8px;
+
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+}
+
+/* כיסא שנבחר */
+.reserveSeatButton.selected {
+  color: #fff5ec;
+  background: #4a231f;
+  border-color: #805044;
+}
+
+/* מעבר העכבר מעל כיסא שלא נבחר */
+.reserveSeatButton:hover:not(.selected):not(:disabled) {
+  background: #dfc39d;
+  border-color: #ac8043;
+}
+
+/* חסימת בחירה בזמן ביצוע פעולה או לאחר הצלחה */
+.reserveDateCard:disabled,
+.reserveSeatButton:disabled {
   cursor: not-allowed;
   opacity: 0.7;
 }
 
+/* ניווט באמצעות המקלדת */
+.reserveDateCard:focus-visible,
+.reserveSeatButton:focus-visible {
+  outline: 2px solid #ac8043;
+  outline-offset: 2px;
+}
+
+/* כיסא המשויך לחלון זמן שבו הספר כבר שוריין */
+.reserveSeatButton.blocked {
+  background: #fce8e8;
+  color: #a12828;
+  border: 1px solid #dca5a5;
+  cursor: not-allowed;
+  opacity: 1;
+  box-shadow: none;
+}
+
+/* כרטיס פרטי ההזמנה שנבחרה */
 .reserveSelectedReservation {
-  margin-top: 22px;
-  padding: 18px;
+  margin-top: 16px;
+  padding: 14px;
 
   background: rgba(255, 250, 247, 0.9);
 
@@ -171,49 +560,119 @@ reserve-book.css
   border-radius: 12px;
 }
 
+/* כותרת פרטי ההזמנה */
 .reserveSelectedReservation h3 {
-  margin-bottom: 14px;
+  margin: 0 0 12px;
 
-  font-size: 20px;
+  color: #4a231f;
+  font-size: 17px;
+  font-weight: 600;
 }
 
+/* פריסת פרטי ההזמנה */
 .reserveSelectedReservation dl {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 
   margin: 0;
 }
 
+/* שורת מידע */
 .reserveSelectedReservation dl > div {
   display: grid;
-  grid-template-columns: minmax(130px, 170px) 1fr;
-  gap: 12px;
+  grid-template-columns: 65px minmax(0, 1fr);
+  gap: 8px;
+
+  font-size: 14px;
 }
 
+/* שם השדה */
 .reserveSelectedReservation dt {
-  font-weight: 800;
+  font-weight: 600;
 }
 
+/* ערך השדה */
 .reserveSelectedReservation dd {
   margin: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
-.reserveNote {
-  margin: 22px 0;
-  padding: 14px;
+/*
+---------------------------------------------------------
+כרטיסי שעות איסוף והחזרת הספר
+---------------------------------------------------------
+*/
 
-  color: #5b391d;
-  background: #f3dfc4;
+.reserveSelectedReservation dl > .reserveTimeCards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 
-  border: 1px solid #c79550;
+  margin-top: 6px;
+  padding-top: 12px;
+
+  border-top: 1px solid #dfc7b9;
+}
+
+/* עיצוב משותף לכרטיסי השעות */
+.reserveTimeCard {
+  padding: 12px 6px;
+
+  border: 1px solid transparent;
   border-radius: 10px;
 
-  font-size: 17px;
+  text-align: center;
+}
+
+/* כותרת כרטיס השעה */
+.reserveTimeCard dt {
+  margin-bottom: 6px;
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* תצוגת השעה */
+.reserveSelectedReservation .reserveTimeCard dd {
+  font-size: 23px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* כרטיס שעת איסוף הספר */
+.reserveCollectionTime {
+  color: #294c2d;
+  background: #e5efe3;
+  border-color: #b7cdb4;
+}
+
+/* כרטיס שעת החזרת הספר */
+.reserveReturnTime {
+  color: #805020;
+  background: #f3e4d0;
+  border-color: #d9bc94;
+}
+
+/* הודעות מידע והנחיות למשתמש */
+.reserveNote {
+  margin: 12px 0;
+  padding: 10px 12px;
+
+  color: #573516;
+  background: #faf0e2;
+
+  border: 1px solid #e4cba8;
+  border-left: 4px solid #c99d5e;
+  border-radius: 8px;
+
+  font-size: 13px;
+  font-weight: 500;
   line-height: 1.5;
 }
 
 .reserveNoReservations {
-  margin-top: 24px;
+  margin: auto 0;
   padding: 22px;
 
   text-align: center;
@@ -227,6 +686,7 @@ reserve-book.css
   margin-bottom: 10px;
 
   font-size: 21px;
+  font-weight: 600;
 }
 
 .reserveNoReservations p {
@@ -237,9 +697,100 @@ reserve-book.css
   line-height: 1.55;
 }
 
+/* כפתור מעבר להזמנת מקום בספרייה */
+.reserveNoReservations .btn {
+  min-height: 46px;
+  padding: 12px 24px;
+
+  color: #fff5ec;
+  background: linear-gradient(135deg, #6e4137, #4a231f);
+
+  border: 1px solid #805044;
+  border-radius: 10px;
+
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.reserveNoReservations .btn:hover {
+  background: linear-gradient(135deg, #805044, #6e4137);
+  border-color: #ac8043;
+}
+
+/*
+---------------------------------------------------------
+כפתורי שריון ספר והצטרפות לרשימת המתנה
+---------------------------------------------------------
+*/
+
 .reserveActions {
   display: flex;
-  justify-content: flex-start;
+  width: 100%;
+  margin-top: auto;
+  padding-top: 14px;
+}
+
+/* עיצוב משותף לכפתורי הפעולה */
+.reserveActions .btn {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 20px;
+
+  border: 1px solid transparent;
+  border-radius: 10px;
+
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+
+  transition:
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+/* כפתור שריון ספר */
+.reserveActions .btn.reserveConfirmButton {
+  color: #ffffff;
+  background: linear-gradient(135deg, #386641, #294c2d);
+  border-color: #386641;
+}
+
+.reserveActions .btn.reserveConfirmButton:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4b8052, #386641);
+  box-shadow: 0 4px 12px rgba(41, 76, 45, 0.25);
+}
+
+/* כפתור הצטרפות לרשימת המתנה */
+.reserveActions .btn.reserveWaitingListButton {
+  color: #211409;
+  background: linear-gradient(135deg, #c99d5e, #ac8043);
+  border-color: #c99d5e;
+}
+
+.reserveActions .btn.reserveWaitingListButton:hover:not(:disabled) {
+  background: linear-gradient(135deg, #dfb77b, #c99d5e);
+  box-shadow: 0 4px 12px rgba(201, 157, 94, 0.3);
+}
+
+/* כפתור שאינו פעיל */
+.reserveActions .btn:disabled {
+  color: #82766c;
+  background: #e2d8cf;
+  border-color: #d8cdc3;
+
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+/* סימון בעת ניווט באמצעות המקלדת */
+.reserveActions .btn:focus-visible {
+  outline: 2px solid #ac8043;
+  outline-offset: 3px;
 }
 
 .reserveEmptyState {
@@ -265,13 +816,26 @@ Tablet
 =========================================================
 */
 
-@media (max-width: 992px) {
+@media (max-width: 1200px) {
   .reserveContent {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr);
   }
 
-  .reserveBook {
-    text-align: center;
+  .reserveSummary {
+    grid-column: 1 / -1;
+  }
+}
+
+/*
+=========================================================
+Small Tablet & Mobile
+=========================================================
+*/
+
+@media (max-width: 768px) {
+  .reserveContent,
+  .reserveContentWithoutReservations {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -283,35 +847,76 @@ Mobile
 
 @media (max-width: 600px) {
   .reservePage {
-    padding: 14px 10px;
+    padding: 10px;
   }
 
   .reserveContainer {
+    padding: 12px;
+  }
+
+  .reserveContent {
+    gap: 14px;
+  }
+
+  .reserveBook,
+  .reserveDetails,
+  .reserveSummary {
     padding: 16px;
   }
 
-  .reserveDetails {
-    padding: 18px 14px;
+  .reserveDetails > h2,
+  .reserveSummary > h2 {
+    font-size: 20px;
   }
 
-  .reserveDetails > h2 {
-    font-size: 23px;
+  /* התאמת רוחב עמודת השעות למסך קטן */
+  .reserveSlotTableHeader,
+  .reserveSlotRow {
+    grid-template-columns: 105px minmax(0, 1fr);
+    gap: 8px;
+    padding: 10px;
   }
 
-  .reserveSelectedReservation dl > div {
-    grid-template-columns: 1fr;
-    gap: 3px;
-
-    padding-bottom: 8px;
-    border-bottom: 1px solid rgba(122, 75, 61, 0.25);
+  .reserveSlotTime {
+    font-size: 13px;
   }
 
-  .reserveReservationSelect {
-    font-size: 15px;
+  /* התאמת כפתורי הכיסאות */
+  .reserveSeatButton {
+    min-width: 60px;
+    padding: 8px;
+    font-size: 12px;
   }
 
-  .reserveActions,
-  .reserveActions button,
+  /* התאמת כרטיסי התאריכים למובייל */
+  .reserveDateCards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    max-height: none;
+  }
+
+  .reserveDateCard {
+    padding: 8px 3px;
+  }
+
+  .reserveDateWeekday,
+  .reserveDateMonth {
+    font-size: 11px;
+  }
+
+  .reserveDateDay {
+    font-size: 22px;
+  }
+
+  .reserveDateYear {
+    font-size: 10px;
+  }
+
+  /* התאמת כרטיסי שעות האיסוף וההחזרה */
+  .reserveSelectedReservation .reserveTimeCard dd {
+    font-size: 20px;
+  }
+
   .reserveNoReservations button,
   .reserveEmptyState button {
     width: 100%;

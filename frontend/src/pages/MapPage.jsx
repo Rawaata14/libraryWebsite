@@ -32,6 +32,10 @@ import {
   ListPlus,
 } from "lucide-react";
 import { useState } from "react";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs from "dayjs";
 
 /*
 ---------------------------------------------------------
@@ -200,14 +204,39 @@ export default function MapPage() {
                   Select Date
                 </label>
 
-                <input
-                  id="reservation-date"
-                  type="date"
-                  value={selectedDate}
-                  min={minimumDate}
-                  className="mapFilterInput"
-                  onChange={(event) => handleDateChange(event.target.value)}
-                />
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <DatePicker
+                    value={selectedDate ? dayjs(selectedDate) : null}
+                    minDate={dayjs(minimumDate)}
+                    shouldDisableDate={(date) => date.day() === 6}
+                    format="DD/MM/YYYY"
+                    onChange={(newDate, context) => {
+                      if (
+                        newDate &&
+                        newDate.isValid() &&
+                        !context.validationError &&
+                        newDate.day() !== 6
+                      ) {
+                        handleDateChange(newDate.format("YYYY-MM-DD"));
+                      }
+                    }}
+                    slotProps={{
+                      textField: {
+                        id: "reservation-date",
+                        className: "mapDatePicker",
+                        fullWidth: true,
+                        size: "small",
+                        helperText: "Library is closed on Saturdays",
+                      },
+                      desktopPaper: {
+                        className: "mapDateCalendar",
+                      },
+                      mobilePaper: {
+                        className: "mapDateCalendar",
+                      },
+                    }}
+                  />
+                </LocalizationProvider>
               </div>
 
               <div className="formGroup">

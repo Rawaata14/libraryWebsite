@@ -96,6 +96,10 @@ map-responsive.css
     padding: 11px 12px;
   }
 
+  .mapDatePicker .MuiOutlinedInput-input {
+    padding: 11px 12px;
+  }
+
   .mapSummaryTitle {
     font-size: 21px;
   }
