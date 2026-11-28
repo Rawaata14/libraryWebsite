@@ -41,6 +41,49 @@ const router = express.Router();
 
 /*
 ---------------------------------------------------------
+createAuthenticatedSession
+
+תפקיד:
+יוצרת Session חדש עבור משתמש לאחר התחברות
+או הרשמה מוצלחת.
+
+פרמטרים:
+- req: בקשת המשתמש.
+- user: אובייקט המשתמש הבטוח.
+
+ערך מוחזר:
+- Promise שמסתיים לאחר שמירת ה-Session.
+- במקרה של שגיאה ה-Promise נדחה.
+
+לוגיקה:
+- מחדשת את מזהה ה-Session.
+- שומרת את פרטי המשתמש ב-Session החדש.
+- שומרת את ה-Session לפני החזרת תשובה ללקוח.
+- מסייעת במניעת מתקפות Session Fixation.
+---------------------------------------------------------
+*/
+function createAuthenticatedSession(req, user) {
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((error) => {
+      if (error) {
+        return reject(error);
+      }
+
+      req.session.user = user;
+
+      req.session.save((saveError) => {
+        if (saveError) {
+          return reject(saveError);
+        }
+
+        return resolve();
+      });
+    });
+  });
+}
+
+/*
+---------------------------------------------------------
 loginLimiter
 
 תפקיד:
@@ -597,7 +640,8 @@ router.post("/reset-password", resetPasswordLimiter, async (req, res) => {
 POST /user/register
 
 תפקיד:
-יוצרת חשבון משתמש חדש ושומרת אותו ב-Session.
+יוצרת חשבון משתמש חדש ומחדשת את ה-Session
+לאחר הרשמה מוצלחת.
 ---------------------------------------------------------
 */
 router.post("/register", registerLimiter, async (req, res) => {
@@ -608,7 +652,8 @@ router.post("/register", registerLimiter, async (req, res) => {
       return res.status(400).json(result);
     }
 
-    req.session.user = result.user;
+    // יצירת Session חדש לאחר הרשמה מוצלחת
+    await createAuthenticatedSession(req, result.user);
 
     return res.status(201).json(result);
   } catch (error) {
@@ -626,7 +671,8 @@ router.post("/register", registerLimiter, async (req, res) => {
 POST /user/login
 
 תפקיד:
-מבצעת התחברות ושומרת את המשתמש הבטוח ב-Session.
+מבצעת התחברות, מחדשת את מזהה ה-Session
+ושומרת בו את פרטי המשתמש הבטוחים.
 ---------------------------------------------------------
 */
 router.post("/login", loginLimiter, async (req, res) => {
@@ -639,7 +685,8 @@ router.post("/login", loginLimiter, async (req, res) => {
       return res.status(401).json(result);
     }
 
-    req.session.user = result.user;
+    // יצירת Session חדש לאחר התחברות מוצלחת
+    await createAuthenticatedSession(req, result.user);
 
     return res.status(200).json(result);
   } catch (error) {
@@ -676,9 +723,18 @@ POST /user/logout
 
 תפקיד:
 מוחקת את ה-Session ואת עוגיית ההתחברות.
+
+לוגיקה:
+- מאפשרת התנתקות גם למשתמש שחשבונו נחסם.
+- מוחקת את ה-Session בצד השרת.
+- מוחקת את עוגיית ההתחברות בצד הלקוח.
+
+הגנות:
+- אינה מעניקה גישה למידע או לפעולות מוגנות.
+- מאפשרת ביטול Session ללא תלות בסטטוס החשבון.
 ---------------------------------------------------------
 */
-router.post("/logout", requireAuth, (req, res) => {
+router.post("/logout", (req, res) => {
   req.session.destroy((error) => {
     if (error) {
       console.error("Error in logout:", error);
