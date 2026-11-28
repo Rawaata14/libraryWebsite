@@ -352,7 +352,8 @@ export default function MapPage() {
             <RoomMap
               key={mapRefreshKey}
               onSeatSelect={(seat) => {
-                if (!hasValidTimeSlot) return;
+                if (!hasValidTimeSlot || !isMapCurrent || isMapConnectionError)
+                  return;
                 handleSeatSelect(seat);
               }}
               onItemsChange={setMapItems}
@@ -361,7 +362,9 @@ export default function MapPage() {
               selectedDate={selectedDate}
               selectedTime={selectedTime}
               onConnectionErrorChange={setIsMapConnectionError}
-              readOnly={!hasValidTimeSlot}
+              readOnly={
+                !hasValidTimeSlot || !isMapCurrent || isMapConnectionError
+              }
             />
           </div>
         </div>

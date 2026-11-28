@@ -27,19 +27,13 @@ ReserveBookPage.jsx
 נדרשת הזמנת מקום תקפה גם לצורך המתנה.
 =========================================================
 */
-
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import Button from "../components/common/Button";
-
 import PageBanner from "../components/layout/PageBanner";
-
 import PageShell from "../components/layout/PageShell";
-
 import { useBookReservation } from "../hooks/useBookReservation";
-
 import { buildApiUrl } from "../config/api";
-
 import {
   formatLocation,
   formatReservationDate,
@@ -77,10 +71,28 @@ ReserveBookPage
 */
 export default function ReserveBookPage() {
   const navigate = useNavigate();
+  /*
+---------------------------------------------------------
+ניהול תאריך לצפייה בהשאלה קיימת
 
+- loanViewDate: תאריך ההשאלה שנבחר לצפייה בלבד.
+- ערך ריק מציין שהמשתמש נמצא במצב בחירת
+  הזמנת מקום תקפה לצורך שריון ספר.
+
+המשתנה מאפשר צפייה בהשאלות קיימות,
+כולל השאלות באיחור, ללא שינוי בהזמנת
+המקום שנבחרה לצורך שריון.
+---------------------------------------------------------
+*/
+  const [loanViewDate, setLoanViewDate] = useState("");
+  // מזהה ההשאלה שנבחרה לצפייה.
+  const [selectedLoanId, setSelectedLoanId] = useState(null);
   const {
     book,
     user,
+    userLoans,
+    isUserLoansLoading,
+    userLoansError,
     eligibleReservations,
     selectedReservation,
     selectedReservationId,
@@ -127,16 +139,102 @@ export default function ReserveBookPage() {
     {},
   );
 
-  /* רשימת תאריכי הביקור הזמינים */
-  const availableDates = Object.keys(reservationsByDate);
+  /*
+---------------------------------------------------------
+קיבוץ השאלות אישיות לפי תאריך
 
-  /* תאריך הביקור של ההזמנה שנבחרה */
-  const selectedDate = selectedReservation
-    ? formatReservationDate(selectedReservation.reservationDate)
-    : availableDates[0] || "";
+תפקיד:
+מקבץ את ההשאלות הפתוחות של המשתמש
+לפי תאריך הביקור שאליו הן משויכות.
+
+לוגיקה:
+- משתמש בנתוני ההשאלות שהתקבלו מהשרת.
+- כולל השאלות פעילות והשאלות באיחור.
+- שומר את פרטי ההשאלות המקוריים.
+- אינו משנה את רשימת הזמנות המקום התקפות.
+---------------------------------------------------------
+*/
+  const loansByDate = userLoans.reduce((groups, loan) => {
+    const date = formatReservationDate(loan.reservationDate);
+
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+
+    groups[date].push(loan);
+
+    return groups;
+  }, {});
+
+  /*
+---------------------------------------------------------
+רשימת תאריכי הביקורים וההשאלות
+
+לוגיקה:
+- משלבת תאריכי הזמנות מקום תקפות
+  ותאריכי השאלות אישיות פתוחות.
+- מסירה תאריכים כפולים.
+- ממיינת את התאריכים בסדר כרונולוגי.
+- כוללת גם תאריכים של השאלות באיחור.
+---------------------------------------------------------
+*/
+  const availableDates = [
+    ...new Set([
+      ...Object.keys(reservationsByDate),
+      ...Object.keys(loansByDate),
+    ]),
+  ].sort((a, b) => {
+    const [dayA, monthA, yearA] = a.split("/").map(Number);
+    const [dayB, monthB, yearB] = b.split("/").map(Number);
+
+    return (
+      new Date(yearA, monthA - 1, dayA) - new Date(yearB, monthB - 1, dayB)
+    );
+  });
+
+  /*
+תאריך הביקור שנבחר לתצוגה.
+
+כאשר נבחר תאריך לצפייה בהשאלה קיימת,
+ניתנת לו עדיפות על פני תאריך הזמנת המקום.
+*/
+  const selectedDate =
+    loanViewDate ||
+    (selectedReservation
+      ? formatReservationDate(selectedReservation.reservationDate)
+      : availableDates[0] || "");
 
   /* הזמנות המקום השייכות לתאריך שנבחר */
   const reservationsForSelectedDate = reservationsByDate[selectedDate] || [];
+
+  /*
+רשימת ההשאלות האישיות בתאריך הנבחר.
+
+משמשת להצגת פרטי השאלות קיימות בלבד,
+ללא שינוי בהזמנות המקום התקפות.
+*/
+  const loansForSelectedDate = loansByDate[selectedDate] || [];
+  // פרטי ההשאלה שנבחרה ומצב צפייה בלבד.
+  const selectedLoan =
+    loansForSelectedDate.find((loan) => loan.loanId === selectedLoanId) || null;
+
+  const isLoanView = Boolean(loanViewDate) || Boolean(selectedLoan);
+  // שילוב השאלות קיימות בטבלת השעות לצורכי תצוגה בלבד.
+  const displayReservations = [
+    ...reservationsForSelectedDate.filter(
+      (reservation) =>
+        !loansForSelectedDate.some(
+          (loan) =>
+            Number(loan.seatReservationId) ===
+            Number(reservation.reservationId),
+        ),
+    ),
+    ...loansForSelectedDate.map((loan) => ({
+      ...loan,
+      reservationId: loan.seatReservationId,
+      isExistingLoan: true,
+    })),
+  ];
 
   /*
 ---------------------------------------------------------
@@ -153,7 +251,7 @@ export default function ReserveBookPage() {
 - ממיין את חלונות הזמן לפי סדר כרונולוגי.
 ---------------------------------------------------------
 */
-  const reservationsByTime = reservationsForSelectedDate.reduce(
+  const reservationsByTime = displayReservations.reduce(
     (groups, reservation) => {
       const startTime = formatReservationTime(reservation.startTime);
 
@@ -183,38 +281,27 @@ export default function ReserveBookPage() {
       a.endTime.localeCompare(b.endTime),
   );
 
-  /*
----------------------------------------------------------
-handleDateChange
-
-תפקיד:
-מטפלת בבחירת תאריך ביקור בספרייה.
-
-פרמטרים:
-date - תאריך הביקור שנבחר.
-
-ערך מוחזר:
-ללא.
-
-לוגיקה:
-- מונעת שינוי תאריך בזמן ביצוע פעולה.
-- מאתרת את הזמנות המקום בתאריך שנבחר.
-- נותנת עדיפות להזמנת כיסא שאינה חסומה.
-- אם כל ההזמנות חסומות, בוחרת את הראשונה
-  לצורך הצגת המידע בלבד.
-- מפעילה בדיקת זמינות בהתאם להזמנה שנבחרה.
----------------------------------------------------------
-*/
+  // בחירת תאריך ביקור או תאריך השאלה קיימת לצפייה.
   const handleDateChange = (date) => {
     if (isLoading || date === selectedDate) {
       return;
     }
 
     const reservations = reservationsByDate[date] || [];
+    const loans = loansByDate[date] || [];
+    setSelectedLoanId(null);
 
+    // תאריך הכולל השאלות בלבד מיועד לצפייה.
     if (reservations.length === 0) {
+      if (loans.length > 0) {
+        setLoanViewDate(date);
+        handleReservationChange("");
+      }
+
       return;
     }
+
+    setLoanViewDate("");
 
     const firstAvailableReservation = reservations.find(
       (reservation) =>
@@ -226,20 +313,10 @@ date - תאריך הביקור שנבחר.
     handleReservationChange(String(reservationToSelect.reservationId));
   };
 
-  /*
----------------------------------------------------------
-pageTitle
-
-תפקיד:
-קובע את כותרת הדף בהתאם לתוצאות בדיקת
-זמינות הספר בחלון הזמן שנבחר.
-
-כאשר הזמינות טרם אומתה, מוצגת כותרת כללית
-שאינה קובעת אם הספר זמין או אינו זמין.
----------------------------------------------------------
-*/
-  const pageTitle =
-    completedAction === "reservation"
+  // כותרת הדף בהתאם למצב הצפייה או השריון.
+  const pageTitle = isLoanView
+    ? "My Book Reservation"
+    : completedAction === "reservation"
       ? "Book Reservation"
       : completedAction === "waitingList"
         ? "Book Waiting List"
@@ -330,7 +407,7 @@ pageTitle
 
               <div
                 className={`reserveContent ${
-                  eligibleReservations.length === 0
+                  availableDates.length === 0
                     ? "reserveContentWithoutReservations"
                     : ""
                 }`}
@@ -363,37 +440,47 @@ pageTitle
                     <strong>Status:</strong>{" "}
                     <span
                       className={
-                        completedAction === "reservation"
-                          ? "available"
-                          : completedAction === "waitingList"
+                        isLoanView
+                          ? selectedLoan?.status === "overdue"
                             ? "unavailable"
-                            : !isAvailabilityReady
-                              ? ""
-                              : isSelectedReservationBlocked
-                                ? "unavailable"
-                                : isBookAvailable
-                                  ? "available"
-                                  : "unavailable"
+                            : ""
+                          : completedAction === "reservation"
+                            ? "available"
+                            : completedAction === "waitingList"
+                              ? "unavailable"
+                              : !isAvailabilityReady
+                                ? ""
+                                : isSelectedReservationBlocked
+                                  ? "unavailable"
+                                  : isBookAvailable
+                                    ? "available"
+                                    : "unavailable"
                       }
                       aria-live="polite"
                     >
-                      {completedAction === "reservation"
-                        ? "Reserved Successfully"
-                        : completedAction === "waitingList"
-                          ? "On Waiting List"
-                          : isAvailabilityLoading
-                            ? "Checking Availability..."
-                            : availabilityError
-                              ? "Availability Check Failed"
-                              : !selectedReservationId
-                                ? "Seat Reservation Required"
-                                : !isAvailabilityReady
-                                  ? "Availability Not Verified"
-                                  : isSelectedReservationBlocked
-                                    ? "Already Reserved"
-                                    : isBookAvailable
-                                      ? "Available"
-                                      : "Waiting List Available"}
+                      {isLoanView
+                        ? selectedLoan
+                          ? selectedLoan.status === "overdue"
+                            ? "Overdue"
+                            : "Already Reserved"
+                          : "Select an Existing Reservation"
+                        : completedAction === "reservation"
+                          ? "Reserved Successfully"
+                          : completedAction === "waitingList"
+                            ? "On Waiting List"
+                            : isAvailabilityLoading
+                              ? "Checking Availability..."
+                              : availabilityError
+                                ? "Availability Check Failed"
+                                : !selectedReservationId
+                                  ? "Seat Reservation Required"
+                                  : !isAvailabilityReady
+                                    ? "Availability Not Verified"
+                                    : isSelectedReservationBlocked
+                                      ? "Already Reserved"
+                                      : isBookAvailable
+                                        ? "Available"
+                                        : "Waiting List Available"}
                     </span>
                   </p>
                 </section>
@@ -406,7 +493,7 @@ pageTitle
                     Select Your Library Visit
                   </h2>
 
-                  {eligibleReservations.length === 0 ? (
+                  {availableDates.length === 0 ? (
                     <div className="reserveNoReservations">
                       <h3>A Seat Reservation Is Required</h3>
 
@@ -434,6 +521,11 @@ pageTitle
                           {availableDates.map((date) => {
                             const [day, month, year] = date.split("/");
 
+                            // בדיקה האם קיימת השאלה באיחור בתאריך זה.
+                            const hasOverdueLoan = (
+                              loansByDate[date] || []
+                            ).some((loan) => loan.status === "overdue");
+
                             const visitDate = new Date(
                               Number(year),
                               Number(month) - 1,
@@ -446,7 +538,7 @@ pageTitle
                                 type="button"
                                 className={`reserveDateCard ${
                                   selectedDate === date ? "selected" : ""
-                                }`}
+                                } ${hasOverdueLoan ? "overdue" : ""}`}
                                 onClick={() => handleDateChange(date)}
                                 disabled={isLoading}
                                 aria-pressed={selectedDate === date}
@@ -467,6 +559,11 @@ pageTitle
                                 </span>
 
                                 <span className="reserveDateYear">{year}</span>
+                                {hasOverdueLoan && (
+                                  <span className="reserveDateOverdueLabel">
+                                    Overdue
+                                  </span>
+                                )}
                               </button>
                             );
                           })}
@@ -483,21 +580,24 @@ pageTitle
                               ? "time slot"
                               : "time slots"}
                             {" · "}
-                            {reservationsForSelectedDate.length}{" "}
-                            {reservationsForSelectedDate.length === 1
+                            {displayReservations.length}{" "}
+                            {displayReservations.length === 1
                               ? "reservation"
                               : "reservations"}
                           </span>
                         </div>
 
-                        {reservationsForSelectedDate.some((reservation) =>
-                          blockedReservationIds.includes(
-                            Number(reservation.reservationId),
-                          ),
+                        {displayReservations.some(
+                          (reservation) =>
+                            reservation.isExistingLoan ||
+                            blockedReservationIds.includes(
+                              Number(reservation.reservationId),
+                            ),
                         ) && (
                           <p className="reserveBlockedLegend">
-                            Red seats indicate time slots for which you have
-                            already reserved this book.
+                            Red seats indicate existing book reservations or
+                            overlapping time slots. Select an existing book
+                            reservation to view its details.
                           </p>
                         )}
 
@@ -527,35 +627,55 @@ pageTitle
                                   aria-label={`Seats from ${slot.startTime} to ${slot.endTime}`}
                                 >
                                   {slot.reservations.map((reservation) => {
-                                    const isSelected =
-                                      String(selectedReservationId) ===
-                                      String(reservation.reservationId);
+                                    const isExistingLoan =
+                                      reservation.isExistingLoan === true;
 
-                                    /*
-                                    בדיקה האם הזמנת הכיסא חסומה לשריון הספר
-                                    עקב שריון קיים בחלון זמן חופף.
-                                    */
+                                    const isSelected = isExistingLoan
+                                      ? selectedLoanId === reservation.loanId
+                                      : selectedLoanId === null &&
+                                        String(selectedReservationId) ===
+                                          String(reservation.reservationId);
+
+                                    // השאלה קיימת חסומה לשריון נוסף.
                                     const isBlocked =
+                                      isExistingLoan ||
                                       blockedReservationIds.includes(
                                         Number(reservation.reservationId),
                                       );
 
                                     return (
                                       <button
-                                        key={reservation.reservationId}
+                                        key={
+                                          isExistingLoan
+                                            ? `loan-${reservation.loanId}`
+                                            : `seat-${reservation.reservationId}`
+                                        }
                                         type="button"
                                         className={`reserveSeatButton ${
                                           isSelected ? "selected" : ""
-                                        } ${isBlocked ? "blocked" : ""}`}
-                                        onClick={() =>
+                                        } ${isBlocked ? "blocked" : ""} ${
+                                          isExistingLoan ? "existingLoan" : ""
+                                        }`}
+                                        onClick={() => {
+                                          if (isExistingLoan) {
+                                            setSelectedLoanId(
+                                              reservation.loanId,
+                                            );
+                                            setLoanViewDate(selectedDate);
+                                            handleReservationChange("");
+                                            return;
+                                          }
+
+                                          setSelectedLoanId(null);
+                                          setLoanViewDate("");
                                           handleReservationChange(
                                             String(reservation.reservationId),
-                                          )
-                                        }
+                                          );
+                                        }}
                                         disabled={
                                           isLoading ||
                                           isAvailabilityLoading ||
-                                          isBlocked
+                                          (isBlocked && !isExistingLoan)
                                         }
                                         aria-pressed={isSelected}
                                         aria-label={
@@ -564,9 +684,11 @@ pageTitle
                                             : `Select seat ${reservation.seatId}, ${slot.startTime} to ${slot.endTime}`
                                         }
                                         title={
-                                          isBlocked
-                                            ? "You have already reserved this book for an overlapping time slot."
-                                            : "Select this seat reservation"
+                                          isExistingLoan
+                                            ? "View existing book reservation"
+                                            : isBlocked
+                                              ? "You have already reserved this book for an overlapping time slot."
+                                              : "Select this seat reservation"
                                         }
                                       >
                                         Seat {reservation.seatId}
@@ -584,7 +706,7 @@ pageTitle
                 </section>
 
                 {/* אזור סיכום ההזמנה וביצוע הפעולה */}
-                {eligibleReservations.length > 0 && (
+                {availableDates.length > 0 && (
                   <div className="reserveSummary">
                     <h2>Reservation Summary</h2>
 
@@ -611,7 +733,67 @@ pageTitle
                         </div>
                       )}
 
-                    {selectedReservation && (
+                    {/* הצגת פרטי השאלה קיימת לצפייה בלבד */}
+                    {selectedLoan && (
+                      <div className="reserveSelectedReservation">
+                        <h3>Existing Book Reservation</h3>
+
+                        <dl>
+                          <div>
+                            <dt>Seat</dt>
+                            <dd>{selectedLoan.seatId}</dd>
+                          </div>
+                          <div>
+                            <dt>Area</dt>
+                            <dd>{formatLocation(selectedLoan.location)}</dd>
+                          </div>
+                          <div>
+                            <dt>Date</dt>
+                            <dd>
+                              {formatReservationDate(
+                                selectedLoan.reservationDate,
+                              )}
+                            </dd>
+                          </div>
+
+                          <div>
+                            <dt>Status</dt>
+                            <dd>
+                              {selectedLoan.status === "overdue"
+                                ? "Overdue"
+                                : "Active"}
+                            </dd>
+                          </div>
+
+                          <div>
+                            <dt>Due Date</dt>
+                            <dd>
+                              {formatReservationDate(selectedLoan.dueDate)}
+                            </dd>
+                          </div>
+
+                          <div className="reserveTimeCards">
+                            <div className="reserveTimeCard reserveCollectionTime">
+                              <dt>Book Collection</dt>
+                              <dd>
+                                {formatReservationTime(selectedLoan.startTime)}
+                              </dd>
+                            </div>
+
+                            <div className="reserveTimeCard reserveReturnTime">
+                              <dt>Book Return</dt>
+                              <dd>
+                                {formatReservationTime(
+                                  selectedLoan.dueDate.split(/[T ]/)[1],
+                                )}
+                              </dd>
+                            </div>
+                          </div>
+                        </dl>
+                      </div>
+                    )}
+
+                    {!isLoanView && selectedReservation && (
                       <div className="reserveSelectedReservation">
                         <h3>Selected Reservation</h3>
 
@@ -686,31 +868,40 @@ pageTitle
                             ? "reserveConfirmButton"
                             : "reserveWaitingListButton"
                         }
-                        onClick={handleReserveBook}
+                        onClick={() => {
+                          if (!isLoanView) {
+                            handleReserveBook();
+                          }
+                        }}
                         disabled={
+                          isLoanView ||
                           !isAvailabilityReady ||
                           isLoading ||
                           isSelectedReservationBlocked ||
                           Boolean(successMessage)
                         }
                       >
-                        {isAvailabilityLoading
-                          ? "Checking Availability..."
-                          : !isAvailabilityReady
-                            ? "Availability Not Verified"
-                            : isLoading
-                              ? isBookAvailable
-                                ? "Reserving..."
-                                : "Joining..."
-                              : completedAction === "reservation"
-                                ? "Book Reserved"
-                                : completedAction === "waitingList"
-                                  ? "Waiting List Joined"
-                                  : isSelectedReservationBlocked
-                                    ? "Already Reserved"
-                                    : isBookAvailable
-                                      ? "Reserve Book"
-                                      : "Join Waiting List"}
+                        {isLoanView
+                          ? selectedLoan
+                            ? "Already Reserved"
+                            : "Select an Existing Reservation"
+                          : isAvailabilityLoading
+                            ? "Checking Availability..."
+                            : !isAvailabilityReady
+                              ? "Availability Not Verified"
+                              : isLoading
+                                ? isBookAvailable
+                                  ? "Reserving..."
+                                  : "Joining..."
+                                : completedAction === "reservation"
+                                  ? "Book Reserved"
+                                  : completedAction === "waitingList"
+                                    ? "Waiting List Joined"
+                                    : isSelectedReservationBlocked
+                                      ? "Already Reserved"
+                                      : isBookAvailable
+                                        ? "Reserve Book"
+                                        : "Join Waiting List"}
                       </Button>
                     </div>
                   </div>

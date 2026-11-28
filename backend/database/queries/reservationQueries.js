@@ -22,102 +22,19 @@ const {
 } = require("../../utils/emailService");
 const {
   isValidDate,
-  isValidTime,
   normalizeDate,
   normalizeTime,
   getLibraryDateTime,
 } = require("../../utils/formatters");
 const {
-  getOpeningHours,
   getReservationTimeSlots,
-  isValidReservationSlot,
+  validateReservationTime,
 } = require("../../utils/libraryHours");
 const {
   createSeatOfferInTransaction,
   notifySeatOffer,
 } = require("../../services/seatWaitingListService");
 const { completeSeatOffer } = require("./waitingListMaintenanceQueries");
-
-/*
----------------------------------------------------------
-validateReservationTime
-
-תפקיד:
-מאמתת תאריך, שעות ומונעת הזמנה בעבר.
----------------------------------------------------------
-*/
-function validateReservationTime(reservationDate, startTime, endTime) {
-  if (
-    !isValidDate(reservationDate) ||
-    !isValidTime(startTime) ||
-    !isValidTime(endTime)
-  ) {
-    return {
-      success: false,
-      invalidReservation: true,
-      message: "Invalid reservation date or time",
-    };
-  }
-
-  const normalizedStartTime = normalizeTime(startTime);
-  const normalizedEndTime = normalizeTime(endTime);
-
-  if (normalizedStartTime >= normalizedEndTime) {
-    return {
-      success: false,
-      invalidReservation: true,
-      message: "Start time must be earlier than end time",
-    };
-  }
-
-  // בדיקה שהספרייה פתוחה בתאריך המבוקש
-  const openingHours = getOpeningHours(reservationDate);
-
-  if (!openingHours) {
-    return {
-      success: false,
-      invalidReservation: true,
-      message: "The library is closed on the selected date",
-    };
-  }
-
-  // בדיקה שההזמנה תואמת לחלון זמן מורשה
-  const isAllowedSlot = isValidReservationSlot(
-    reservationDate,
-    normalizedStartTime,
-    normalizedEndTime,
-  );
-
-  if (!isAllowedSlot) {
-    return {
-      success: false,
-      invalidReservation: true,
-      message:
-        `Invalid reservation time slot. Library opening hours: ` +
-        `${openingHours.open} - ${openingHours.close}`,
-    };
-  }
-
-  // מניעת הזמנות בעבר
-  const libraryNow = getLibraryDateTime();
-
-  const reservationStartKey = `${reservationDate}T${normalizedStartTime}`;
-
-  if (reservationStartKey <= libraryNow.dateTimeKey) {
-    return {
-      success: false,
-      invalidReservation: true,
-      message: "The reservation must start later than the current time",
-    };
-  }
-
-  return {
-    success: true,
-    reservationDate,
-    startTime: normalizedStartTime,
-    endTime: normalizedEndTime,
-  };
-}
 
 /*
 ---------------------------------------------------------
@@ -232,10 +149,9 @@ async function reserveSeat(reservationDetails) {
         throw error;
       }
 
-      if (seats[0].type === "table-4" || seats[0].type === "table-8") {
-        const error = new Error(
-          "A table cannot be reserved as an individual seat",
-        );
+      // אימות סוג מקום הישיבה המותר להזמנה רגילה
+      if (!["seat", "single-seat", "computer-seat"].includes(seats[0].type)) {
+        const error = new Error("Invalid seat type for individual reservation");
         error.conflict = true;
         throw error;
       }
@@ -476,7 +392,7 @@ async function reserveGroupSeats(reservationDetails) {
       }
 
       const [tables] = await connection.query(
-        `SELECT seatId, type
+        `SELECT seatId, type, status
           FROM seat
           WHERE seatId = ?
           FOR UPDATE`,
@@ -488,6 +404,11 @@ async function reserveGroupSeats(reservationDetails) {
         !["table-4", "table-8"].includes(tables[0].type)
       ) {
         const error = new Error("Invalid table");
+        error.conflict = true;
+        throw error;
+      }
+      if (String(tables[0].status).toLowerCase() === "blocked") {
+        const error = new Error("This table is blocked");
         error.conflict = true;
         throw error;
       }
@@ -809,29 +730,23 @@ getReservationsByUser
 async function getReservationsByUser(userId) {
   try {
     const sql = `
-      SELECT
-        reservationId,
-        userId,
-        seatId,
-        DATE_FORMAT(
-          reservationDate,
-          '%Y-%m-%d'
-        ) AS reservationDate,
-        TIME_FORMAT(
-          startTime,
-          '%H:%i:%s'
-        ) AS startTime,
-        TIME_FORMAT(
-          endTime,
-          '%H:%i:%s'
-        ) AS endTime,
-        status
-      FROM seat_reservation
-      WHERE userId = ?
-      ORDER BY
-        reservationDate DESC,
-        startTime ASC
-    `;
+  SELECT
+    sr.reservationId,
+    sr.userId,
+    sr.seatId,
+    DATE_FORMAT(sr.reservationDate, '%Y-%m-%d') AS reservationDate,
+    TIME_FORMAT(sr.startTime, '%H:%i:%s') AS startTime,
+    TIME_FORMAT(sr.endTime, '%H:%i:%s') AS endTime,
+    sr.status,
+    s.location
+  FROM seat_reservation AS sr
+  LEFT JOIN seat AS s
+    ON sr.seatId = s.seatId
+  WHERE sr.userId = ?
+  ORDER BY
+    sr.reservationDate DESC,
+    sr.startTime ASC
+`;
 
     const reservations = await doQuery(sql, [userId]);
 

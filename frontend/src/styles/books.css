@@ -137,6 +137,28 @@ books.css
   line-height: 1.4;
 }
 
+/* Book metadata */
+.bookMetadata {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  color: #dfc7b9;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.bookMetadata p {
+  margin: 0;
+}
+
+.bookMetadata strong {
+  color: #fff5ec;
+  font-weight: 600;
+}
+
 /* Action buttons */
 .bookCardActions {
   display: flex;

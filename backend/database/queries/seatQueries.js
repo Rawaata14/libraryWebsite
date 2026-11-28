@@ -98,10 +98,21 @@ async function getMapSeatsByTimeSlot(
               AND wl.offerExpiresAt > ?
               AND (? IS NULL OR wl.userId <> ?)
           ) THEN 'held'
+            ELSE 'available'
+            END AS status,
 
-          ELSE 'available'
-        END AS status
-      FROM seat s
+            EXISTS (
+              SELECT 1
+              FROM seat_reservation sr
+              WHERE sr.seatId = s.seatId
+                AND sr.userId = ?
+                AND sr.reservationDate = ?
+                AND LOWER(sr.status) NOT IN ('cancelled', 'canceled')
+                AND sr.startTime < ?
+                AND sr.endTime > ?
+            ) AS isReservedByCurrentUser
+
+            FROM seat s
     `;
 
     const mapSeats = await doQuery(getMapSQL, [
@@ -114,9 +125,19 @@ async function getMapSeatsByTimeSlot(
       getLibraryDateTime().sqlDateTime,
       userId,
       userId,
+      userId,
+      reservationDate,
+      endTime,
+      startTime,
     ]);
 
-    return { success: true, map: mapSeats };
+    return {
+      success: true,
+      map: mapSeats.map((seat) => ({
+        ...seat,
+        isReservedByCurrentUser: Number(seat.isReservedByCurrentUser) === 1,
+      })),
+    };
   } catch (error) {
     console.error("Error fetching map seats by time slot:", error);
     return { success: false, message: "Failed to fetch map seats" };

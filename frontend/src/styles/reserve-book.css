@@ -329,6 +329,8 @@ reserve-book.css
   align-items: center;
   gap: 4px;
 
+  min-height: 145px;
+  box-sizing: border-box;
   padding: 12px 8px;
 
   color: #4a231f;
@@ -363,6 +365,29 @@ reserve-book.css
 .reserveDateYear {
   font-size: 12px;
   font-weight: 400;
+}
+
+/* כרטיס תאריך הכולל השאלה באיחור */
+.reserveDateCard.overdue:not(.selected) {
+  color: #a12828;
+  background: #fce8e8;
+  border-color: #dca5a5;
+}
+
+.reserveDateCard.overdue:hover:not(.selected):not(:disabled) {
+  background: #f8d8d4;
+  border-color: #a84238;
+}
+
+/* תווית השאלה באיחור */
+.reserveDateOverdueLabel {
+  margin-top: auto;
+  padding: 3px 8px;
+  color: #a12828;
+  background: #f8d8d4;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 /* תאריך שנבחר */
@@ -547,6 +572,21 @@ reserve-book.css
   cursor: not-allowed;
   opacity: 1;
   box-shadow: none;
+}
+
+.reserveSeatButton.existingLoan:not(:disabled) {
+  cursor: pointer;
+}
+
+.reserveSeatButton.existingLoan:hover:not(.selected):not(:disabled) {
+  background: #f8d8d4;
+  border-color: #a84238;
+}
+
+.reserveSeatButton.existingLoan.selected {
+  background: #a12828;
+  color: #fff5ec;
+  border-color: #a12828;
 }
 
 /* כרטיס פרטי ההזמנה שנבחרה */
@@ -896,6 +936,7 @@ Mobile
   }
 
   .reserveDateCard {
+    min-height: 125px;
     padding: 8px 3px;
   }
 

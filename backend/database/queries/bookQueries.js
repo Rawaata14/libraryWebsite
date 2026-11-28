@@ -193,8 +193,25 @@ async function getAllBooks(userId = null) {
         ) > 0 AS userHasActiveLoan`
             : `, 0 AS userHasActiveLoan`
         }
-      FROM book b 
-      LEFT JOIN loan l ON b.bookId = l.bookId AND l.status IN ('active', 'overdue')
+      FROM book b
+      LEFT JOIN loan l
+          ON b.bookId = l.bookId
+          AND (
+              l.status = 'overdue'
+              OR (
+                  l.status = 'active'
+                  AND (
+                      l.dueDate <= NOW()
+                      OR EXISTS (
+                          SELECT 1
+                          FROM seat_reservation sr
+                          WHERE sr.reservationId = l.seatReservationId
+                          AND TIMESTAMP(sr.reservationDate, sr.startTime) <= NOW()
+                      )
+                      OR l.seatReservationId IS NULL
+                  )
+              )
+          )
       GROUP BY b.bookId
       ORDER BY b.category ASC, b.title ASC
     `;
@@ -265,9 +282,26 @@ async function getBookById(bookId, userId = null) {
       SELECT 
         b.*,
         (b.total_quantity - COUNT(l.bookId)) AS available_quantity
-      FROM book b 
-      LEFT JOIN loan l ON b.bookId = l.bookId AND l.status IN ('active', 'overdue')
-      WHERE b.bookId = ?
+      FROM book b
+LEFT JOIN loan l
+    ON b.bookId = l.bookId
+    AND (
+        l.status = 'overdue'
+        OR (
+            l.status = 'active'
+            AND (
+                l.dueDate <= NOW()
+                OR EXISTS (
+                    SELECT 1
+                    FROM seat_reservation sr
+                    WHERE sr.reservationId = l.seatReservationId
+                    AND TIMESTAMP(sr.reservationDate, sr.startTime) <= NOW()
+                )
+                OR l.seatReservationId IS NULL
+            )
+        )
+    )
+WHERE b.bookId = ?
       GROUP BY b.bookId
       LIMIT 1
     `;

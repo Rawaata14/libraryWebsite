@@ -472,6 +472,80 @@ async function getBookAvailabilityByReservation(
 
 /*
 ---------------------------------------------------------
+getUserLoansByBook
+
+תפקיד:
+מחזירה את פרטי ההשאלות הפתוחות של המשתמש
+עבור ספר מסוים, לצורך הצגת סיכום ההשאלה
+ומועד החזרת הספר.
+
+פרמטרים:
+- userId: מזהה המשתמש המחובר.
+- bookId: מזהה הספר.
+
+ערך מוחזר:
+- מערך המכיל את פרטי ההשאלות הפתוחות.
+- מערך ריק כאשר אין השאלות מתאימות.
+
+לוגיקה:
+- שולפת השאלות לפי מזהה המשתמש ומזהה הספר.
+- כוללת השאלות פעילות והשאלות באיחור.
+- שולפת את פרטי הספר והזמנת הכיסא.
+- מציגה את מועד ההחזרה השמור במסד הנתונים.
+- מזהה איחור גם אם סטטוס ההשאלה טרם עודכן.
+- ממיינת את ההשאלות לפי מועד ההחזרה.
+
+הגנות:
+- שליפת השאלות של המשתמש המבוקש בלבד.
+- שימוש בפרמטרים למניעת SQL Injection.
+- אינה משנה נתונים במסד הנתונים.
+---------------------------------------------------------
+*/
+async function getUserLoansByBook(userId, bookId) {
+  const sql = `
+    SELECT
+      l.loanId,
+      l.bookId,
+      l.seatReservationId,
+      b.title AS bookTitle,
+      b.author,
+      DATE_FORMAT(l.loanDate, '%Y-%m-%d %H:%i')
+        AS loanDate,
+      DATE_FORMAT(l.dueDate, '%Y-%m-%d %H:%i')
+        AS dueDate,
+      DATE_FORMAT(sr.reservationDate, '%Y-%m-%d')
+        AS reservationDate,
+      TIME_FORMAT(sr.startTime, '%H:%i')
+        AS startTime,
+      TIME_FORMAT(sr.endTime, '%H:%i')
+        AS endTime,
+      sr.seatId AS seatId,
+      s.location,
+      CASE
+        WHEN l.status = 'active'
+          AND l.dueDate <= NOW()
+        THEN 'overdue'
+        ELSE l.status
+      END AS status
+    FROM loan l
+    INNER JOIN book b
+      ON l.bookId = b.bookId
+    LEFT JOIN seat_reservation sr
+      ON l.seatReservationId = sr.reservationId
+      AND l.userId = sr.userId
+    LEFT JOIN seat s
+      ON sr.seatId = s.seatId
+    WHERE l.userId = ?
+      AND l.bookId = ?
+      AND l.status IN ('active', 'overdue')
+    ORDER BY l.dueDate ASC, l.loanId ASC
+  `;
+
+  return await doQuery(sql, [userId, bookId]);
+}
+
+/*
+---------------------------------------------------------
 getLoansCountByStatus
 
 תפקיד:
@@ -694,6 +768,7 @@ async function getAllLoansListForLibrarian(
 module.exports = {
   reserveBook,
   getBookAvailabilityByReservation,
+  getUserLoansByBook,
   getLoansCountByStatus,
   returnBookByLibrarian,
   getTodaysLoansListForLibrarian,

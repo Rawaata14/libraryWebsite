@@ -24,6 +24,7 @@ const notificationQueries = require("../database/queries/notificationQueries");
 const waitingListService = require("../services/waitingListService");
 const { sendLibraryEmail } = require("../utils/mailer");
 const seatQueries = require("../database/queries/seatQueries");
+const { requireAuth } = require("../middleware/auth");
 const router = express.Router();
 
 /*
@@ -41,7 +42,7 @@ POST /reservations/reserve-seat
 הזמנת המקום מתבצעת בדרך הרגילה.
 ---------------------------------------------------------
 */
-router.post("/reserve-seat", async (req, res) => {
+router.post("/reserve-seat", requireAuth, async (req, res) => {
   try {
     if (!req.session?.user) {
       return res.status(401).json({
@@ -50,6 +51,11 @@ router.post("/reserve-seat", async (req, res) => {
     }
 
     const { seatId, date, startTime, endTime } = req.body;
+    if (!Number.isSafeInteger(seatId) || seatId <= 0) {
+      return res.status(400).json({
+        message: "Invalid seat ID",
+      });
+    }
 
     if (!seatId || !date || !startTime || !endTime) {
       return res.status(400).json({
@@ -669,7 +675,7 @@ POST /reservations/reserve-table
 הזמנה קבוצתית לשולחן עם הגנת "הכול או כלום" (All-or-Nothing).
 ---------------------------------------------------------
 */
-router.post("/reserve-table", async (req, res) => {
+router.post("/reserve-table", requireAuth, async (req, res) => {
   try {
     if (!req.session?.user) {
       return res.status(401).json({
@@ -678,6 +684,11 @@ router.post("/reserve-table", async (req, res) => {
     }
 
     const { tableId, groupSize, date, startTime, endTime } = req.body;
+    if (!Number.isSafeInteger(tableId) || tableId <= 0) {
+      return res.status(400).json({
+        message: "Invalid table ID",
+      });
+    }
 
     if (!tableId || !groupSize || !date || !startTime || !endTime) {
       return res.status(400).json({

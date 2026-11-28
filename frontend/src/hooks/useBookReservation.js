@@ -25,6 +25,9 @@ Custom Hook המרכז את הלוגיקה של דף שריון הספר
 - שריון ספר זמין.
 - רענון זמינות העותקים ורשימת החסימות לאחר שריון מוצלח.
 - הצטרפות לרשימת המתנה לספר שאינו זמין.
+- טעינת פרטי ההשאלות האישיות ומועדי החזרת הספר.
+- ניהול מצב טעינה ושגיאות בשליפת ההשאלות.
+- שמירה נפרדת של השאלות פתוחות והזמנות מקום תקפות.
 =========================================================
 */
 
@@ -38,6 +41,7 @@ import {
   getBookById,
   reserveBook,
   getBookAvailabilityByReservation,
+  getUserLoansByBook,
 } from "../services/bookService";
 
 import { getReservations } from "../services/reservationService";
@@ -96,6 +100,23 @@ export function useBookReservation() {
   const [book, setBook] = useState(location.state || null);
 
   const [eligibleReservations, setEligibleReservations] = useState([]);
+  /*
+---------------------------------------------------------
+ניהול פרטי ההשאלות האישיות
+
+- userLoans: רשימת ההשאלות הפתוחות של המשתמש
+  עבור הספר הנוכחי, כולל השאלות באיחור.
+- isUserLoansLoading: מציין האם מתבצעת טעינת השאלות.
+- userLoansError: שומר הודעת שגיאה בעת כשל בטעינה.
+
+ההשאלות נשמרות בנפרד מהזמנות המקום התקפות,
+כדי לאפשר צפייה גם בהשאלות שמועד החזרתן חלף,
+מבלי לאפשר שריון ספר עבור ביקור שכבר הסתיים.
+---------------------------------------------------------
+*/
+  const [userLoans, setUserLoans] = useState([]);
+  const [isUserLoansLoading, setIsUserLoansLoading] = useState(false);
+  const [userLoansError, setUserLoansError] = useState("");
 
   const [selectedReservationId, setSelectedReservationId] = useState("");
 
@@ -254,6 +275,97 @@ null - טרם הושלמה פעולה.
 ---------------------------------------------------------
 */
   const bookId = book?.bookId;
+
+  /*
+---------------------------------------------------------
+טעינת ההשאלות האישיות של המשתמש
+
+תפקיד:
+שולפת את פרטי ההשאלות הפתוחות עבור הספר
+הנוכחי, כולל השאלות פעילות והשאלות באיחור.
+
+לוגיקה:
+- מאפסת את נתוני ההשאלות הקודמים.
+- טוענת השאלות בעת החלפת ספר או משתמש.
+- מרעננת את ההשאלות לאחר שריון מוצלח.
+- מנהלת מצבי טעינה ושגיאות.
+- מונעת מתגובה ישנה לעדכן את הנתונים
+  לאחר החלפת ספר או משתמש.
+- אינה משנה את רשימת הזמנות המקום התקפות.
+---------------------------------------------------------
+*/
+  useEffect(() => {
+    let isCurrentRequest = true;
+
+    setUserLoans([]);
+    setUserLoansError("");
+
+    if (!bookId || !user?.userId) {
+      setIsUserLoansLoading(false);
+      return;
+    }
+
+    /*
+  -------------------------------------------------------
+  loadUserLoans
+
+  תפקיד:
+  שולחת בקשה לשרת לקבלת ההשאלות האישיות
+  של המשתמש עבור הספר הנוכחי.
+
+  פרמטרים:
+  - ללא פרמטרים ישירים.
+  - משתמשת במזהה הספר הנוכחי.
+
+  ערך מוחזר:
+  - Promise ללא ערך מוחזר מפורש.
+
+  לוגיקה:
+  - שולחת בקשת שליפה לשרת.
+  - בודקת את תקינות התשובה.
+  - שומרת את רשימת ההשאלות.
+  - מטפלת בשגיאות ובמצב הטעינה.
+  -------------------------------------------------------
+  */
+    const loadUserLoans = async () => {
+      try {
+        setIsUserLoansLoading(true);
+
+        const result = await getUserLoansByBook(bookId);
+
+        if (!isCurrentRequest) {
+          return;
+        }
+
+        if (!result.success || !Array.isArray(result.data)) {
+          throw new Error(
+            result.message || "Failed to load your book reservations.",
+          );
+        }
+
+        setUserLoans(result.data);
+      } catch (loadError) {
+        if (isCurrentRequest) {
+          setUserLoansError(
+            getRequestErrorMessage(
+              loadError,
+              "Failed to load your book reservations.",
+            ),
+          );
+        }
+      } finally {
+        if (isCurrentRequest) {
+          setIsUserLoansLoading(false);
+        }
+      }
+    };
+
+    loadUserLoans();
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [bookId, user?.userId, availabilityRefreshKey]);
 
   /*
 ---------------------------------------------------------
@@ -595,6 +707,9 @@ handleReservationChange
   return {
     book,
     user,
+    userLoans,
+    isUserLoansLoading,
+    userLoansError,
     eligibleReservations,
     selectedReservation,
     selectedReservationId,

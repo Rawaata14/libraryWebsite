@@ -69,10 +69,11 @@ BookCard
 להרשאות המשתמש ולזמינות הספר.
 
 עבור משתמש רגיל:
-- ספר זמין מציג Reserve Book.
-- ספר שאינו זמין מציג Check Future Availability.
+- ספר עם השאלה אישית פתוחה מציג View My Reservations.
+- ספר זמין ללא השאלה אישית מציג Reserve Book.
+- ספר שאינו זמין ללא השאלה אישית מציג Check Future Availability.
 
-שני הכפתורים מעבירים לדף שריון הספר,
+כל הכפתורים מעבירים לדף שריון הספר,
 ללא ביצוע שריון או הצטרפות ישירה לרשימת המתנה.
 
 בדף שריון הספר:
@@ -104,6 +105,7 @@ export default function BookCard({
   const bookImageSrc = getBookImageSrc(book.book_image_name);
 
   const isAvailable = Number(book.available_quantity) > 0;
+  const hasActiveLoan = Number(book.userHasActiveLoan) === 1;
 
   return (
     <article className="bookCard">
@@ -134,57 +136,54 @@ export default function BookCard({
 
         <p className="bookAuthor">{book.author}</p>
 
+        <div className="bookMetadata">
+          <p>
+            <strong>Published:</strong> {book.publishYear ?? "Not specified"}
+          </p>
+          <p>
+            <strong>ISBN:</strong> {book.isbn || "Not specified"}
+          </p>
+        </div>
+
         <div className="bookCardActions">
           {/*
 פעולת המשתמש מוצגת רק לקורא.
 
-כאשר הספר זמין:
+כאשר קיימת השאלה פתוחה של הספר:
+- מוצג כפתור View My Reservations.
+
+כאשר אין השאלה פתוחה והספר זמין:
 - מוצג כפתור Reserve Book.
 
-כאשר הספר אינו זמין:
+כאשר אין השאלה פתוחה והספר אינו זמין:
 - מוצג כפתור Check Future Availability.
 
-שני הכפתורים מובילים לדף שריון הספר,
-שבו מתבצעת בדיקת זמינות בהתאם לתאריך
-ולשעות של הזמנת המקום שנבחרה.
-
-בהתאם לתוצאות הבדיקה, המשתמש יכול
-לשריין ספר או להצטרף לרשימת ההמתנה.
-
-הלחיצה על הכפתור בכרטיס אינה מבצעת
-שריון או הצטרפות לרשימת המתנה באופן ישיר.
+כל הכפתורים מובילים לדף שריון הספר,
+ללא ביצוע שריון או הצטרפות ישירה לרשימת המתנה.
 */}
           {!isLibrarian && onReserve && (
-            <>
-              {book.userHasActiveLoan && !isAvailable ? (
-                <span
-                  className="userHasLoanMessage"
-                  style={{
-                    color: "#d9534f",
-                    fontSize: "0.9rem",
-                    display: "block",
-                    margin: "8px 0",
-                  }}
-                >
-                  You currently have this book on loan
-                </span>
-              ) : (
-                <Button
-                  variant={isAvailable ? "success" : "secondary"}
-                  className={
-                    isAvailable ? "bookReserveButton" : "bookAvailabilityButton"
-                  }
-                  onClick={onReserve}
-                  aria-label={
-                    isAvailable
-                      ? `Reserve ${book.title}`
-                      : `Check future availability for ${book.title}`
-                  }
-                >
-                  {isAvailable ? "Reserve Book" : "Check Future Availability"}
-                </Button>
-              )}
-            </>
+            <Button
+              variant={hasActiveLoan || !isAvailable ? "secondary" : "success"}
+              className={
+                hasActiveLoan || !isAvailable
+                  ? "bookAvailabilityButton"
+                  : "bookReserveButton"
+              }
+              onClick={onReserve}
+              aria-label={
+                hasActiveLoan
+                  ? `View my reservations for ${book.title}`
+                  : isAvailable
+                    ? `Reserve ${book.title}`
+                    : `Check future availability for ${book.title}`
+              }
+            >
+              {hasActiveLoan
+                ? "View My Reservations"
+                : isAvailable
+                  ? "Reserve Book"
+                  : "Check Future Availability"}
+            </Button>
           )}
           {/*
         כפתור העריכה מוצג רק לספרנית ורק אם

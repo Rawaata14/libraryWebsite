@@ -93,68 +93,35 @@ async function getSeatForUpdate(seatId, connection) {
   return seats[0] || null;
 }
 
-/*
----------------------------------------------------------
-hasSeatReservation
-
-תפקיד:
-בודקת אם קיימת הזמנה פעילה החופפת למקום
-ולמועד המבוקשים.
-
-בדיקת החפיפה:
-הזמנה קיימת חופפת כאשר:
-
-existing.startTime < requestedEndTime
-
-וגם:
-
-existing.endTime > requestedStartTime
-
-הזמנות מבוטלות אינן חוסמות את המקום.
-
-@param {number} seatId
-מזהה המקום.
-
-@param {string} requestedDate
-התאריך המבוקש.
-
-@param {string} requestedStartTime
-שעת ההתחלה המבוקשת.
-
-@param {string} requestedEndTime
-שעת הסיום המבוקשת.
-
-@returns {Promise<boolean>}
-true אם המקום תפוס במועד המבוקש.
----------------------------------------------------------
-*/
+// בודקת אם קיימת הזמנה לא מבוטלת החופפת למקום ולמועד המבוקשים, עם אפשרות לסינון לפי משתמש ולנעילת הרשומה במסגרת טרנזקציה.
 async function hasSeatReservation(
   seatId,
   requestedDate,
   requestedStartTime,
   requestedEndTime,
   connection = null,
+  userId = null,
 ) {
   const sql = `
     SELECT reservationId
     FROM seat_reservation
     WHERE seatId = ?
       AND reservationDate = ?
-      AND LOWER(status) NOT IN (
-        'cancelled',
-        'canceled'
-      )
+      AND LOWER(status) NOT IN ('cancelled', 'canceled')
       AND startTime < ?
       AND endTime > ?
+      ${userId !== null ? "AND userId = ?" : ""}
     LIMIT 1
     ${connection ? "FOR UPDATE" : ""}
   `;
 
-  const reservations = await doQuery(
-    sql,
-    [seatId, requestedDate, requestedEndTime, requestedStartTime],
-    connection,
-  );
+  const params = [seatId, requestedDate, requestedEndTime, requestedStartTime];
+
+  if (userId !== null) {
+    params.push(userId);
+  }
+
+  const reservations = await doQuery(sql, params, connection);
 
   return reservations.length > 0;
 }
@@ -199,6 +166,7 @@ async function getActiveSeatEntry(
   requestedDate,
   requestedStartTime,
   requestedEndTime,
+  connection = null,
 ) {
   const sql = `
     SELECT
@@ -244,15 +212,14 @@ async function getActiveSeatEntry(
       queueSeatId ASC
 
     LIMIT 1
+    ${connection ? "FOR UPDATE" : ""}
   `;
 
-  const entries = await doQuery(sql, [
-    seatId,
-    userId,
-    requestedDate,
-    requestedStartTime,
-    requestedEndTime,
-  ]);
+  const entries = await doQuery(
+    sql,
+    [seatId, userId, requestedDate, requestedStartTime, requestedEndTime],
+    connection,
+  );
 
   return entries[0] || null;
 }
@@ -294,6 +261,7 @@ async function addSeatEntry(
   requestedDate,
   requestedStartTime,
   requestedEndTime,
+  connection = null,
 ) {
   const sql = `
     INSERT INTO waiting_list_seat (
@@ -307,13 +275,11 @@ async function addSeatEntry(
     VALUES (?, ?, ?, ?, ?, 'waiting')
   `;
 
-  const result = await doQuery(sql, [
-    seatId,
-    userId,
-    requestedDate,
-    requestedStartTime,
-    requestedEndTime,
-  ]);
+  const result = await doQuery(
+    sql,
+    [seatId, userId, requestedDate, requestedStartTime, requestedEndTime],
+    connection,
+  );
 
   return result.insertId;
 }

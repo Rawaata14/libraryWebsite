@@ -22,7 +22,7 @@ seatWaitingListService.js
 */
 
 const seatWaitingListQueries = require("../database/queries/seatWaitingListQueries");
-const { withTransaction } = require("../database/query");
+const { doQuery, withTransaction } = require("../database/query");
 const notificationQueries = require("../database/queries/notificationQueries");
 
 const { escapeHtml, sendOptionalEmail } = require("../utils/emailService");
@@ -131,7 +131,7 @@ async function joinSeatWaitingList(details) {
   }
   const libraryNow = getLibraryDateTime();
 
-  const requestedStartKey = `${requestedDate}T` + `${requestedStartTime}`;
+  const requestedStartKey = `${requestedDate}T${requestedStartTime.slice(0, 5)}`;
 
   /*
   לא ניתן להצטרף להמתנה למועד
@@ -147,111 +147,119 @@ async function joinSeatWaitingList(details) {
     };
   }
 
-  /*
-  שליפת המקום ובדיקת קיומו.
-  */
-  const seat = await seatWaitingListQueries.getSeat(seatId);
+  // בדיקת תפוסה, בעלות והצטרפות לרשימת המתנה בטרנזקציה אחת.
+  return withTransaction(async (connection) => {
+    // נעילת המשתמש לפני הכיסא לשמירה על סדר נעילות אחיד.
+    const users = await doQuery(
+      "SELECT userId FROM user WHERE userId = ? FOR UPDATE",
+      [userId],
+      connection,
+    );
 
-  if (!seat) {
-    return {
-      success: false,
+    if (users.length === 0) {
+      return {
+        success: false,
+        statusCode: 401,
+        message: "User not found.",
+      };
+    }
 
-      statusCode: 404,
-
-      message: "Seat not found.",
-    };
-  }
-
-  /*
-  מקום חסום מנהלית אינו מקום תפוס רגיל.
-
-  לא יוצרים עבורו רשימת המתנה משום שאין
-  ודאות שהוא יחזור לשימוש במועד המבוקש.
-  */
-  if (String(seat.status).toLowerCase() === "blocked") {
-    return {
-      success: false,
-
-      statusCode: 409,
-
-      message: "A blocked seat cannot have " + "a waiting list.",
-    };
-  }
-
-  /*
-  בדיקה שהמקום אכן תפוס במועד המבוקש.
-
-  אם הוא פנוי, המשתמש צריך להזמין אותו
-  ישירות ולא להצטרף לרשימת המתנה.
-  */
-  const isReserved = await seatWaitingListQueries.hasSeatReservation(
-    seatId,
-    requestedDate,
-    requestedStartTime,
-    requestedEndTime,
-  );
-
-  if (!isReserved) {
-    return {
-      success: false,
-
-      statusCode: 409,
-
-      message: "This seat is available now. " + "You can reserve it directly.",
-    };
-  }
-
-  /*
-  מניעת המתנה כפולה לאותו מקום ומועד.
-  */
-  const existingEntry = await seatWaitingListQueries.getActiveSeatEntry(
-    seatId,
-    userId,
-    requestedDate,
-    requestedStartTime,
-    requestedEndTime,
-  );
-
-  if (existingEntry) {
-    return {
-      success: false,
-
-      statusCode: 409,
-
-      message: "You are already waiting for " + "this seat and time.",
-    };
-  }
-
-  /*
-  יצירת רשומת ההמתנה.
-  */
-  const waitingId = await seatWaitingListQueries.addSeatEntry(
-    seatId,
-    userId,
-    requestedDate,
-    requestedStartTime,
-    requestedEndTime,
-  );
-
-  return {
-    success: true,
-
-    statusCode: 201,
-
-    message: `You joined the waiting list ` + `for seat ${seatId}.`,
-
-    waitingId,
-
-    waitingDetails: {
+    const seat = await seatWaitingListQueries.getSeatForUpdate(
       seatId,
+      connection,
+    );
 
+    if (!seat) {
+      return {
+        success: false,
+        statusCode: 404,
+        message: "Seat not found.",
+      };
+    }
+
+    if (String(seat.status).toLowerCase() === "blocked") {
+      return {
+        success: false,
+        statusCode: 409,
+        message: "A blocked seat cannot have a waiting list.",
+      };
+    }
+
+    // בדיקה שהמקום תפוס במועד המבוקש.
+    const isReserved = await seatWaitingListQueries.hasSeatReservation(
+      seatId,
       requestedDate,
-
       requestedStartTime,
-
       requestedEndTime,
-    },
-  };
+      connection,
+    );
+
+    if (!isReserved) {
+      return {
+        success: false,
+        statusCode: 409,
+        message: "This seat is available now. You can reserve it directly.",
+      };
+    }
+
+    // מניעת הצטרפות לרשימת המתנה עבור הזמנה עצמית.
+    const isOwnReservation = await seatWaitingListQueries.hasSeatReservation(
+      seatId,
+      requestedDate,
+      requestedStartTime,
+      requestedEndTime,
+      connection,
+      userId,
+    );
+
+    if (isOwnReservation) {
+      return {
+        success: false,
+        statusCode: 409,
+        message: "You have already reserved this seat for the selected time.",
+      };
+    }
+
+    // מניעת הצטרפות כפולה לרשימת ההמתנה.
+    const existingEntry = await seatWaitingListQueries.getActiveSeatEntry(
+      seatId,
+      userId,
+      requestedDate,
+      requestedStartTime,
+      requestedEndTime,
+      connection,
+    );
+
+    if (existingEntry) {
+      return {
+        success: false,
+        statusCode: 409,
+        message: "You are already waiting for this seat and time.",
+      };
+    }
+
+    const waitingId = await seatWaitingListQueries.addSeatEntry(
+      seatId,
+      userId,
+      requestedDate,
+      requestedStartTime,
+      requestedEndTime,
+      connection,
+    );
+
+    return {
+      success: true,
+      statusCode: 201,
+      message: `You joined the waiting list for seat ${seatId}.`,
+      waitingId,
+      waitingDetails: {
+        seatId,
+        requestedDate,
+        requestedStartTime,
+        requestedEndTime,
+      },
+    };
+  });
 }
 
 async function createSeatOfferInTransaction(

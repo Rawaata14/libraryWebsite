@@ -259,6 +259,7 @@ export default function useLibraryMap({
       location: clickedItem.location,
       type: clickedItem.type,
       tableId: clickedItem.tableId,
+      isReservedByCurrentUser: clickedItem.isReservedByCurrentUser === true,
     });
   };
 

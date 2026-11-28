@@ -450,9 +450,6 @@ export default function useSeatReservation({
       }
     }
 
-    setIsSubmitting(true);
-    setReservationFeedback(null);
-
     // בדיקת זמינות עדכנית של כיסא יחיד
     if (!isTable) {
       const currentSeat = items.find(
@@ -461,6 +458,14 @@ export default function useSeatReservation({
 
       const currentStatus = normalizeSeatStatus(currentSeat);
       const originalStatus = normalizeSeatStatus(selectedSeat);
+
+      if (currentSeat?.isReservedByCurrentUser === true) {
+        setReservationFeedback({
+          type: "error",
+          message: "You have already reserved this seat for the selected time.",
+        });
+        return;
+      }
 
       if (
         !currentSeat ||
@@ -475,6 +480,9 @@ export default function useSeatReservation({
         return;
       }
     }
+
+    setIsSubmitting(true);
+    setReservationFeedback(null);
 
     try {
       if (isTable) {

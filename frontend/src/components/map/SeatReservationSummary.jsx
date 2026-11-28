@@ -43,18 +43,7 @@ export default function SeatReservationSummary({
 }) {
   const dialogRef = useRef(null);
   const previousFocusedElementRef = useRef(null);
-
-  const actionTitle = isTable
-    ? `Reserve Group Table ${selectedSeat.id}`
-    : isSeatAvailable
-      ? `Reserve Seat ${selectedSeat.id}`
-      : `Join Waiting List for Seat ${selectedSeat.id}`;
-
-  const actionDescription = isTable
-    ? "Select group size and review table reservation details before confirming."
-    : isSeatAvailable
-      ? "Review the reservation details before confirming."
-      : "This seat is occupied for the selected time. Review the details before joining its waiting list.";
+  const isActionSuccessful = reservationFeedback?.type === "success";
 
   useEffect(() => {
     previousFocusedElementRef.current = document.activeElement;
@@ -135,6 +124,27 @@ export default function SeatReservationSummary({
   );
 
   const currentSeatStatus = String(currentSeat?.status || "").toLowerCase();
+
+  const isOwnReservation =
+    !isTable &&
+    currentSeatStatus === "occupied" &&
+    currentSeat?.isReservedByCurrentUser === true;
+
+  const actionTitle = isOwnReservation
+    ? `Seat ${selectedSeat.id} — Your Reservation`
+    : isTable
+      ? `Reserve Group Table ${selectedSeat.id}`
+      : isSeatAvailable
+        ? `Reserve Seat ${selectedSeat.id}`
+        : `Join Waiting List for Seat ${selectedSeat.id}`;
+
+  const actionDescription = isOwnReservation
+    ? "You have already reserved this seat for the selected time."
+    : isTable
+      ? "Select group size and review table reservation details before confirming."
+      : isSeatAvailable
+        ? "Review the reservation details before confirming."
+        : "This seat is occupied for the selected time. Review the details before joining its waiting list.";
 
   const originalSeatStatus = String(selectedSeat?.status || "").toLowerCase();
 
@@ -231,7 +241,11 @@ export default function SeatReservationSummary({
           )}
         </div>
 
-        {isTable ? (
+        {isActionSuccessful ? null : isOwnReservation ? (
+          <div className="mapAvailabilityBanner availableBanner">
+            This Seat Is Reserved by You
+          </div>
+        ) : isTable ? (
           <div
             className={`mapAvailabilityBanner ${
               canReserveGroup ? "availableBanner" : "waitingListBanner"
@@ -308,36 +322,38 @@ export default function SeatReservationSummary({
           </div>
         )}
         <div className="mapSummaryButtonRow">
-          <Button
-            variant={isSeatAvailable ? "primary" : "secondary"}
-            className={`confirmSeatReservationButton ${
-              !isSeatAvailable && !isTable ? "waitingListButton" : ""
-            }`}
-            onClick={onConfirm}
-            disabled={
-              isSubmitting ||
-              !selectedTime ||
-              reservationFeedback?.type === "success" ||
-              isConnectionError ||
-              hasSeatStatusChanged ||
-              (isTable &&
-                (!canReserveGroup ||
-                  groupSize < minTableCapacity ||
-                  groupSize > maxAvailableGroupSize))
-            }
-          >
-            {isSubmitting
-              ? isSeatAvailable
-                ? "Confirming..."
-                : "Joining..."
-              : isSeatAvailable
-                ? isTable
-                  ? `Reserve Table (${groupSize} ${
-                      groupSize === 1 ? "Seat" : "Seats"
-                    })`
-                  : "Confirm Reservation"
-                : "Join Waiting List"}
-          </Button>
+          {!isOwnReservation && (
+            <Button
+              variant={isSeatAvailable ? "primary" : "secondary"}
+              className={`confirmSeatReservationButton ${
+                !isSeatAvailable && !isTable ? "waitingListButton" : ""
+              }`}
+              onClick={onConfirm}
+              disabled={
+                isSubmitting ||
+                !selectedTime ||
+                isActionSuccessful ||
+                isConnectionError ||
+                hasSeatStatusChanged ||
+                (isTable &&
+                  (!canReserveGroup ||
+                    groupSize < minTableCapacity ||
+                    groupSize > maxAvailableGroupSize))
+              }
+            >
+              {isSubmitting
+                ? isSeatAvailable
+                  ? "Confirming..."
+                  : "Joining..."
+                : isSeatAvailable
+                  ? isTable
+                    ? `Reserve Table (${groupSize} ${
+                        groupSize === 1 ? "Seat" : "Seats"
+                      })`
+                    : "Confirm Reservation"
+                  : "Join Waiting List"}
+            </Button>
+          )}
 
           <Button
             className="chooseAnotherSeatButton"

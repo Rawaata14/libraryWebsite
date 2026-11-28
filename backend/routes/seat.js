@@ -75,6 +75,7 @@ router.get("/get-map", async (req, res) => {
     );
 
     if (result.success) {
+      res.set("Cache-Control", "private, no-store");
       res.status(200).json({ map: result.map });
     } else {
       res.status(500).json({ message: "Failed to fetch seat map" });

@@ -15,6 +15,7 @@ Routes עבור מערכת הספרים.
 - עריכת פרטי ספר וכמות עותקים.
 - הצעת ספר שהתפנה למשתמש הבא בתור.
 - מחיקת ספר ללא היסטוריית השאלות.
+- שליפת פרטי ההשאלות האישיות ומועדי החזרת הספרים.
 =========================================================
 */
 
@@ -25,8 +26,8 @@ const fs = require("fs/promises");
 const bookQueries = require("../database/queries/bookQueries");
 const loanQueries = require("../database/queries/loanQueries");
 const waitingListService = require("../services/waitingListService");
+const { requireAuth } = require("../middleware/auth");
 const router = express.Router();
-
 /*
 ---------------------------------------------------------
 storage
@@ -380,6 +381,68 @@ router.get("/:id/availability", async (req, res) => {
       .json(result);
   } catch (error) {
     console.error("Error checking book availability:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+});
+
+/*
+---------------------------------------------------------
+GET /books/:id/my-loans
+
+תפקיד:
+מחזירה את פרטי ההשאלות הפתוחות של המשתמש
+המחובר עבור ספר מסוים.
+
+פרמטרים:
+- id: מזהה הספר מתוך כתובת הנתיב.
+- userId: מזהה המשתמש מתוך ה-Session בלבד.
+
+ערך מוחזר:
+- 200: מערך פרטי ההשאלות של המשתמש.
+- 400: מזהה ספר אינו תקין.
+- 401: המשתמש אינו מחובר.
+- 403: חשבון המשתמש אינו פעיל.
+- 500: שגיאה פנימית בשרת.
+
+לוגיקה:
+- אימות המשתמש באמצעות requireAuth.
+- בדיקת תקינות מזהה הספר.
+- שליפת ההשאלות האישיות של המשתמש.
+- החזרת פרטי ההשאלות ומועדי ההחזרה.
+
+הגנות:
+- מזהה המשתמש מתקבל מה-Session בלבד.
+- אין אפשרות לצפות בהשאלות של משתמש אחר.
+- המידע האישי אינו נשמר במטמון הדפדפן.
+- הפעולה מיועדת לקריאה בלבד.
+---------------------------------------------------------
+*/
+router.get("/:id/my-loans", requireAuth, async (req, res) => {
+  try {
+    const bookId = Number(req.params.id);
+    const userId = Number(req.session.user.userId);
+
+    if (!Number.isSafeInteger(bookId) || bookId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid book ID.",
+      });
+    }
+
+    const loans = await loanQueries.getUserLoansByBook(userId, bookId);
+
+    res.set("Cache-Control", "no-store");
+
+    return res.status(200).json({
+      success: true,
+      data: loans,
+    });
+  } catch (error) {
+    console.error("Error fetching user book loans:", error);
 
     return res.status(500).json({
       success: false,
