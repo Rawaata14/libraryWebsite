@@ -13,6 +13,7 @@ import Button from "../components/common/Button";
 import AlertMessage from "../components/common/AlertMessage";
 import { isValidPassword } from "../utils/validators";
 import axios from "axios";
+import { buildApiUrl } from "../config/api";
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -64,13 +65,10 @@ export default function ResetPasswordPage() {
     setIsSubmitting(true);
 
     try {
-      await axios.post(
-        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/user/reset-password`,
-        {
-          token,
-          newPassword: formData.password,
-        },
-      );
+      await axios.post(buildApiUrl("/user/reset-password"), {
+        token,
+        newPassword: formData.password,
+      });
 
       setSuccess("Your password has been reset successfully.");
 

@@ -6,6 +6,7 @@ import Button from "../components/common/Button";
 import AlertMessage from "../components/common/AlertMessage";
 import { isValidEmail } from "../utils/validators";
 import axios from "axios";
+import { buildApiUrl } from "../config/api";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -30,7 +31,7 @@ export default function ForgotPasswordPage() {
 
     try {
       await axios.post(
-        `${import.meta.env.VITE_API_URL || "http://localhost:8000"}/user/forgot-password`,
+        buildApiUrl("/user/forgot-password"),
         {
           email: email.trim(),
         },

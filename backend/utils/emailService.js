@@ -310,10 +310,19 @@ sendPasswordResetEmail
 ---------------------------------------------------------
 */
 async function sendPasswordResetEmail(userEmail, token) {
-  const frontendUrl = process.env.FRONTEND_URL;
+  /*
+בחירת כתובת האתר עבור קישור שחזור הסיסמה.
+
+אם מוגדרת כתובת ייעודית לשחזור סיסמה,
+נעשה שימוש בה.
+
+אחרת, נעשה שימוש בכתובת האתר הרגילה.
+*/
+  const frontendUrl =
+    process.env.PASSWORD_RESET_URL || process.env.FRONTEND_URL;
 
   if (!frontendUrl) {
-    throw new Error("FRONTEND_URL is not configured");
+    throw new Error("Password reset URL is not configured");
   }
 
   const resetLink = `${frontendUrl.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;

@@ -241,7 +241,8 @@ async function startServer() {
   try {
     await dbSingleton.getConnection();
 
-    app.listen(PORT, () => {
+    // הגבלת שרת ה-Backend לחיבורים מקומיים בלבד
+    app.listen(PORT, "::1", () => {
       console.log(`Server running on http://localhost:${PORT}`);
 
       /*

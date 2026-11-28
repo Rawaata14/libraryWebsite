@@ -232,51 +232,83 @@ async function loginUser(email, password) {
 updateProfileImage
 
 תפקיד:
-מעדכנת במסד הנתונים את שם קובץ תמונת הפרופיל
-ומחזירה אובייקט משתמש בטוח.
+מעדכנת את תמונת הפרופיל של המשתמש במסד הנתונים.
 
 פרמטרים:
-- email: האימייל של המשתמש המחובר.
-- profileImageName: שם הקובץ שנשמר בשרת.
+- userId: המזהה הקבוע של המשתמש.
+- profileImageName: שם קובץ התמונה שנשמר בשרת.
+
+ערך מוחזר:
+- safeToDeleteImage: האם ניתן למחוק בבטחה את התמונה
+  החדשה במקרה של כשל בעדכון.
+- success: האם העדכון הצליח.
+- message: הודעת הצלחה או כישלון.
+- user: פרטי המשתמש הבטוחים לאחר העדכון.
+
+לוגיקה:
+- בודקת שהתקבלו הפרמטרים הנדרשים.
+- מבצעת את הפעולות במסגרת טרנזקציה אחת.
+- מעדכנת את שם התמונה לפי userId של משתמש פעיל בלבד.
+- שולפת את פרטי המשתמש המעודכנים.
+- במקרה של חריגה מתבצע ניסיון ROLLBACK.
+- במקרה של הצלחה מתבצע COMMIT.
 ---------------------------------------------------------
 */
-async function updateProfileImage(email, profileImageName) {
-  if (!email || !profileImageName) {
+async function updateProfileImage(userId, profileImageName) {
+  const id = Number(userId);
+  if (
+    !Number.isSafeInteger(id) ||
+    id <= 0 ||
+    typeof profileImageName !== "string" ||
+    !profileImageName.trim()
+  ) {
     return {
       success: false,
-      message: "User email and profile image are required",
+      safeToDeleteImage: true,
+      message: "Valid user ID and profile image are required",
     };
   }
 
   try {
-    await doQuery(
-      `UPDATE \`user\`
-       SET profile_image_name = ?
-       WHERE email = ?`,
-      [profileImageName, email],
-    );
+    return await withTransaction(async (connection) => {
+      const [updateResult] = await connection.query(
+        `UPDATE \`user\`
+         SET profile_image_name = ?
+         WHERE userId = ? AND status = 'active'`,
+        [profileImageName, id],
+      );
 
-    const users = await doQuery("SELECT * FROM `user` WHERE email = ?", [
-      email,
-    ]);
+      if (updateResult.affectedRows === 0) {
+        return {
+          success: false,
+          safeToDeleteImage: true,
+          message: "Active user not found",
+        };
+      }
 
-    if (users.length === 0) {
+      const [users] = await connection.query(
+        "SELECT * FROM `user` WHERE userId = ?",
+        [id],
+      );
+
+      if (users.length === 0) {
+        throw new Error("User not found");
+      }
+
       return {
-        success: false,
-        message: "User not found",
+        success: true,
+        message: "Profile image updated successfully",
+        user: createSafeUser(users[0]),
       };
-    }
-
-    return {
-      success: true,
-      message: "Profile image updated successfully",
-      user: createSafeUser(users[0]),
-    };
+    });
   } catch (error) {
     console.error("Error updating profile image:", error);
 
+    // לא ניתן להבטיח שה-ROLLBACK הושלם ושלא בוצע COMMIT.
+    // לכן משאירים את הקובץ החדש כדי למנוע הפניה שבורה במסד הנתונים.
     return {
       success: false,
+      safeToDeleteImage: false,
       message: "Failed to update profile image",
     };
   }
@@ -292,9 +324,16 @@ updateUserProfile
 ניתן לעדכן:
 - שם מלא
 - אימייל
-- טלפון
-- כתובת
 - סיסמה
+
+פרמטרים:
+- userId: מזהה המשתמש המחובר.
+- updatedData: פרטי הפרופיל החדשים.
+
+לוגיקה:
+- עדכון משתמש פעיל לפי מזהה קבוע במסגרת טרנזקציה.
+- בדיקת כפילות אימייל מול משתמשים אחרים.
+- ביטול אסימוני שחזור לאחר שינוי אימייל או סיסמה.
 
 אם לא הוזנה סיסמה חדשה:
 הסיסמה הקיימת נשארת ללא שינוי.
@@ -303,25 +342,29 @@ updateUserProfile
 מוחזר אובייקט משתמש בטוח ללא passwordHash.
 ---------------------------------------------------------
 */
-async function updateUserProfile(currentEmail, updatedData) {
-  const fullName = updatedData.fullName?.trim();
-  const email = updatedData.email?.trim().toLowerCase();
+async function updateUserProfile(userId, updatedData) {
+  const id = Number(userId);
+  if (
+    !Number.isSafeInteger(id) ||
+    id <= 0 ||
+    !updatedData ||
+    typeof updatedData.fullName !== "string" ||
+    typeof updatedData.email !== "string" ||
+    (updatedData.password != null && typeof updatedData.password !== "string")
+  ) {
+    return { success: false, message: "Invalid profile data" };
+  }
+
+  const fullName = updatedData.fullName.trim();
+  const email = updatedData.email.trim().toLowerCase();
   const password = updatedData.password ?? "";
 
   if (!fullName || !email) {
-    return {
-      success: false,
-      message: "Full name and email are required",
-    };
+    return { success: false, message: "Full name and email are required" };
   }
-
   if (!isValidEmail(email)) {
-    return {
-      success: false,
-      message: "Please enter a valid email address",
-    };
+    return { success: false, message: "Please enter a valid email address" };
   }
-
   if (password && !isValidPassword(password)) {
     return {
       success: false,
@@ -331,63 +374,60 @@ async function updateUserProfile(currentEmail, updatedData) {
   }
 
   try {
-    if (email !== currentEmail) {
-      const existingUsers = await doQuery(
-        "SELECT userId FROM `user` WHERE email = ?",
-        [email],
+    const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
+    return await withTransaction(async (connection) => {
+      const [currentUsers] = await connection.query(
+        "SELECT userId, email FROM `user` WHERE userId = ? AND status = 'active' FOR UPDATE",
+        [id],
       );
-
-      if (existingUsers.length > 0) {
-        return {
-          success: false,
-          message: "Email already exists",
-        };
+      if (!currentUsers.length) {
+        return { success: false, message: "Active user not found" };
       }
-    }
 
-    let updateSQL = `
-      UPDATE \`user\`
-      SET fullName = ?,
-          email = ?
-    `;
+      // בדיקת כפילות אימייל תוך החרגת המשתמש המחובר
+      const [existingUsers] = await connection.query(
+        "SELECT userId FROM `user` WHERE email = ? AND userId <> ?",
+        [email, id],
+      );
+      if (existingUsers.length) {
+        return { success: false, message: "Email already exists" };
+      }
 
-    const params = [fullName, email];
+      let updateSQL = "UPDATE `user` SET fullName = ?, email = ?";
+      const params = [fullName, email];
+      if (hashedPassword) {
+        updateSQL += ", passwordHash = ?";
+        params.push(hashedPassword);
+      }
+      updateSQL += " WHERE userId = ? AND status = 'active'";
+      params.push(id);
+      await connection.query(updateSQL, params);
 
-    if (password) {
-      const hashedPassword = await bcrypt.hash(password, 10);
+      // ביטול קישורי שחזור ישנים לאחר שינוי אימייל או סיסמה
+      if (email !== currentUsers[0].email || hashedPassword) {
+        await connection.query(
+          "DELETE FROM password_reset_tokens WHERE userId = ?",
+          [id],
+        );
+      }
 
-      updateSQL += ", passwordHash = ?";
-      params.push(hashedPassword);
-    }
-
-    updateSQL += " WHERE email = ?";
-    params.push(currentEmail);
-
-    await doQuery(updateSQL, params);
-
-    const updatedUsers = await doQuery("SELECT * FROM `user` WHERE email = ?", [
-      email,
-    ]);
-
-    if (updatedUsers.length === 0) {
+      const [updatedUsers] = await connection.query(
+        "SELECT * FROM `user` WHERE userId = ?",
+        [id],
+      );
+      if (!updatedUsers.length) throw new Error("User not found");
       return {
-        success: false,
-        message: "User not found",
+        success: true,
+        message: "Profile updated successfully",
+        user: createSafeUser(updatedUsers[0]),
       };
-    }
-
-    return {
-      success: true,
-      message: "Profile updated successfully",
-      user: createSafeUser(updatedUsers[0]),
-    };
+    });
   } catch (error) {
+    if (error.code === "ER_DUP_ENTRY") {
+      return { success: false, message: "Email already exists" };
+    }
     console.error("Error updating user profile:", error);
-
-    return {
-      success: false,
-      message: "Failed to update profile",
-    };
+    return { success: false, message: "Failed to update profile" };
   }
 }
 
